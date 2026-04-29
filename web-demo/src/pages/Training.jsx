@@ -35,14 +35,14 @@ export default function Training() {
   const { user } = useAuth();
   const [exerciseType] = useState("pitch");
 
+  // Demo: fallback values since user object is not available
   const goal = user?.voice_goal || "feminize";
-
   const targetRange =
-    user?.target_pitch_range?.length === 2
-      ? user.target_pitch_range
-      : goal === "feminize"
-      ? [180, 240]
-      : [100, 150];
+  user?.target_pitch_range?.length === 2
+    ? user.target_pitch_range
+    : goal === "feminize"
+    ? [180, 240]
+    : [100, 150];
 
   const {
     isRecording,
@@ -79,9 +79,16 @@ export default function Training() {
           goal,
         };
 
-        const existingSessions = JSON.parse(
-          localStorage.getItem("voiceSessions") || "[]"
-        );
+
+        let existingSessions = [];
+        try {
+          const parsed = JSON.parse(localStorage.getItem("voiceSessions") || "[]");
+          if (Array.isArray(parsed)) {
+            existingSessions = parsed;
+          }
+        } catch (e) {
+          existingSessions = [];
+        }
 
         localStorage.setItem(
           "voiceSessions",

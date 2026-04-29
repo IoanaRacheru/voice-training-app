@@ -8,9 +8,9 @@ import { Flame, Trophy, Target } from "lucide-react";
  * @param {{ user: any }} props
  */
 export default function ProgressSection({ user }) {
-  const completion = user?.goal_completion || 42;
-  const streak = user?.streak_days || 7;
-  const exercises = user?.completed_exercises || 34;
+  const completion = 42;
+  const streak = 7;
+  const exercises = 34;
 
   return (
     <div className="rounded-2xl bg-card border border-border/50 p-6 space-y-6">

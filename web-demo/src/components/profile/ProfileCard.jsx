@@ -1,20 +1,23 @@
 // @ts-nocheck
 
-import React from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Flame, Trophy, Calendar } from 'lucide-react';
+import React from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Flame, Trophy, Calendar } from "lucide-react";
 
 /**
+ * Displays the current user's profile summary.
+ *
  * @param {{ user: any }} props
  */
 export default function ProfileCard({ user }) {
-  const initials = user?.username
-    ? user.username[0].toUpperCase()
-    : 'U';
+  const displayName = user?.username || user?.id || "User";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
-  const goal = user?.voice_goal === 'masculinize' ? 'Masculinize' : 'Feminize';
-  const level = user?.experience_level || 'beginner';
+  const goal =
+    user?.voice_goal === "masculinize" ? "Masculinize" : "Feminize";
+
+  const level = user?.experience_level || "beginner";
 
   return (
     <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
@@ -30,11 +33,10 @@ export default function ProfileCard({ user }) {
         </Avatar>
 
         <div className="mt-3">
-          <h2 className="text-xl font-bold text-foreground">
-            {user?.username || 'User'}
-          </h2>
+          <h2 className="text-xl font-bold text-foreground">{displayName}</h2>
+
           <p className="text-sm text-muted-foreground">
-            {user?.email || ''}
+            {user?.email || "No email available"}
           </p>
         </div>
 
@@ -42,6 +44,7 @@ export default function ProfileCard({ user }) {
           <Badge className="bg-primary/10 text-primary border-primary/20">
             {goal}
           </Badge>
+
           <Badge className="bg-accent/10 text-accent border-accent/20 capitalize">
             {level}
           </Badge>
@@ -50,19 +53,21 @@ export default function ProfileCard({ user }) {
         <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-border/50">
           <div className="text-center">
             <Flame className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-lg font-bold">{user?.streak_days || 7}</p>
+            <p className="text-lg font-bold">{user?.streak_days || 0}</p>
             <p className="text-xs text-muted-foreground">Day Streak</p>
           </div>
 
           <div className="text-center">
             <Trophy className="w-4 h-4 text-accent mx-auto mb-1" />
-            <p className="text-lg font-bold">{user?.completed_exercises || 34}</p>
+            <p className="text-lg font-bold">
+              {user?.completed_exercises || 0}
+            </p>
             <p className="text-xs text-muted-foreground">Exercises</p>
           </div>
 
           <div className="text-center">
             <Calendar className="w-4 h-4 text-chart-4 mx-auto mb-1" />
-            <p className="text-lg font-bold">{user?.total_sessions || 12}</p>
+            <p className="text-lg font-bold">{user?.total_sessions || 0}</p>
             <p className="text-xs text-muted-foreground">Sessions</p>
           </div>
         </div>
