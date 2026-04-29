@@ -1,15 +1,7 @@
-.PHONY: install run lint check dev
-
-install:
-	npm install
-
-run:
-	npm run dev
-
 lint:
 	npm run lint
 
-check:
-	npm run lint
+typecheck:
+	npm run typecheck
 
-dev: install run
+check: lint typecheck
