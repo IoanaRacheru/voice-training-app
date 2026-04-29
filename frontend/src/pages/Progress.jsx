@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+
 import React from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -7,9 +8,15 @@ import PitchEvolutionChart from "@/components/progress/PitchEvolutionChart";
 import ScoreChart from "@/components/progress/ScoreChart";
 import SessionHistory from "@/components/progress/SessionHistory";
 import { Activity } from "lucide-react";
+import { safeJsonParse } from "@/lib/utils";
+
 
 export default function Progress() {
-  const sessions = JSON.parse(localStorage.getItem("voiceSessions") || "[]");
+  const sessions = safeJsonParse(
+    localStorage.getItem("voiceSessions"),
+    [],
+    (val) => Array.isArray(val)
+  );
 
   const hasSessions = sessions.length > 0;
 

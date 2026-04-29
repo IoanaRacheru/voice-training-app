@@ -10,13 +10,8 @@ export default function Topbar() {
   const { user, logout } = useAuth();
 
   const initials = user?.username
-  ? user.username
-      .split(/[\s._-]/)
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase()
-  : "U";
+    ? user.username.slice(0, 2).toUpperCase()
+    : "U";
 
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -72,15 +67,12 @@ export default function Topbar() {
             
             {/* USER TEXT */}
             <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-foreground leading-none">
-                {user?.username || "User"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {user?.voice_goal === "masculinize"
-                  ? "Masculinize"
-                  : "Feminize"}{" "}
-                Goal
-              </p>
+                <p className="text-sm font-medium text-foreground leading-none">
+                  {user?.username || "User"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {user?.voice_goal || "Feminize"}
+                </p>
             </div>
 
             {/* AVATAR */}

@@ -15,7 +15,7 @@ export default function AppLayout() {
         <Topbar />
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <Outlet context={{ user, setUser: updateUser }} />
+          <Outlet context={{ user, updateUser }} />
         </main>
       </div>
     </div>
