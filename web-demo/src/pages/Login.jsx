@@ -19,7 +19,8 @@ export default function Login({ onGoToRegister }) {
     setError("");
 
     try {
-      login({ email, password });
+      // TODO: Replace with backend login and use returned user id
+      login({ id: email });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
     }

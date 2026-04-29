@@ -1,129 +1,124 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 /**
  * @typedef {{
  *   id: string;
  *   username: string;
- *   full_name: string;
- *   email: string;
- *   password: string;
+ *   email?: string;
+ *   voice_goal?: "feminize" | "masculinize";
+ *   experience_level?: "beginner" | "intermediate" | "advanced";
+ *   target_pitch_range?: number[];
+ *   training_focus?: string[];
  * }} User
  *
  * @typedef {{
  *   user: User | null;
+ *   userId: string | null;
  *   isAuthenticated: boolean;
- *   login: (data: { email: string; password: string }) => void;
- *   register: (data: { username: string; email: string; password: string }) => void;
+ *   login: (data: { id: string }) => void;
+ *   register: (data?: { username?: string; email?: string }) => void;
  *   logout: () => void;
- *   updateUser: (updatedUser: User) => void;
+ *   updateUser: (updates: Partial<User>) => void;
  * }} AuthContextValue
  */
 
-const AuthContext = createContext(
-  /** @type {AuthContextValue | null} */ (null)
-);
+const AuthContext = createContext(/** @type {AuthContextValue | null} */ (null));
 
 /**
+ * Provides temporary frontend authentication state.
+ *
+ * This does not persist data in localStorage.
+ * Later, login/register/logout/updateUser should be replaced with backend API calls.
+ *
  * @param {{ children: React.ReactNode }} props
  */
 export const AuthProvider = ({ children }) => {
-const [user, setUser] = useState(
-  /** @type {User | null} */ (null)
-);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser");
-
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
-
-  const getUsers = () => {
-    const savedUsers = localStorage.getItem("users");
-    return savedUsers ? JSON.parse(savedUsers) : [];
-  };
+  const [user, setUser] = useState(/** @type {User | null} */ (null));
 
   /**
-   * @param {{ username: string; email: string; password: string }} data
+   * Temporary login placeholder.
+   * Later this should call the backend login endpoint.
+   *
+   * @param {{ id: string }} data
    */
-  const register = ({ username, email, password }) => {
-    /** @type {User[]} */
-    const users = getUsers();
-
-    const exists = users.some((u) => u.email === email);
-
-    if (exists) {
-      throw new Error("User already exists");
+  const login = ({ id }) => {
+    if (!id) {
+      throw new Error("Please provide a username or email.");
     }
 
-    const newUser = {
-      id: crypto.randomUUID(),
-      username,
-      full_name: username,
-      email,
-      password,
+    /** @type {User} */
+    const demoUser = {
+      id,
+      username: id.includes("@") ? id.split("@")[0] : id,
+      email: id.includes("@") ? id : "",
+      voice_goal: "feminize",
+      experience_level: "beginner",
+      target_pitch_range: [180, 240],
+      training_focus: ["pitch"],
     };
 
-    localStorage.setItem("users", JSON.stringify([...users, newUser]));
-    localStorage.setItem("currentUser", JSON.stringify(newUser));
-
-    setUser(newUser);
+    setUser(demoUser);
   };
 
   /**
-   * @param {{ email: string; password: string }} data
+   * Temporary register placeholder.
+   * Later this should call the backend register endpoint.
+   *
+   * @param {{ username?: string; email?: string }} data
    */
-  const login = ({ email, password }) => {
-    /** @type {User[]} */
-    const users = getUsers();
+  const register = (data = {}) => {
+    const id = data.email || data.username;
 
-    const found = users.find(
-      (u) => u.email === email && u.password === password
-    );
-
-    if (!found) {
-      throw new Error("Invalid credentials");
+    if (!id) {
+      throw new Error("Please provide a username or email.");
     }
 
-    localStorage.setItem("currentUser", JSON.stringify(found));
-    setUser(found);
+    login({ id });
   };
 
+  /**
+   * Temporary logout placeholder.
+   * Later this should call the backend logout endpoint.
+   */
   const logout = () => {
-    localStorage.removeItem("currentUser");
     setUser(null);
   };
-  /** @param {User} updatedUser */
-  const updateUser = (updatedUser) => {
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
 
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+  /**
+   * Updates user data only in React state.
+   * Later this should call PATCH /me or PATCH /profile.
+   *
+   * @param {Partial<User>} updates
+   */
+  const updateUser = (updates) => {
+    if (!user) return;
 
-    const updatedUsers = users.map((/** @type {User} */ item) =>
-      item.email === updatedUser.email ? updatedUser : item
-    );
-
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    setUser(updatedUser);
+    setUser({
+      ...user,
+      ...updates,
+    });
   };
 
   return (
     <AuthContext.Provider
       value={{
-      user,
-      isAuthenticated: Boolean(user),
-      register,
-      login,
-      logout,
-      updateUser,
-}}
+        user,
+        userId: user?.id || null,
+        isAuthenticated: Boolean(user),
+        login,
+        register,
+        logout,
+        updateUser,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
+/**
+ * Access authentication state and actions.
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
 
