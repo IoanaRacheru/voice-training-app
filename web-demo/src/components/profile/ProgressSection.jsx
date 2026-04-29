@@ -7,7 +7,7 @@ import { Flame, Trophy, Target } from "lucide-react";
 /**
  * @param {{ user: any }} props
  */
-export default function ProgressSection({ userId }) {
+export default function ProgressSection({ user }) {
   const completion = 42;
   const streak = 7;
   const exercises = 34;
