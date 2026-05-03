@@ -3,77 +3,67 @@
 import React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Trophy, Calendar } from "lucide-react";
 
-/**
- * Displays the current user's profile summary.
- *
- * @param {{ user: any }} props
- */
 export default function ProfileCard({ user }) {
   const displayName = user?.username || user?.id || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
-
-  const goal =
-    user?.voice_goal === "masculinize" ? "Masculinize" : "Feminize";
-
+  const goal = user?.voice_goal === "masculinize" ? "Masculinize" : "Feminize";
   const level = user?.experience_level || "beginner";
 
   return (
-    <div className="rounded-[28px] bg-card border border-border/70 overflow-hidden shadow-[0_14px_28px_rgba(47,42,38,0.09)]">
-      <div className="h-24 bg-secondary relative overflow-hidden">
-        <div className="absolute -left-8 -bottom-10 w-32 h-32 rounded-[46%_54%_42%_58%] bg-primary/45" />
-        <div className="absolute right-6 top-8 w-28 h-8 rounded-[90%_12%_90%_12%] bg-chart-2/70 -rotate-12" />
-        <div className="absolute right-16 top-12 w-20 h-6 rounded-[90%_12%_90%_12%] bg-chart-5/60 rotate-12" />
-      </div>
+    <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+      <p className="font-mono text-[11px] uppercase text-muted-foreground">
+        Identification
+      </p>
 
-      <div className="px-6 pb-6 -mt-10 relative">
-        <Avatar className="w-20 h-20 border-4 border-card">
-          <AvatarFallback className="bg-primary text-foreground text-xl font-bold">
+      <div className="mt-5 flex items-start gap-4">
+        <Avatar className="h-16 w-16 border border-border bg-background">
+          <AvatarFallback className="bg-background text-xl font-black text-foreground">
             {initials}
           </AvatarFallback>
         </Avatar>
 
-        <div className="mt-3">
-          <h2 className="text-xl font-bold text-foreground">{displayName}</h2>
-
-          <p className="text-sm text-muted-foreground">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-black uppercase leading-tight text-foreground">
+            {displayName}
+          </h2>
+          <p className="mt-1 truncate text-sm font-medium text-muted-foreground">
             {user?.email || "No email available"}
           </p>
         </div>
-
-        <div className="flex flex-wrap gap-2 mt-4">
-          <Badge className="bg-primary/10 text-primary border-primary/20">
-            {goal}
-          </Badge>
-
-          <Badge className="bg-accent/10 text-accent border-accent/20 capitalize">
-            {level}
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-border/50">
-          <div className="text-center">
-            <Flame className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-lg font-bold">{user?.streak_days || 0}</p>
-            <p className="text-xs text-muted-foreground">Day Streak</p>
-          </div>
-
-          <div className="text-center">
-            <Trophy className="w-4 h-4 text-accent mx-auto mb-1" />
-            <p className="text-lg font-bold">
-              {user?.completed_exercises || 0}
-            </p>
-            <p className="text-xs text-muted-foreground">Exercises</p>
-          </div>
-
-          <div className="text-center">
-            <Calendar className="w-4 h-4 text-chart-4 mx-auto mb-1" />
-            <p className="text-lg font-bold">{user?.total_sessions || 0}</p>
-            <p className="text-xs text-muted-foreground">Sessions</p>
-          </div>
-        </div>
       </div>
-    </div>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Badge className="border-border bg-background text-foreground">
+          {goal}
+        </Badge>
+        <Badge className="border-border bg-background text-muted-foreground capitalize">
+          {level}
+        </Badge>
+      </div>
+
+      <dl className="mt-7 grid grid-cols-3 gap-4 border-t border-border pt-5 text-center">
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-muted-foreground">
+            Streak
+          </dt>
+          <dd className="mt-1 text-2xl font-black">{user?.streak_days || 0}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-muted-foreground">
+            Exercises
+          </dt>
+          <dd className="mt-1 text-2xl font-black">
+            {user?.completed_exercises || 0}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-bold uppercase text-muted-foreground">
+            Sessions
+          </dt>
+          <dd className="mt-1 text-2xl font-black">{user?.total_sessions || 0}</dd>
+        </div>
+      </dl>
+    </section>
   );
 }

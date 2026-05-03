@@ -11,6 +11,7 @@ import DuckNatureBackdrop from "@/components/layout/DuckNatureBackdrop";
 import Training from "@/pages/Training";
 import Profile from "@/pages/Profile";
 import Progress from "@/pages/Progress";
+import Chatbot from "@/pages/Chatbot";
 
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -33,6 +34,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Training />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/chatbot" element={<Chatbot />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Navigate to="/" replace />} />
       </Route>

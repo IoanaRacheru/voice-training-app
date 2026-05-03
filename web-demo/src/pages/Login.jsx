@@ -35,7 +35,7 @@ export default function Login({ onGoToRegister }) {
         </div>
 
         <h1>Welcome back</h1>
-        <p>Login to continue your voice training journey.</p>
+        <p>Login to continue your voice training practice.</p>
 
         {error && <div className="auth-error">{error}</div>}
 

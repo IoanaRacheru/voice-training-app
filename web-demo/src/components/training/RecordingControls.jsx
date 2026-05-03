@@ -1,120 +1,85 @@
 // @ts-nocheck
 
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Mic, RotateCcw, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-/**
- * @param {{
- *  isRecording: boolean,
- *  onToggle: () => void,
- *  onReset: () => void,
- *  duration: number
- * }} props
- */
 export default function RecordingControls({
   isRecording,
   onToggle,
   onReset,
-  duration
+  duration,
 }) {
   const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+    const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${secs}`;
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="flex items-center gap-6">
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onReset}
-          className="w-12 h-12 rounded-[18px] bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted shadow-[0_8px_16px_rgba(47,42,38,0.06)]"
-          disabled={isRecording}
-        >
-          <RotateCcw className="w-5 h-5" />
-        </Button>
-
-        {/* RECORD BUTTON */}
-        <motion.button
-          onClick={onToggle}
-          className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-colors ${
-            isRecording
-              ? 'bg-accent/30 glow-recording'
-              : 'bg-primary/45 hover:bg-primary/60 shadow-[0_14px_26px_rgba(47,42,38,0.12)]'
-          }`}
-          whileTap={{ scale: 0.95 }}
-          whileHover={{ scale: 1.05 }}
-        >
-          {/* Outer ring */}
-          <div
-            className={`absolute inset-0 rounded-full border-2 ${
-              isRecording
-                ? 'border-destructive/50'
-                : 'border-primary'
-            }`}
-          />
-
-          {/* Pulsing */}
-          <AnimatePresence>
-            {isRecording && (
-              <motion.div
-                className="absolute inset-0 rounded-full border-2 border-destructive/30"
-                initial={{ scale: 1, opacity: 1 }}
-                animate={{ scale: 1.4, opacity: 0 }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* INNER */}
-          <div
-            className={`w-14 h-14 rounded-full flex items-center justify-center ${
-              isRecording
-                ? 'bg-destructive'
-                : 'bg-primary'
-            }`}
-          >
-            <AnimatePresence mode="wait">
-              {isRecording ? (
-                <motion.div key="stop">
-                  <Square className="w-5 h-5 text-white fill-white" />
-                </motion.div>
-              ) : (
-                <motion.div key="record">
-                  <Mic className="w-6 h-6 text-white" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.button>
-
-        <div className="w-12 h-12" />
+    <div className="flex min-h-[300px] flex-col justify-between bg-foreground p-5 text-white">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] uppercase text-white/55">
+            Recorder
+          </p>
+          <p className="mt-1 text-2xl font-black uppercase leading-none">
+            {isRecording ? "Recording" : "Ready"}
+          </p>
+        </div>
+        <span className={`h-2.5 w-2.5 ${isRecording ? "animate-pulse-glow bg-primary" : "bg-white/35"}`} />
       </div>
 
-      {/* TIMER */}
-      <div className="flex items-center gap-2">
-        {isRecording && (
-          <motion.div
-            className="w-2 h-2 rounded-full bg-destructive"
-            animate={{ opacity: [1, 0.3, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-        )}
+      <motion.button
+        type="button"
+        onClick={onToggle}
+        className={`mx-auto grid h-32 w-32 place-items-center border border-white ${
+          isRecording ? "bg-primary text-white" : "bg-white text-foreground"
+        }`}
+        whileTap={{ scale: 0.97 }}
+        aria-label={isRecording ? "Stop recording" : "Start recording"}
+      >
+        <AnimatePresence mode="wait">
+          {isRecording ? (
+            <motion.span
+              key="stop"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="grid place-items-center"
+            >
+              <Square className="h-10 w-10 fill-current" />
+            </motion.span>
+          ) : (
+            <motion.span
+              key="record"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="grid place-items-center"
+            >
+              <Mic className="h-12 w-12" />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
-        <span
-          className={`text-lg font-mono font-semibold tracking-wider ${
-            isRecording
-              ? 'text-foreground'
-              : 'text-muted-foreground'
-          }`}
+      <div className="grid gap-3">
+        <div className="flex items-center justify-between border-t border-white/20 pt-3 font-mono text-xs uppercase text-white/65">
+          <span>Elapsed</span>
+          <span className="text-white">{formatTime(duration)}</span>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={onReset}
+          disabled={isRecording}
+          className="w-full border-white/35 bg-transparent text-white hover:bg-white hover:text-foreground"
         >
-          {formatTime(duration)}
-        </span>
+          <RotateCcw className="h-4 w-4" />
+          Reset
+        </Button>
       </div>
     </div>
   );

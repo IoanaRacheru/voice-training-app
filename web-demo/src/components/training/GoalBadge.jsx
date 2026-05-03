@@ -1,22 +1,17 @@
-import React from 'react';
-import { Sparkles } from 'lucide-react';
-
+import React from "react";
+import { Target } from "lucide-react";
 /**
- * @param {{ goal: string }} props
+ * @param {{
+ *   goal: "feminize" | "masculinize" | "androgynous"
+ * }} props
  */
 export default function GoalBadge({ goal }) {
-  const isFem = goal !== 'masculinize';
+  const isFem = goal !== "masculinize";
 
   return (
-    <div
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-        isFem
-          ? 'bg-primary/10 border-primary/20 text-primary'
-          : 'bg-accent/10 border-accent/20 text-accent'
-      }`}
-    >
-      <Sparkles className="w-3.5 h-3.5" />
-      {isFem ? 'Feminize Voice' : 'Masculinize Voice'}
+    <div className="inline-flex items-center gap-2 border border-border bg-white px-3 py-1.5 text-xs font-bold uppercase text-foreground">
+      <Target className="h-3.5 w-3.5 text-primary" />
+      {isFem ? "Feminize voice" : goal === "masculinize" ? "Masculinize voice" : "Androgynous voice"}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import React from "react";
 import { useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -6,36 +8,40 @@ import ProfileSettings from "@/components/profile/ProfileSettings";
 import ProgressSection from "@/components/profile/ProgressSection";
 
 export default function Profile() {
-  /** @type {{ user: any; updateUser: (updates: any) => void }} */
   const { user, updateUser } = useOutletContext();
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+    <div className="mx-auto max-w-6xl space-y-10">
+      <motion.header
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <p className="mb-3 font-mono text-[11px] uppercase text-muted-foreground">
+          User dossier
+        </p>
+        <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">
           Profile
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your voice training preferences
+        <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-muted-foreground">
+          Manage the training profile used by the recorder.
         </p>
-      </motion.div>
+      </motion.header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_1fr]">
         <motion.div
-          className="lg:col-span-1 space-y-6"
+          className="space-y-8"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.08 }}
         >
           <ProfileCard user={user} />
           <ProgressSection user={user} />
         </motion.div>
 
         <motion.div
-          className="lg:col-span-2"
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.15 }}
+          transition={{ delay: 0.12 }}
         >
           <ProfileSettings user={user} onUpdate={updateUser} />
         </motion.div>
