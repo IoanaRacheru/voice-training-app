@@ -16,9 +16,8 @@ export default function WaveformVisualizer({ isRecording, waveformData = [] }) {
   });
 
   return (
-    <div className="relative w-full h-32 flex items-center justify-center gap-[3px] overflow-hidden rounded-2xl bg-muted/30 border border-border/50 px-4">
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background z-10 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+    <div className="relative w-full h-32 flex items-center justify-center gap-[3px] overflow-hidden rounded-[24px] bg-secondary border border-border/70 px-4 shadow-inner">
+      <div className="absolute inset-x-6 top-1/2 h-px bg-border/50 z-10 pointer-events-none" />
 
       {bars.map((height, i) => (
         <div
@@ -28,8 +27,8 @@ export default function WaveformVisualizer({ isRecording, waveformData = [] }) {
             width: "3px",
             height: `${height}px`,
             background: isRecording
-              ? "linear-gradient(to top, hsl(262 80% 60%), hsl(180 60% 45%))"
-              : "hsl(230 18% 22%)",
+              ? "hsl(var(--chart-5))"
+              : "hsl(var(--border))",
           }}
         />
       ))}

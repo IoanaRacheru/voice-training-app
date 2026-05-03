@@ -13,7 +13,7 @@ export default function ProgressSection({ user }) {
   const exercises = 34;
 
   return (
-    <div className="rounded-2xl bg-card border border-border/50 p-6 space-y-6">
+    <div className="rounded-[28px] bg-card border border-border/70 p-6 space-y-6 shadow-[0_14px_28px_rgba(47,42,38,0.08)]">
       <h3 className="text-lg font-semibold text-foreground">Your Progress</h3>
 
       <div className="space-y-3">
@@ -34,7 +34,7 @@ export default function ProgressSection({ user }) {
           <Progress value={completion} className="h-3 bg-muted rounded-full" />
 
           <div
-            className="absolute top-0 left-0 h-3 rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+            className="absolute top-0 left-0 h-3 rounded-full bg-chart-5 transition-all duration-500"
             style={{ width: `${completion}%` }}
           />
         </div>
@@ -45,13 +45,13 @@ export default function ProgressSection({ user }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 p-4">
+        <div className="rounded-[22px] bg-primary/30 border border-primary/40 p-4">
           <Flame className="w-5 h-5 text-primary mb-2" />
           <p className="text-2xl font-bold text-foreground">{streak}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Day Streak</p>
         </div>
 
-        <div className="rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/10 p-4">
+        <div className="rounded-[22px] bg-secondary border border-border/70 p-4">
           <Trophy className="w-5 h-5 text-accent mb-2" />
           <p className="text-2xl font-bold text-foreground">{exercises}</p>
           <p className="text-xs text-muted-foreground mt-0.5">

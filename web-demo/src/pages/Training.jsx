@@ -151,7 +151,7 @@ export default function Training() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-2xl bg-card border border-border/50 p-5 glow-purple"
+        className="rounded-[28px] bg-card border border-border/70 p-5 shadow-[0_14px_28px_rgba(47,42,38,0.10)]"
       >
         <WaveformVisualizer
           isRecording={isRecording}
@@ -181,7 +181,7 @@ export default function Training() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card border border-border/50 p-5"
+        className="rounded-[28px] bg-card border border-border/70 p-5 shadow-[0_14px_28px_rgba(47,42,38,0.08)]"
       >
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-foreground">

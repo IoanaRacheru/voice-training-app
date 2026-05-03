@@ -33,7 +33,7 @@ export default function RecordingControls({
           variant="ghost"
           size="icon"
           onClick={onReset}
-          className="w-12 h-12 rounded-full text-muted-foreground hover:text-foreground"
+          className="w-12 h-12 rounded-[18px] bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted shadow-[0_8px_16px_rgba(47,42,38,0.06)]"
           disabled={isRecording}
         >
           <RotateCcw className="w-5 h-5" />
@@ -44,8 +44,8 @@ export default function RecordingControls({
           onClick={onToggle}
           className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-colors ${
             isRecording
-              ? 'bg-destructive/20 glow-recording'
-              : 'bg-primary/20 glow-purple hover:bg-primary/30'
+              ? 'bg-accent/30 glow-recording'
+              : 'bg-primary/45 hover:bg-primary/60 shadow-[0_14px_26px_rgba(47,42,38,0.12)]'
           }`}
           whileTap={{ scale: 0.95 }}
           whileHover={{ scale: 1.05 }}
@@ -55,7 +55,7 @@ export default function RecordingControls({
             className={`absolute inset-0 rounded-full border-2 ${
               isRecording
                 ? 'border-destructive/50'
-                : 'border-primary/50'
+                : 'border-primary'
             }`}
           />
 
@@ -76,7 +76,7 @@ export default function RecordingControls({
             className={`w-14 h-14 rounded-full flex items-center justify-center ${
               isRecording
                 ? 'bg-destructive'
-                : 'bg-gradient-to-br from-primary to-primary/80'
+                : 'bg-primary'
             }`}
           >
             <AnimatePresence mode="wait">

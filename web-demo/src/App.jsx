@@ -7,6 +7,7 @@ import PageNotFound from "./lib/PageNotFound";
 import { useAuth } from "@/lib/AuthContext";
 
 import AppLayout from "@/components/layout/AppLayout";
+import DuckNatureBackdrop from "@/components/layout/DuckNatureBackdrop";
 import Training from "@/pages/Training";
 import Profile from "@/pages/Profile";
 import Progress from "@/pages/Progress";
@@ -45,9 +46,14 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <QueryClientProvider client={queryClientInstance}>
-      <Router>
-        <AuthenticatedApp />
-      </Router>
+      <div className="relative min-h-screen overflow-hidden">
+        <DuckNatureBackdrop />
+        <div className="relative z-10 min-h-screen">
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+        </div>
+      </div>
       <Toaster />
     </QueryClientProvider>
   );

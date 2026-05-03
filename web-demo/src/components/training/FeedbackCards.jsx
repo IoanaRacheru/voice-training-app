@@ -9,33 +9,33 @@ const cards = [
     key: "pitch",
     label: "Current Pitch",
     icon: Activity,
-    color: "from-primary/20 to-primary/5",
+    color: "bg-primary/35",
     iconColor: "text-primary",
-    border: "border-primary/20",
+    border: "border-primary/40",
   },
   {
     key: "target",
     label: "Target Range",
     icon: Target,
-    color: "from-accent/20 to-accent/5",
-    iconColor: "text-accent",
-    border: "border-accent/20",
+    color: "bg-secondary",
+    iconColor: "text-chart-5",
+    border: "border-border/70",
   },
   {
     key: "score",
     label: "Score",
     icon: Zap,
-    color: "from-chart-4/20 to-chart-4/5",
-    iconColor: "text-chart-4",
-    border: "border-chart-4/20",
+    color: "bg-accent/20",
+    iconColor: "text-accent",
+    border: "border-accent/35",
   },
   {
     key: "trend",
     label: "Trend",
     icon: TrendingUp,
-    color: "from-chart-5/20 to-chart-5/5",
+    color: "bg-chart-2/20",
     iconColor: "text-chart-5",
-    border: "border-chart-5/20",
+    border: "border-chart-5/30",
   },
 ];
 
@@ -70,7 +70,7 @@ export default function FeedbackCards({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.05 }}
-          className={`rounded-2xl bg-gradient-to-br ${color} border ${border} p-4 transition-all`}
+          className={`rounded-[24px] ${color} border ${border} p-4 shadow-[0_10px_20px_rgba(47,42,38,0.07)] transition-all hover:scale-[1.02]`}
         >
           <div className="flex items-center gap-2 mb-2">
             <Icon className={`w-4 h-4 ${iconColor}`} />

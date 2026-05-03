@@ -20,14 +20,16 @@ export default function ProfileCard({ user }) {
   const level = user?.experience_level || "beginner";
 
   return (
-    <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
-      <div className="h-24 bg-gradient-to-r from-primary/30 via-accent/20 to-primary/10 relative">
-        <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+    <div className="rounded-[28px] bg-card border border-border/70 overflow-hidden shadow-[0_14px_28px_rgba(47,42,38,0.09)]">
+      <div className="h-24 bg-secondary relative overflow-hidden">
+        <div className="absolute -left-8 -bottom-10 w-32 h-32 rounded-[46%_54%_42%_58%] bg-primary/45" />
+        <div className="absolute right-6 top-8 w-28 h-8 rounded-[90%_12%_90%_12%] bg-chart-2/70 -rotate-12" />
+        <div className="absolute right-16 top-12 w-20 h-6 rounded-[90%_12%_90%_12%] bg-chart-5/60 rotate-12" />
       </div>
 
       <div className="px-6 pb-6 -mt-10 relative">
         <Avatar className="w-20 h-20 border-4 border-card">
-          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-xl font-bold">
+          <AvatarFallback className="bg-primary text-foreground text-xl font-bold">
             {initials}
           </AvatarFallback>
         </Avatar>
