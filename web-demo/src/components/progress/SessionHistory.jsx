@@ -3,7 +3,6 @@
 import React from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Clock, Zap } from "lucide-react";
 
 const exerciseLabels = {
   pitch: "Pitch",
@@ -13,82 +12,64 @@ const exerciseLabels = {
   free_practice: "Free",
 };
 
-/**
- * @param {{ sessions: any[] }} props
- */
 export default function SessionHistory({ sessions }) {
   return (
-    <div className="rounded-[28px] bg-card border border-border/70 overflow-hidden shadow-[0_14px_28px_rgba(47,42,38,0.08)]">
-      <div className="p-5 border-b border-border/60">
-        <h3 className="text-sm font-semibold text-foreground">
-          Past Sessions
-        </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Your recent training history
-        </p>
+    <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+      <div className="mb-5 flex items-end justify-between gap-4 border-b border-border pb-4">
+        <div>
+          <p className="font-mono text-[11px] uppercase text-muted-foreground">
+            Ledger
+          </p>
+          <h3 className="mt-1 text-xl font-black uppercase text-foreground">
+            Past sessions
+          </h3>
+        </div>
+        <span className="text-xs font-bold uppercase text-muted-foreground">
+          {sessions.length} total
+        </span>
       </div>
 
-      <div className="divide-y divide-border/30">
-        {sessions.map((session, i) => (
+      <div className="divide-y divide-border">
+        {sessions.map((session, index) => (
           <div
-            key={session.id || i}
-            className="flex items-center gap-4 px-5 py-4 hover:bg-secondary/80 transition-colors"
+            key={session.id || index}
+            className="grid gap-4 py-4 transition-colors hover:bg-background md:grid-cols-[1fr_auto]"
           >
-            {/* Icon */}
-            <div className="w-10 h-10 rounded-[18px] bg-primary/35 flex items-center justify-center shrink-0">
-              <Activity className="w-4 h-4 text-foreground" />
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {exerciseLabels[session.exercise_type] ||
-                    session.exercise_type}{" "}
-                  Exercise
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-bold uppercase text-foreground">
+                  {exerciseLabels[session.exercise_type] || session.exercise_type} exercise
                 </p>
 
-                <Badge className="text-[10px] px-2 py-0 h-5 bg-muted text-muted-foreground capitalize">
+                <Badge className="border-border bg-background text-muted-foreground">
                   {session.goal}
                 </Badge>
               </div>
 
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span>
-                  {format(new Date(session.date), "MMM d, yyyy")}
-                </span>
-
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {Math.round((session.duration_seconds || 0) / 60)}min
-                </span>
-              </div>
+              <p className="mt-1 text-xs font-medium uppercase text-muted-foreground">
+                {format(new Date(session.date), "MMM d, yyyy")} / {Math.round((session.duration_seconds || 0) / 60)} min
+              </p>
             </div>
 
-            {/* Pitch & Score */}
-            <div className="text-right shrink-0">
-              <p className="text-sm font-semibold text-foreground">
-                {session.average_pitch || "—"}Hz
+            <div className="text-left md:text-right">
+              <p className="text-lg font-black uppercase text-foreground">
+                {session.average_pitch || "--"} Hz
               </p>
-
-              <div className="flex items-center gap-1 justify-end mt-0.5">
-                <Zap className="w-3 h-3 text-accent" />
-                <span className="text-xs font-medium text-accent">
-                  {session.score || "—"}/100
-                </span>
-              </div>
+              <p className="mt-1 text-xs font-bold uppercase text-primary">
+                {session.score || "--"}/100
+              </p>
             </div>
           </div>
         ))}
 
         {sessions.length === 0 && (
-          <div className="px-5 py-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              No sessions yet. Start training!
+          <div className="py-12 text-center">
+            <p className="text-sm font-medium text-muted-foreground">
+              No sessions yet. Start training.
             </p>
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

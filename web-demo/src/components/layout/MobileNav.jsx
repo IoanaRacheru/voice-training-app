@@ -1,44 +1,53 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Mic, User, TrendingUp } from 'lucide-react';
-import DuckMark from './DuckMark';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { MessageSquare, Mic, TrendingUp, User } from "lucide-react";
+import DuckMark from "./DuckMark";
 
 const navItems = [
-  { path: '/', label: 'Training', icon: Mic },
-  { path: '/progress', label: 'Progress', icon: TrendingUp },
-  { path: '/profile', label: 'Profile', icon: User },
+  { path: "/", label: "Training", code: "01", icon: Mic },
+  { path: "/progress", label: "Progress", code: "02", icon: TrendingUp },
+  { path: "/profile", label: "Profile", code: "03", icon: User },
+  { path: "/chatbot", label: "Chatbot", code: "04", icon: MessageSquare },
 ];
 
 export default function MobileNav() {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-6 pb-8">
+    <div className="flex h-full flex-col bg-background">
+      <div className="border-b border-border p-5">
         <div className="flex items-center gap-3">
-          <div className="brand-icon">
+          <span className="brand-icon !h-8 !w-10 !bg-foreground !text-foreground !shadow-none">
             <DuckMark />
-          </div>
+          </span>
           <div>
-            <h1 className="text-lg font-bold text-foreground tracking-tight">VoxShift</h1>
-            <p className="text-xs text-muted-foreground font-medium">Voice Training</p>
+            <h1 className="font-display text-xl uppercase leading-none text-foreground">
+              VoxShift
+            </h1>
+            <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">
+              Voice training
+            </p>
           </div>
         </div>
       </div>
-      <nav className="flex-1 px-3 space-y-1">
-        {navItems.map(({ path, label, icon: Icon }) => {
+
+      <nav className="flex-1 px-3 py-4">
+        {navItems.map(({ path, label, code, icon: Icon }) => {
           const isActive = location.pathname === path;
+
           return (
             <Link
               key={path}
               to={path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              className={`relative flex items-center gap-3 px-3 py-3 text-sm font-bold uppercase ${
                 isActive
-                  ? 'bg-primary text-primary-foreground shadow-[0_8px_16px_rgba(47,42,38,0.10)]'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
+                  ? "bg-white text-foreground"
+                  : "text-muted-foreground hover:bg-white hover:text-foreground"
               }`}
             >
-              <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-foreground' : 'text-muted-foreground'}`} />
+              {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-primary" />}
+              <span className="w-7 font-mono text-[11px]">{code}</span>
+              <Icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
               {label}
             </Link>
           );

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,7 +33,7 @@ export default function ProfileSettings({ user, onUpdate }) {
 
   const toggleFocus = (id) => {
     setFocus((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
@@ -55,91 +55,103 @@ export default function ProfileSettings({ user, onUpdate }) {
   };
 
   return (
-    <div className="rounded-[28px] bg-card border border-border/70 p-6 space-y-6 shadow-[0_14px_28px_rgba(47,42,38,0.08)]">
-      <h3 className="text-lg font-semibold text-foreground">
-        Training Settings
-      </h3>
-
-      <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground">Voice Goal</Label>
-        <Select value={goal} onValueChange={setGoal}>
-          <SelectTrigger className="bg-secondary border-border/70 rounded-[18px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="feminize">Feminize Voice</SelectItem>
-            <SelectItem value="masculinize">Masculinize Voice</SelectItem>
-          </SelectContent>
-        </Select>
+    <section className="bg-white p-6 shadow-[0_24px_70px_rgba(17,17,17,0.07)]">
+      <div className="border-b border-border pb-5">
+        <p className="font-mono text-[11px] uppercase text-muted-foreground">
+          Editable record
+        </p>
+        <h2 className="mt-2 text-2xl font-black uppercase text-foreground">
+          Training settings
+        </h2>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground">
-          Experience Level
-        </Label>
-        <Select value={level} onValueChange={setLevel}>
-          <SelectTrigger className="bg-secondary border-border/70 rounded-[18px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="beginner">Beginner</SelectItem>
-            <SelectItem value="intermediate">Intermediate</SelectItem>
-            <SelectItem value="advanced">Advanced</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <div className="grid gap-7 pt-6">
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase text-muted-foreground">
+              Voice Goal
+            </Label>
+            <Select value={goal} onValueChange={setGoal}>
+              <SelectTrigger className="h-11 rounded-[2px] border border-border bg-white font-semibold shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="feminize">Feminize Voice</SelectItem>
+                <SelectItem value="masculinize">Masculinize Voice</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="space-y-3">
-        <Label className="text-sm text-muted-foreground">
-          Target Pitch Range
-        </Label>
-        <Slider
-          value={pitchRange}
-          onValueChange={setPitchRange}
-          min={80}
-          max={300}
-          step={5}
-          className="py-2"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{pitchRange[0]}Hz</span>
-          <span>{pitchRange[1]}Hz</span>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase text-muted-foreground">
+              Experience Level
+            </Label>
+            <Select value={level} onValueChange={setLevel}>
+              <SelectTrigger className="h-11 rounded-[2px] border border-border bg-white font-semibold shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <Label className="text-sm text-muted-foreground">Training Focus</Label>
-
-        <div className="grid grid-cols-2 gap-3">
-          {focusAreas.map(({ id, label }) => (
-            <label
-              key={id}
-              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                focus.includes(id)
-                  ? "bg-primary/35 border-primary"
-                  : "bg-secondary border-border/70 hover:border-chart-2"
-              }`}
-            >
-              <Checkbox
-                checked={focus.includes(id)}
-                onCheckedChange={() => toggleFocus(id)}
-              />
-              <span className="text-sm font-medium text-foreground">
-                {label}
-              </span>
-            </label>
-          ))}
+        <div className="border-t border-border pt-6">
+          <div className="flex items-center justify-between gap-3">
+            <Label className="text-xs font-bold uppercase text-muted-foreground">
+              Target Pitch Range
+            </Label>
+            <span className="font-mono text-xs font-bold text-primary">
+              {pitchRange[0]} Hz - {pitchRange[1]} Hz
+            </span>
+          </div>
+          <Slider
+            value={pitchRange}
+            onValueChange={setPitchRange}
+            min={80}
+            max={300}
+            step={5}
+            className="py-5"
+          />
         </div>
-      </div>
 
-      <Button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full bg-primary text-primary-foreground hover:bg-accent rounded-[20px] h-11 shadow-[0_12px_20px_rgba(47,42,38,0.10)]"
-      >
-        <Save className="w-4 h-4 mr-2" />
-        {saving ? "Saving..." : "Save Settings"}
-      </Button>
-    </div>
+        <div className="space-y-3 border-t border-border pt-6">
+          <Label className="text-xs font-bold uppercase text-muted-foreground">
+            Training Focus
+          </Label>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {focusAreas.map(({ id, label }) => {
+              const selected = focus.includes(id);
+
+              return (
+                <label
+                  key={id}
+                  className={`flex cursor-pointer items-center gap-3 border p-3 transition-colors ${
+                    selected
+                      ? "border-primary bg-primary/5 text-foreground"
+                      : "border-border bg-white text-foreground hover:border-foreground"
+                  }`}
+                >
+                  <Checkbox
+                    checked={selected}
+                    onCheckedChange={() => toggleFocus(id)}
+                  />
+                  <span className="text-sm font-bold">{label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <Button onClick={handleSave} disabled={saving} className="h-11 w-full md:w-auto md:px-8">
+          <Save className="h-4 w-4" />
+          {saving ? "Saving" : "Save settings"}
+        </Button>
+      </div>
+    </section>
   );
 }

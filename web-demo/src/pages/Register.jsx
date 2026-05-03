@@ -26,7 +26,7 @@ export default function Register({ onGoToLogin }) {
     }
 
       try {
-        register();
+        register({ username, email });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed.");
     }
