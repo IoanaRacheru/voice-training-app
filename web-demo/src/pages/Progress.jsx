@@ -54,10 +54,10 @@ export default function Progress() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center py-24 gap-4"
+          className="rounded-[28px] bg-card border border-border/70 flex flex-col items-center justify-center py-24 gap-4 shadow-[0_14px_28px_rgba(47,42,38,0.08)]"
         >
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Activity className="w-8 h-8 text-primary" />
+          <div className="w-16 h-16 rounded-[24px] bg-primary/40 flex items-center justify-center">
+            <Activity className="w-8 h-8 text-foreground" />
           </div>
 
           <div className="text-center">

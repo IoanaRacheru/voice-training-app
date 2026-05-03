@@ -22,23 +22,23 @@ export default function PitchChart({ data, targetRange }) {
         <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
           <defs>
             <linearGradient id="pitchGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(262 80% 60%)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(262 80% 60%)" stopOpacity={0} />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(230 18% 15%)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
 
           <XAxis
             dataKey="time"
-            tick={{ fill: 'hsl(220 10% 45%)', fontSize: 11 }}
-            axisLine={{ stroke: 'hsl(230 18% 15%)' }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+            axisLine={{ stroke: 'hsl(var(--border))' }}
             tickLine={false}
           />
 
           <YAxis
             domain={[80, 300]}
-            tick={{ fill: 'hsl(220 10% 45%)', fontSize: 11 }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => `${v}Hz`}
@@ -48,13 +48,13 @@ export default function PitchChart({ data, targetRange }) {
             <>
               <ReferenceLine
                 y={targetRange[0]}
-                stroke="hsl(180 60% 45%)"
+                stroke="hsl(var(--accent))"
                 strokeDasharray="4 4"
                 strokeOpacity={0.5}
               />
               <ReferenceLine
                 y={targetRange[1]}
-                stroke="hsl(180 60% 45%)"
+                stroke="hsl(var(--accent))"
                 strokeDasharray="4 4"
                 strokeOpacity={0.5}
               />
@@ -64,13 +64,13 @@ export default function PitchChart({ data, targetRange }) {
           <Area
             type="monotone"
             dataKey="pitch"
-            stroke="hsl(262 80% 60%)"
+            stroke="hsl(var(--primary))"
             strokeWidth={2}
             fill="url(#pitchGradient)"
             dot={false}
             activeDot={{
               r: 4,
-              fill: 'hsl(262 80% 60%)',
+              fill: 'hsl(var(--primary))',
               stroke: 'white',
               strokeWidth: 2,
             }}

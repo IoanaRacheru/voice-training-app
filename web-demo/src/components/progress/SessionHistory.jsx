@@ -18,8 +18,8 @@ const exerciseLabels = {
  */
 export default function SessionHistory({ sessions }) {
   return (
-    <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
-      <div className="p-5 border-b border-border/50">
+    <div className="rounded-[28px] bg-card border border-border/70 overflow-hidden shadow-[0_14px_28px_rgba(47,42,38,0.08)]">
+      <div className="p-5 border-b border-border/60">
         <h3 className="text-sm font-semibold text-foreground">
           Past Sessions
         </h3>
@@ -32,11 +32,11 @@ export default function SessionHistory({ sessions }) {
         {sessions.map((session, i) => (
           <div
             key={session.id || i}
-            className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors"
+            className="flex items-center gap-4 px-5 py-4 hover:bg-secondary/80 transition-colors"
           >
             {/* Icon */}
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Activity className="w-4 h-4 text-primary" />
+            <div className="w-10 h-10 rounded-[18px] bg-primary/35 flex items-center justify-center shrink-0">
+              <Activity className="w-4 h-4 text-foreground" />
             </div>
 
             {/* Info */}

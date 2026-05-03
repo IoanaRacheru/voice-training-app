@@ -1,10 +1,11 @@
 import React from "react";
-import { Bell, Menu, Waves, LogOut } from "lucide-react";
+import { Bell, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MobileNav from "./MobileNav";
 import { useAuth } from "../../lib/AuthContext";
+import DuckMark from "./DuckMark";
 
 export default function Topbar() {
   const { user, logout } = useAuth();
@@ -14,7 +15,7 @@ export default function Topbar() {
     : "U";
 
   return (
-    <header className="sticky top-0 z-30 h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+    <header className="sticky top-4 z-30 h-16 mx-4 md:mx-8 mt-4 rounded-[24px] border border-border/70 bg-secondary/95 shadow-[0_12px_24px_rgba(47,42,38,0.08)]">
       <div className="flex items-center justify-between h-full px-4 md:px-8">
         
         {/* MOBILE LEFT */}
@@ -39,8 +40,8 @@ export default function Topbar() {
           </Sheet>
 
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Waves className="w-3.5 h-3.5 text-white" />
+            <div className="brand-icon !w-8 !h-8 !rounded-[14px] !text-[22px]">
+              <DuckMark />
             </div>
             <span className="font-bold text-sm">VoxShift</span>
           </div>
@@ -76,8 +77,8 @@ export default function Topbar() {
             </div>
 
             {/* AVATAR */}
-            <Avatar className="w-9 h-9 border-2 border-primary/30">
-              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground text-xs font-semibold">
+            <Avatar className="w-9 h-9 border-2 border-primary bg-secondary">
+              <AvatarFallback className="bg-primary/45 text-foreground text-xs font-semibold">
                 {initials}
               </AvatarFallback>
             </Avatar>

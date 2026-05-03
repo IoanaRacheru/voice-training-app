@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function ScoreChart({ data }) {
   return (
-    <div className="rounded-2xl bg-card border border-border/50 p-5">
+    <div className="rounded-[28px] bg-card border border-border/70 p-5 shadow-[0_14px_28px_rgba(47,42,38,0.08)]">
       <h3 className="text-sm font-semibold text-foreground mb-1">
         Score Improvement
       </h3>
@@ -45,12 +45,12 @@ export default function ScoreChart({ data }) {
               <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="0%"
-                  stopColor="hsl(180 60% 45%)"
+                  stopColor="hsl(var(--accent))"
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="100%"
-                  stopColor="hsl(180 60% 45%)"
+                  stopColor="hsl(var(--accent))"
                   stopOpacity={0.3}
                 />
               </linearGradient>
@@ -58,20 +58,20 @@ export default function ScoreChart({ data }) {
 
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="hsl(230 18% 15%)"
+              stroke="hsl(var(--border))"
               vertical={false}
             />
 
             <XAxis
               dataKey="date"
-              tick={{ fill: "hsl(220 10% 45%)", fontSize: 11 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
             />
 
             <YAxis
               domain={[0, 100]}
-              tick={{ fill: "hsl(220 10% 45%)", fontSize: 11 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
             />

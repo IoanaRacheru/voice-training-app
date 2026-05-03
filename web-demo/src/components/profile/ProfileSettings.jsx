@@ -55,7 +55,7 @@ export default function ProfileSettings({ user, onUpdate }) {
   };
 
   return (
-    <div className="rounded-2xl bg-card border border-border/50 p-6 space-y-6">
+    <div className="rounded-[28px] bg-card border border-border/70 p-6 space-y-6 shadow-[0_14px_28px_rgba(47,42,38,0.08)]">
       <h3 className="text-lg font-semibold text-foreground">
         Training Settings
       </h3>
@@ -63,7 +63,7 @@ export default function ProfileSettings({ user, onUpdate }) {
       <div className="space-y-2">
         <Label className="text-sm text-muted-foreground">Voice Goal</Label>
         <Select value={goal} onValueChange={setGoal}>
-          <SelectTrigger className="bg-muted border-border/50 rounded-xl">
+          <SelectTrigger className="bg-secondary border-border/70 rounded-[18px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -78,7 +78,7 @@ export default function ProfileSettings({ user, onUpdate }) {
           Experience Level
         </Label>
         <Select value={level} onValueChange={setLevel}>
-          <SelectTrigger className="bg-muted border-border/50 rounded-xl">
+          <SelectTrigger className="bg-secondary border-border/70 rounded-[18px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -116,8 +116,8 @@ export default function ProfileSettings({ user, onUpdate }) {
               key={id}
               className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                 focus.includes(id)
-                  ? "bg-primary/10 border-primary/30"
-                  : "bg-muted/50 border-border/50 hover:border-border"
+                  ? "bg-primary/35 border-primary"
+                  : "bg-secondary border-border/70 hover:border-chart-2"
               }`}
             >
               <Checkbox
@@ -135,7 +135,7 @@ export default function ProfileSettings({ user, onUpdate }) {
       <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 rounded-xl h-11"
+        className="w-full bg-primary text-primary-foreground hover:bg-accent rounded-[20px] h-11 shadow-[0_12px_20px_rgba(47,42,38,0.10)]"
       >
         <Save className="w-4 h-4 mr-2" />
         {saving ? "Saving..." : "Save Settings"}

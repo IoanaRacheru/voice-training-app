@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Mic, User, TrendingUp, Waves } from 'lucide-react';
+import { Mic, User, TrendingUp } from 'lucide-react';
+import DuckMark from './DuckMark';
 
 const navItems = [
   { path: '/', label: 'Training', icon: Mic },
@@ -15,8 +16,8 @@ export default function MobileNav() {
     <div className="flex flex-col h-full">
       <div className="p-6 pb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <Waves className="w-5 h-5 text-white" />
+          <div className="brand-icon">
+            <DuckMark />
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground tracking-tight">VoxShift</h1>
@@ -33,11 +34,11 @@ export default function MobileNav() {
               to={path}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-primary text-primary-foreground shadow-[0_8px_16px_rgba(47,42,38,0.10)]'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent'
               }`}
             >
-              <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+              <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-foreground' : 'text-muted-foreground'}`} />
               {label}
             </Link>
           );
