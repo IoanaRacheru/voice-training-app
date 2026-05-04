@@ -1,4 +1,4 @@
-.PHONY: install-frontend run-frontend lint-frontend check-frontend dev
+.PHONY: install-frontend run-frontend lint-frontend check-frontend clean-frontend dev clean
 
 install-frontend:
 	$(MAKE) -C web-demo install
@@ -12,5 +12,10 @@ lint-frontend:
 check-frontend:
 	$(MAKE) -C web-demo check
 
+clean-frontend:
+	$(MAKE) -C web-demo clean
+
 dev:
 	$(MAKE) -C web-demo dev
+
+clean: clean-frontend
