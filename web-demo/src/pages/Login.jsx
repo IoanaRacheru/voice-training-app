@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import DuckMark from "@/components/layout/DuckMark";
 
 /**
  * @param {{ onGoToRegister: () => void }} props
@@ -29,10 +30,12 @@ export default function Login({ onGoToRegister }) {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <div className="brand-icon big">⌁</div>
+        <div className="brand-icon big">
+          <DuckMark />
+        </div>
 
         <h1>Welcome back</h1>
-        <p>Login to continue your voice training journey.</p>
+        <p>Login to continue your voice training practice.</p>
 
         {error && <div className="auth-error">{error}</div>}
 

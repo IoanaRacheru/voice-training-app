@@ -13,16 +13,12 @@ import GoalBadge from "@/components/training/GoalBadge";
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 
-/**
- * Calculate score
- */
 function computeScore(pitch, targetRange) {
   if (!pitch || !targetRange) return null;
 
   const [low, high] = targetRange;
   const center = (low + high) / 2;
   const margin = (high - low) / 2;
-
   const dist = Math.abs(pitch - center);
 
   return Math.max(
@@ -31,18 +27,23 @@ function computeScore(pitch, targetRange) {
   );
 }
 
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const secs = (seconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${secs}`;
+}
+
 export default function Training() {
   const { user } = useAuth();
   const [exerciseType] = useState("pitch");
 
-  // Demo: fallback values since user object is not available
   const goal = user?.voice_goal || "feminize";
   const targetRange =
-  user?.target_pitch_range?.length === 2
-    ? user.target_pitch_range
-    : goal === "feminize"
-    ? [180, 240]
-    : [100, 150];
+    user?.target_pitch_range?.length === 2
+      ? user.target_pitch_range
+      : goal === "feminize"
+        ? [180, 240]
+        : [100, 150];
 
   const {
     isRecording,
@@ -59,6 +60,7 @@ export default function Training() {
 
   const safePitch = currentPitch ?? 0;
   const score = computeScore(currentPitch, targetRange) ?? 0;
+  const targetCenter = Math.round((targetRange[0] + targetRange[1]) / 2);
 
   const handleToggle = async () => {
     if (isRecording) {
@@ -79,7 +81,6 @@ export default function Training() {
           goal,
         };
 
-
         let existingSessions = [];
         try {
           const parsed = JSON.parse(localStorage.getItem("voiceSessions") || "[]");
@@ -96,7 +97,7 @@ export default function Training() {
         );
 
         toast.success(
-          `Session saved! Avg pitch: ${averagePitch}Hz · Score: ${sessionScore}/100`
+          `Session saved. Avg pitch: ${averagePitch}Hz - Score: ${sessionScore}/100`
         );
       }
     } else {
@@ -105,60 +106,102 @@ export default function Training() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* HEADER */}
-      <motion.div
+    <div className="mx-auto max-w-6xl space-y-10">
+      <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between"
       >
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-            Voice Training
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">
+              Module 03
+            </span>
+            <GoalBadge goal={goal} />
+          </div>
+
+          <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">
+            Training session
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Practice and track your vocal progress
+          <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-muted-foreground">
+            Focus on one sustained tone. Record, monitor the essentials, then review the take.
           </p>
         </div>
 
-        <GoalBadge goal={goal} />
-      </motion.div>
+        <div className="text-sm font-semibold text-muted-foreground md:text-right">
+          Target <span className="font-bold text-foreground">{targetRange[0]}-{targetRange[1]} Hz</span>
+        </div>
+      </motion.header>
 
-      {/* ERROR */}
       {error && (
-        <div className="rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-3">
+        <div className="border-l-4 border-destructive bg-white px-4 py-3 text-sm font-bold text-destructive shadow-[0_12px_34px_rgba(17,17,17,0.06)]">
           {error}
         </div>
       )}
 
-      {/* RECORDING INDICATOR */}
-      {isRecording && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center gap-2 text-sm text-destructive font-medium"
-        >
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive" />
-          </span>
-          Recording Live
-        </motion.div>
-      )}
-
-      {/* WAVEFORM */}
-      <motion.div
+      <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="rounded-2xl bg-card border border-border/50 p-5 glow-purple"
+        transition={{ delay: 0.08 }}
+        className="bg-white shadow-[0_24px_70px_rgba(17,17,17,0.08)]"
       >
-        <WaveformVisualizer
-          isRecording={isRecording}
-          waveformData={waveformData ? Array.from(waveformData) : []}
-        />
+        <div className="grid gap-8 p-5 md:p-8 lg:grid-cols-[minmax(0,1fr)_270px]">
+          <div className="space-y-7">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
+              <div>
+                <p className="font-mono text-[11px] uppercase text-muted-foreground">
+                  Recording deck
+                </p>
+                <h2 className="mt-1 text-2xl font-black uppercase text-foreground">
+                  Live take
+                </h2>
+              </div>
 
-        <div className="mt-5">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2.5 w-2.5 ${isRecording ? "animate-pulse-glow bg-primary" : "bg-muted"}`}
+                />
+                <span className="font-mono text-xs font-bold uppercase text-muted-foreground">
+                  {isRecording ? "Recording" : "Ready"}
+                </span>
+              </div>
+            </div>
+
+            <WaveformVisualizer
+              isRecording={isRecording}
+              waveformData={waveformData ? Array.from(waveformData) : []}
+            />
+
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div>
+                <p className="font-mono text-[11px] uppercase text-muted-foreground">
+                  Pitch
+                </p>
+                <p className="mt-2 font-display text-4xl uppercase leading-none">
+                  {isRecording ? `${safePitch} Hz` : "-- Hz"}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-mono text-[11px] uppercase text-muted-foreground">
+                  Time
+                </p>
+                <p className="mt-2 font-display text-4xl uppercase leading-none">
+                  {formatTime(duration)}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-mono text-[11px] uppercase text-muted-foreground">
+                  Score
+                </p>
+                <p className="mt-2 font-display text-4xl uppercase leading-none">
+                  {isRecording ? score : "--"}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <RecordingControls
             isRecording={isRecording}
             onToggle={handleToggle}
@@ -166,40 +209,65 @@ export default function Training() {
             duration={duration}
           />
         </div>
-      </motion.div>
+      </motion.section>
 
-      {/* FEEDBACK */}
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-mono text-[11px] uppercase text-muted-foreground">
+                Secondary monitor
+              </p>
+              <h3 className="mt-1 text-xl font-black uppercase text-foreground">
+                Pitch graph
+              </h3>
+            </div>
+            <span className="text-xs font-bold uppercase text-muted-foreground">
+              Center {targetCenter} Hz
+            </span>
+          </div>
+
+          {pitchData.length > 0 ? (
+            <PitchChart data={pitchData} targetRange={targetRange} />
+          ) : (
+            <div className="flex h-48 items-center justify-center bg-background p-4 text-center text-sm font-medium text-muted-foreground">
+              Start recording to see pitch in real time.
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-6">
+          <div className="border-t border-border pt-5">
+            <h3 className="text-sm font-black uppercase text-foreground">
+              Exercise notes
+            </h3>
+            <p className="mt-3 text-sm font-medium leading-6 text-muted-foreground">
+              Maintain a steady tone. Avoid throat pressure. Review peaks before changing the target.
+            </p>
+          </div>
+
+          <div className="border-t border-border pt-5">
+            <h3 className="text-sm font-black uppercase text-foreground">
+              Specs
+            </h3>
+            <dl className="mt-3 grid grid-cols-[84px_1fr] gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Name</dt>
+              <dd className="text-right font-semibold">Sustained pitch</dd>
+              <dt className="text-muted-foreground">Mode</dt>
+              <dd className="text-right font-semibold capitalize">{goal}</dd>
+              <dt className="text-muted-foreground">Target</dt>
+              <dd className="text-right font-semibold">{targetRange[0]}-{targetRange[1]} Hz</dd>
+            </dl>
+          </div>
+        </aside>
+      </section>
+
       <FeedbackCards
         currentPitch={safePitch}
         targetRange={targetRange}
         score={score}
         isRecording={isRecording}
       />
-
-      {/* GRAPH */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card border border-border/50 p-5"
-      >
-        <div className="mb-4">
-          <h2 className="text-sm font-semibold text-foreground">
-            Live Pitch Graph
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Target: {targetRange[0]}–{targetRange[1]}Hz
-          </p>
-        </div>
-
-        {pitchData.length > 0 ? (
-          <PitchChart data={pitchData} targetRange={targetRange} />
-        ) : (
-          <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
-            Start recording to see your pitch in real time
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 }

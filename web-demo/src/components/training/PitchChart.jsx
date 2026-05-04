@@ -1,81 +1,72 @@
-import React from 'react';
+import React from "react";
 import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
   XAxis,
   YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  ReferenceLine,
-  Area,
-  AreaChart,
-} from 'recharts';
-
+} from "recharts";
 /**
  * @param {{
- *   data: Array<{ time: string | number; pitch: number }>;
- *   targetRange?: number[];
+ *   data: Array<{ time: string | number, pitch: number }>,
+ *   targetRange?: [number, number]
  * }} props
  */
 export default function PitchChart({ data, targetRange }) {
   return (
-    <div className="w-full h-48">
+    <div className="h-48 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-          <defs>
-            <linearGradient id="pitchGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(262 80% 60%)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(262 80% 60%)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(230 18% 15%)" vertical={false} />
+        <LineChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" vertical={false} />
 
           <XAxis
             dataKey="time"
-            tick={{ fill: 'hsl(220 10% 45%)', fontSize: 11 }}
-            axisLine={{ stroke: 'hsl(230 18% 15%)' }}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }}
+            axisLine={{ stroke: "hsl(var(--foreground))" }}
             tickLine={false}
           />
 
           <YAxis
             domain={[80, 300]}
-            tick={{ fill: 'hsl(220 10% 45%)', fontSize: 11 }}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) => `${v}Hz`}
+            tickFormatter={(value) => `${value}Hz`}
           />
 
           {targetRange && (
             <>
               <ReferenceLine
                 y={targetRange[0]}
-                stroke="hsl(180 60% 45%)"
-                strokeDasharray="4 4"
-                strokeOpacity={0.5}
+                stroke="hsl(var(--primary))"
+                strokeDasharray="6 4"
+                strokeWidth={2}
               />
               <ReferenceLine
                 y={targetRange[1]}
-                stroke="hsl(180 60% 45%)"
-                strokeDasharray="4 4"
-                strokeOpacity={0.5}
+                stroke="hsl(var(--primary))"
+                strokeDasharray="6 4"
+                strokeWidth={2}
               />
             </>
           )}
 
-          <Area
+          <Line
             type="monotone"
             dataKey="pitch"
-            stroke="hsl(262 80% 60%)"
-            strokeWidth={2}
-            fill="url(#pitchGradient)"
+            stroke="hsl(var(--foreground))"
+            strokeWidth={3}
             dot={false}
             activeDot={{
               r: 4,
-              fill: 'hsl(262 80% 60%)',
-              stroke: 'white',
+              fill: "hsl(var(--primary))",
+              stroke: "hsl(var(--foreground))",
               strokeWidth: 2,
             }}
           />
-        </AreaChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

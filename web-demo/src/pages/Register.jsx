@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../lib/AuthContext";
+import DuckMark from "@/components/layout/DuckMark";
 
 /**
  * @param {{ onGoToLogin: () => void }} props
@@ -25,7 +26,7 @@ export default function Register({ onGoToLogin }) {
     }
 
       try {
-        register();
+        register({ username, email });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed.");
     }
@@ -34,7 +35,9 @@ export default function Register({ onGoToLogin }) {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <div className="brand-icon big">⌁</div>
+        <div className="brand-icon big">
+          <DuckMark />
+        </div>
 
         <h1>Create account</h1>
         <p>Set up your account before creating your voice profile.</p>
