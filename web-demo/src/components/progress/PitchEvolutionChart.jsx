@@ -2,96 +2,71 @@
 
 import React from "react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl bg-card border border-border/50 px-3 py-2 shadow-xl">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-bold text-primary">
-        {payload[0].value}Hz avg
-      </p>
+    <div className="border border-border bg-white px-3 py-2 shadow-[0_12px_32px_rgba(17,17,17,0.09)]">
+      <p className="font-mono text-[11px] uppercase text-muted-foreground">{label}</p>
+      <p className="text-sm font-bold text-primary">{payload[0].value} Hz avg</p>
     </div>
   );
 };
 
 export default function PitchEvolutionChart({ data }) {
   return (
-    <div className="rounded-2xl bg-card border border-border/50 p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-1">
-        Pitch Evolution
-      </h3>
-      <p className="text-xs text-muted-foreground mb-4">
-        Average pitch per session over time
+    <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+      <p className="font-mono text-[11px] uppercase text-muted-foreground">
+        Pitch
       </p>
+      <h3 className="mt-1 text-xl font-black uppercase text-foreground">
+        Evolution
+      </h3>
 
-      <div className="h-56">
+      <div className="mt-5 h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
-          >
-            <defs>
-              <linearGradient id="evoGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor="hsl(262 80% 60%)"
-                  stopOpacity={0.25}
-                />
-                <stop
-                  offset="100%"
-                  stopColor="hsl(262 80% 60%)"
-                  stopOpacity={0}
-                />
-              </linearGradient>
-            </defs>
-
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(230 18% 15%)"
-              vertical={false}
-            />
+          <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" vertical={false} />
 
             <XAxis
               dataKey="date"
-              tick={{ fill: "hsl(220 10% 45%)", fontSize: 11 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 600 }}
               axisLine={false}
               tickLine={false}
             />
 
             <YAxis
-              tick={{ fill: "hsl(220 10% 45%)", fontSize: 11 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 600 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `${v}Hz`}
+              tickFormatter={(value) => `${value}Hz`}
             />
 
             <Tooltip content={<CustomTooltip />} />
 
-            <Area
+            <Line
               type="monotone"
               dataKey="pitch"
-              stroke="hsl(262 80% 60%)"
+              stroke="hsl(var(--foreground))"
               strokeWidth={2}
-              fill="url(#evoGrad)"
               dot={{
-                fill: "hsl(262 80% 60%)",
+                fill: "hsl(var(--primary))",
                 r: 3,
                 strokeWidth: 0,
               }}
             />
-          </AreaChart>
+          </LineChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </section>
   );
 }
