@@ -9,6 +9,7 @@ import RecordingControls from "@/components/training/RecordingControls";
 import PitchChart from "@/components/training/PitchChart";
 import FeedbackCards from "@/components/training/FeedbackCards";
 import GoalBadge from "@/components/training/GoalBadge";
+import VoiceMetricsPanel from "@/components/training/VoiceMetricsPanel";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
@@ -172,16 +173,12 @@ export default function Training() {
               waveformData={waveformData ? Array.from(waveformData) : []}
             />
 
-            <div className="grid gap-5 sm:grid-cols-3">
-              <div>
-                <p className="font-mono text-[11px] uppercase text-muted-foreground">
-                  Pitch
-                </p>
-                <p className="mt-2 font-display text-4xl uppercase leading-none">
-                  {isRecording ? `${safePitch} Hz` : "-- Hz"}
-                </p>
-              </div>
+            <VoiceMetricsPanel
+              isRecording={isRecording}
+              currentPitch={safePitch}
+            />
 
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <p className="font-mono text-[11px] uppercase text-muted-foreground">
                   Time
