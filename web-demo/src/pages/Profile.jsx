@@ -38,6 +38,9 @@ export default function Profile() {
         >
           <ProfileCard user={user} />
           <ProgressSection user={user} />
+          <div className="lg:pt-6">
+            <VoiceInput user={user} onUpdate={updateUser} />
+          </div>
         </motion.div>
 
         <motion.div
@@ -48,7 +51,6 @@ export default function Profile() {
         >
           <ProfileSettings user={user} onUpdate={updateUser} />
           <ProfileExtension user={user} onUpdate={updateUser} />
-          <VoiceInput user={user} onUpdate={updateUser} />
         </motion.div>
       </div>
     </div>

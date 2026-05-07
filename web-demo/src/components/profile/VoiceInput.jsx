@@ -96,13 +96,13 @@ export default function VoiceInput({ user, onUpdate }) {
         </h2>
       </div>
 
-      <div className="grid gap-4 pt-6 md:grid-cols-[220px_1fr]">
+      <div className="grid gap-3 pt-6">
         <Button
           type="button"
           onClick={handleRecordingToggle}
           aria-label={isRecording ? "Stop recording" : "Record your voice"}
           variant={isRecording ? "destructive" : "default"}
-          className="h-11 rounded-[2px]"
+          className="h-11 w-full rounded-[2px]"
         >
           {isRecording ? (
             <Square className="h-4 w-4" />
@@ -112,7 +112,7 @@ export default function VoiceInput({ user, onUpdate }) {
           {isRecording ? "Stop recording" : "Record your voice"}
         </Button>
 
-        <label className="flex h-11 cursor-pointer items-center gap-3 border border-border bg-background px-3 text-sm font-bold text-foreground transition-colors hover:border-foreground">
+        <label className="flex h-11 w-full cursor-pointer items-center justify-center gap-3 border border-border bg-background px-3 text-sm font-bold uppercase text-foreground transition-colors hover:border-foreground">
           <Upload className="h-4 w-4 text-primary" />
           Upload sample
           <Input

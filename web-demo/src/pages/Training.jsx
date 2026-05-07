@@ -11,6 +11,7 @@ import FeedbackCards from "@/components/training/FeedbackCards";
 import GoalBadge from "@/components/training/GoalBadge";
 import VoiceMetricsPanel from "@/components/training/VoiceMetricsPanel";
 import ReadingExercises from "@/components/training/ReadingExercises";
+import { VoiceAnalyticsDashboard } from "@/components/voice-analytics";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
@@ -264,6 +265,19 @@ export default function Training() {
             </dl>
           </div>
         </aside>
+      </section>
+
+      <section className="space-y-6">
+        <div>
+          <p className="font-mono text-[11px] uppercase text-muted-foreground">
+            Voice Analytics - Dashboard
+          </p>
+          <h2 className="mt-1 text-2xl font-black uppercase text-foreground">
+            Voice analytics
+          </h2>
+        </div>
+
+        <VoiceAnalyticsDashboard />
       </section>
 
       <ReadingExercises />
