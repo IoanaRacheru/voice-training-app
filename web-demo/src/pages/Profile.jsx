@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import ProfileCard from "@/components/profile/ProfileCard";
 import ProfileSettings from "@/components/profile/ProfileSettings";
 import ProgressSection from "@/components/profile/ProgressSection";
+import ProfileExtension from "@/components/profile/ProfileExtension";
+import VoiceInput from "@/components/profile/VoiceInput";
 
 export default function Profile() {
   const { user, updateUser } = useOutletContext();
@@ -39,11 +41,14 @@ export default function Profile() {
         </motion.div>
 
         <motion.div
+          className="space-y-8"
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.12 }}
         >
           <ProfileSettings user={user} onUpdate={updateUser} />
+          <ProfileExtension user={user} onUpdate={updateUser} />
+          <VoiceInput user={user} onUpdate={updateUser} />
         </motion.div>
       </div>
     </div>

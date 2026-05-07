@@ -5,10 +5,21 @@ import { createContext, useContext, useState } from "react";
  *   id: string;
  *   username: string;
  *   email?: string;
- *   voice_goal?: "feminize" | "masculinize";
+ *   voice_goal?: "feminize" | "masculinize" | "feminine" | "masculine" | "androgynous" | "custom";
  *   experience_level?: "beginner" | "intermediate" | "advanced";
  *   target_pitch_range?: number[];
  *   training_focus?: string[];
+ *   identity_background?: string;
+ *   personalization_goals?: string[];
+ *   age?: string | number;
+ *   puberty_background?: string;
+ *   initial_voice_sample?: {
+ *     name: string;
+ *     type?: string;
+ *     size?: number;
+ *     source?: "recording" | "upload";
+ *     saved_at?: string;
+ *   };
  * }} User
  *
  * @typedef {{
@@ -51,7 +62,7 @@ export const AuthProvider = ({ children }) => {
       id,
       username: id.includes("@") ? id.split("@")[0] : id,
       email: id.includes("@") ? id : "",
-      voice_goal: "feminize",
+      voice_goal: "feminine",
       experience_level: "beginner",
       target_pitch_range: [180, 240],
       training_focus: ["pitch"],
