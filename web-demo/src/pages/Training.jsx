@@ -10,6 +10,7 @@ import PitchChart from "@/components/training/PitchChart";
 import FeedbackCards from "@/components/training/FeedbackCards";
 import GoalBadge from "@/components/training/GoalBadge";
 import VoiceMetricsPanel from "@/components/training/VoiceMetricsPanel";
+import ReadingExercises from "@/components/training/ReadingExercises";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
@@ -38,13 +39,19 @@ export default function Training() {
   const { user } = useAuth();
   const [exerciseType] = useState("pitch");
 
-  const goal = user?.voice_goal || "feminize";
+  const goal = user?.voice_goal || "feminine";
+  const normalizedGoal =
+    goal === "feminize" ? "feminine" : goal === "masculinize" ? "masculine" : goal;
   const targetRange =
     user?.target_pitch_range?.length === 2
       ? user.target_pitch_range
-      : goal === "feminize"
+      : normalizedGoal === "feminine"
         ? [180, 240]
-        : [100, 150];
+        : normalizedGoal === "androgynous"
+          ? [145, 185]
+          : normalizedGoal === "custom"
+            ? [120, 220]
+            : [100, 150];
 
   const {
     isRecording,
@@ -118,7 +125,7 @@ export default function Training() {
             <span className="font-mono text-[11px] uppercase text-muted-foreground">
               Module 03
             </span>
-            <GoalBadge goal={goal} />
+            <GoalBadge goal={normalizedGoal} />
           </div>
 
           <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">
@@ -258,6 +265,8 @@ export default function Training() {
           </div>
         </aside>
       </section>
+
+      <ReadingExercises />
 
       <FeedbackCards
         currentPitch={safePitch}
