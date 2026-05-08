@@ -4,11 +4,10 @@ import React from "react";
 import { Info } from "lucide-react";
 
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const metrics = [
   {
@@ -51,47 +50,45 @@ const metrics = [
 
 export default function VoiceMetricsPanel({ isRecording, currentPitch }) {
   return (
-    <TooltipProvider delayDuration={150}>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {metrics.map((metric) => (
-          <div
-            key={metric.key}
-            className="min-h-[126px] border border-border bg-background p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 ${metric.accent}`} />
-                <p className="truncate font-mono text-[11px] uppercase text-muted-foreground">
-                  {metric.label}
-                </p>
-              </div>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={`${metric.label} details`}
-                    className="grid h-6 w-6 shrink-0 place-items-center text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[220px] leading-5">
-                  {metric.hint}
-                </TooltipContent>
-              </Tooltip>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      {metrics.map((metric) => (
+        <div
+          key={metric.key}
+          className="min-h-[126px] border border-border bg-background p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className={`h-2.5 w-2.5 shrink-0 ${metric.accent}`} />
+              <p className="truncate font-mono text-[11px] uppercase text-muted-foreground">
+                {metric.label}
+              </p>
             </div>
 
-            <p className="mt-5 font-display text-3xl uppercase leading-none text-foreground">
-              {metric.value({ isRecording, currentPitch })}
-            </p>
-
-            <p className="mt-3 text-xs font-semibold uppercase text-muted-foreground">
-              {metric.key === "pitch" ? "Live" : "Planned"}
-            </p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${metric.label} details`}
+                  className="grid h-6 w-6 shrink-0 place-items-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 rounded-[2px] px-3 py-2 text-xs font-semibold leading-5">
+                {metric.hint}
+              </PopoverContent>
+            </Popover>
           </div>
-        ))}
-      </div>
-    </TooltipProvider>
+
+          <p className="mt-5 font-display text-3xl uppercase leading-none text-foreground">
+            {metric.value({ isRecording, currentPitch })}
+          </p>
+
+          <p className="mt-3 text-xs font-semibold uppercase text-muted-foreground">
+            {metric.key === "pitch" ? "Live" : "Planned"}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
