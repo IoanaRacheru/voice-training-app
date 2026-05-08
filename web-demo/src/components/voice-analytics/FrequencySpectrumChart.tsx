@@ -1,0 +1,53 @@
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  FrequencyBand,
+  frequencySpectrumData,
+} from "./mockVoiceAnalyticsData";
+import { VoiceChartCard } from "./VoiceChartCard";
+
+type FrequencySpectrumChartProps = {
+  data?: FrequencyBand[];
+  title?: string;
+};
+
+const chartConfig = {
+  amplitude: {
+    label: "Amplitude",
+    color: "#dc2626",
+  },
+};
+
+export function FrequencySpectrumChart({
+  data = frequencySpectrumData,
+  title = "Frequency Spectrum",
+}: FrequencySpectrumChartProps) {
+  return (
+    <VoiceChartCard
+      title={title}
+      description="Snapshot of amplitude distribution across frequency bands."
+    >
+      <ChartContainer config={chartConfig} className="h-[240px] w-full">
+        <BarChart data={data} margin={{ left: 4, right: 8, top: 12 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="frequency" tickLine={false} axisLine={false} />
+          <YAxis tickLine={false} axisLine={false} width={28} domain={[0, 100]} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Bar dataKey="amplitude" fill="var(--color-amplitude)" radius={[3, 3, 0, 0]} />
+        </BarChart>
+      </ChartContainer>
+    </VoiceChartCard>
+  );
+}
+
