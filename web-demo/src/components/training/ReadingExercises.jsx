@@ -1,7 +1,8 @@
 // @ts-nocheck
 
 import React, { useState } from "react";
-import { BookOpen, Check } from "lucide-react";
+import { BookOpen, Check, Pin } from "lucide-react";
+import FloatingReadingBubble from "@/components/training/FloatingReadingBubble";
 
 const exercises = [
   {
@@ -65,6 +66,7 @@ const exercises = [
 export default function ReadingExercises() {
   const [selectedId, setSelectedId] = useState(exercises[0].id);
   const [completedCues, setCompletedCues] = useState([]);
+  const [pinnedExercise, setPinnedExercise] = useState(null);
 
   const selectedExercise =
     exercises.find((exercise) => exercise.id === selectedId) || exercises[0];
@@ -83,97 +85,123 @@ export default function ReadingExercises() {
   };
 
   return (
-    <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)] md:p-6">
-      <div className="flex flex-col gap-4 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="font-mono text-[11px] uppercase text-muted-foreground">
-            Guided practice
-          </p>
-          <h2 className="mt-1 text-2xl font-black uppercase text-foreground">
-            Reading exercises
-          </h2>
-        </div>
-        <div className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground">
-          <BookOpen className="h-4 w-4 text-primary" />
-          {selectedExercise.pace} pace
-        </div>
-      </div>
-
-      <div className="grid gap-6 pt-6 lg:grid-cols-[280px_1fr]">
-        <div className="grid gap-2" role="listbox" aria-label="Reading exercises">
-          {exercises.map((exercise) => {
-            const selected = exercise.id === selectedExercise.id;
-
-            return (
-              <button
-                key={exercise.id}
-                type="button"
-                aria-selected={selected}
-                onClick={() => handleSelect(exercise.id)}
-                className={`border px-4 py-3 text-left transition-colors ${
-                  selected
-                    ? "border-primary bg-primary/5 text-foreground"
-                    : "border-border bg-white text-muted-foreground hover:border-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="block text-sm font-black uppercase">
-                  {exercise.title}
-                </span>
-                <span className="mt-1 block text-xs font-bold uppercase">
-                  {exercise.pace}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="grid gap-5">
-          <article className="border border-border bg-background p-5 md:p-6">
-            <h3 className="text-xl font-black uppercase text-foreground">
-              {selectedExercise.title}
-            </h3>
-            <p className="mt-4 text-base font-semibold leading-8 text-foreground md:text-lg">
-              {selectedExercise.text}
-            </p>
-          </article>
-
+    <>
+      <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)] md:p-6">
+        <div className="flex flex-col gap-4 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h3 className="text-sm font-black uppercase text-foreground">
-              Focus cues
-            </h3>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {selectedExercise.focusCues.map((cue) => {
-                const completed = completedCues.includes(cue);
+            <p className="font-mono text-[11px] uppercase text-muted-foreground">
+              Guided practice
+            </p>
+            <h2 className="mt-1 text-2xl font-black uppercase text-foreground">
+              Reading exercises
+            </h2>
+          </div>
+          <div className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground">
+            <BookOpen className="h-4 w-4 text-primary" />
+            {selectedExercise.pace} pace
+          </div>
+        </div>
 
-                return (
+        <div className="grid gap-6 pt-6 lg:grid-cols-[280px_1fr]">
+          <div className="grid gap-2" role="listbox" aria-label="Reading exercises">
+            {exercises.map((exercise) => {
+              const selected = exercise.id === selectedExercise.id;
+              const pinned = pinnedExercise?.id === exercise.id;
+
+              return (
+                <div
+                  key={exercise.id}
+                  className={`grid grid-cols-[1fr_44px] border transition-colors ${
+                    selected
+                      ? "border-primary bg-primary/5 text-foreground"
+                      : "border-border bg-white text-muted-foreground hover:border-foreground hover:text-foreground"
+                  }`}
+                >
                   <button
-                    key={cue}
                     type="button"
-                    aria-pressed={completed}
-                    onClick={() => toggleCue(cue)}
-                    className={`flex min-h-12 items-center justify-between gap-3 border px-3 py-2 text-left text-sm font-bold transition-colors ${
-                      completed
-                        ? "border-primary bg-primary/5 text-foreground"
-                        : "border-border bg-white text-muted-foreground hover:border-foreground hover:text-foreground"
-                    }`}
+                    aria-selected={selected}
+                    onClick={() => handleSelect(exercise.id)}
+                    className="px-4 py-3 text-left"
                   >
-                    {cue}
-                    <span
-                      className={`grid h-5 w-5 shrink-0 place-items-center border ${
-                        completed
-                          ? "border-primary bg-primary text-white"
-                          : "border-border bg-white"
-                      }`}
-                    >
-                      {completed && <Check className="h-3.5 w-3.5" />}
+                    <span className="block text-sm font-black uppercase">
+                      {exercise.title}
+                    </span>
+                    <span className="mt-1 block text-xs font-bold uppercase">
+                      {exercise.pace}
                     </span>
                   </button>
-                );
-              })}
+
+                  <button
+                    type="button"
+                    onClick={() => setPinnedExercise(exercise)}
+                    className={`grid place-items-center border-l border-border transition-colors ${
+                      pinned
+                        ? "bg-primary text-white"
+                        : "bg-background text-foreground hover:bg-white"
+                    }`}
+                    aria-label={`Pin ${exercise.title} to recording bubble`}
+                    title="Pin to recording bubble"
+                  >
+                    <Pin className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-5">
+            <article className="border border-border bg-background p-5 md:p-6">
+              <h3 className="text-xl font-black uppercase text-foreground">
+                {selectedExercise.title}
+              </h3>
+              <p className="mt-4 text-base font-semibold leading-8 text-foreground md:text-lg">
+                {selectedExercise.text}
+              </p>
+            </article>
+
+            <div>
+              <h3 className="text-sm font-black uppercase text-foreground">
+                Focus cues
+              </h3>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {selectedExercise.focusCues.map((cue) => {
+                  const completed = completedCues.includes(cue);
+
+                  return (
+                    <button
+                      key={cue}
+                      type="button"
+                      aria-pressed={completed}
+                      onClick={() => toggleCue(cue)}
+                      className={`flex min-h-12 items-center justify-between gap-3 border px-3 py-2 text-left text-sm font-bold transition-colors ${
+                        completed
+                          ? "border-primary bg-primary/5 text-foreground"
+                          : "border-border bg-white text-muted-foreground hover:border-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {cue}
+                      <span
+                        className={`grid h-5 w-5 shrink-0 place-items-center border ${
+                          completed
+                            ? "border-primary bg-primary text-white"
+                            : "border-border bg-white"
+                        }`}
+                      >
+                        {completed && <Check className="h-3.5 w-3.5" />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <FloatingReadingBubble
+        exercise={pinnedExercise}
+        onClose={() => setPinnedExercise(null)}
+      />
+    </>
   );
 }

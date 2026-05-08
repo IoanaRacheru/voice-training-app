@@ -1,18 +1,34 @@
 // @ts-nocheck
 
-import React, { useState } from "react";
-import { Mic, Square, Upload } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Mic, Square, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 
 export default function VoiceInput({ user, onUpdate }) {
   const [status, setStatus] = useState(user?.initial_voice_sample ? "uploaded" : "idle");
-  const [fileName, setFileName] = useState(user?.initial_voice_sample?.name || "");
+  const [sample, setSample] = useState(user?.initial_voice_sample || null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lastAveragePitch, setLastAveragePitch] = useState(
     user?.initial_voice_sample?.average_pitch || null
   );
+  const mediaRecorderRef = useRef(null);
+  const recorderStreamRef = useRef(null);
+  const chunksRef = useRef([]);
+  const fileInputRef = useRef(null);
+  const objectUrlRef = useRef(user?.initial_voice_sample?.audioUrl || null);
   const {
     isRecording,
     currentPitch,
@@ -21,6 +37,26 @@ export default function VoiceInput({ user, onUpdate }) {
     stopRecording,
     getSessionStats,
   } = useVoiceRecorder();
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+      recorderStreamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  const replaceSample = (nextSample) => {
+    if (objectUrlRef.current && objectUrlRef.current !== nextSample.audioUrl) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+
+    objectUrlRef.current = nextSample.audioUrl;
+    setSample(nextSample);
+    setStatus(nextSample.type === "recording" ? "recorded" : "uploaded");
+    saveSample(nextSample);
+  };
 
   const saveSample = (sample) => {
     onUpdate?.({
@@ -36,17 +72,9 @@ export default function VoiceInput({ user, onUpdate }) {
     if (isRecording) {
       const { averagePitch } = getSessionStats();
       stopRecording();
+      mediaRecorderRef.current?.stop();
 
-      const recordingName = "Initial voice recording";
-      setStatus("recorded");
-      setFileName(recordingName);
       setLastAveragePitch(averagePitch);
-      saveSample({
-        name: recordingName,
-        type: "audio/webm",
-        source: "recording",
-        average_pitch: averagePitch,
-      });
       toast.success(
         averagePitch
           ? `Initial voice recording saved. Avg pitch: ${averagePitch}Hz`
@@ -55,25 +83,91 @@ export default function VoiceInput({ user, onUpdate }) {
       return;
     }
 
-    setStatus("recording");
-    setLastAveragePitch(null);
-    await startRecording();
+    try {
+      const recorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(recorderStream);
+
+      chunksRef.current = [];
+      recorderStreamRef.current = recorderStream;
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        recorderStream.getTracks().forEach((track) => track.stop());
+        recorderStreamRef.current = null;
+
+        if (chunksRef.current.length === 0) return;
+
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const audioUrl = URL.createObjectURL(blob);
+        const { averagePitch } = getSessionStats();
+        const recordingSample = {
+          id: crypto.randomUUID(),
+          type: "recording",
+          name: "Initial voice recording",
+          audioUrl,
+          mimeType: blob.type,
+          size: blob.size,
+          createdAt: new Date().toISOString(),
+          average_pitch: averagePitch,
+        };
+
+        replaceSample(recordingSample);
+      };
+
+      setStatus("recording");
+      setLastAveragePitch(null);
+      mediaRecorder.start();
+      await startRecording();
+    } catch (error) {
+      setStatus(sample ? (sample.type === "recording" ? "recorded" : "uploaded") : "idle");
+      toast.error("Microphone access is unavailable");
+    }
   };
 
   const handleUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setStatus("uploaded");
-    setFileName(file.name);
-    setLastAveragePitch(null);
-    saveSample({
+    const audioUrl = URL.createObjectURL(file);
+    const uploadedSample = {
+      id: crypto.randomUUID(),
+      type: "upload",
       name: file.name,
-      type: file.type || "audio",
+      audioUrl,
+      mimeType: file.type || "audio",
       size: file.size,
-      source: "upload",
-    });
+      createdAt: new Date().toISOString(),
+    };
+
+    setLastAveragePitch(null);
+    replaceSample(uploadedSample);
     toast.success("Initial voice sample uploaded");
+  };
+
+  const handleDeleteSample = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+
+    setSample(null);
+    setStatus("idle");
+    setLastAveragePitch(null);
+    setDeleteDialogOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    onUpdate?.({
+      ...user,
+      initial_voice_sample: null,
+    });
+    toast.success("Initial voice sample deleted");
   };
 
   const statusLabel =
@@ -116,11 +210,13 @@ export default function VoiceInput({ user, onUpdate }) {
           <Upload className="h-4 w-4 text-primary" />
           Upload sample
           <Input
+            ref={fileInputRef}
             type="file"
             accept=".mp3,.wav,audio/mpeg,audio/wav"
             className="sr-only"
             aria-label="Upload voice sample"
             onChange={handleUpload}
+            disabled={isRecording}
           />
         </label>
       </div>
@@ -152,12 +248,63 @@ export default function VoiceInput({ user, onUpdate }) {
 
       <div className="mt-5 border-t border-border pt-4">
         <p className="text-sm font-bold text-foreground">{statusLabel}</p>
-        {fileName && (
-          <p className="mt-1 break-all text-sm font-medium text-muted-foreground">
-            {fileName}
+        {sample?.audioUrl ? (
+          <div className="mt-4 border border-border bg-background p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="break-all text-sm font-black uppercase text-foreground">
+                  {sample.name}
+                </p>
+                <p className="mt-1 text-xs font-bold uppercase text-muted-foreground">
+                  {sample.type === "recording" ? "Recorded sample" : "Uploaded sample"}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setDeleteDialogOpen(true)}
+                aria-label="Delete initial voice sample"
+                className="shrink-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <audio
+              controls
+              src={sample.audioUrl}
+              className="mt-3 w-full"
+              aria-label={`Play ${sample.name}`}
+            />
+          </div>
+        ) : (
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
+            Record or upload a sample to listen to it here.
           </p>
         )}
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete voice sample?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the saved initial voice sample from this session.
+              You can record or upload a new one afterward.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSample}
+              className="border-destructive bg-destructive text-destructive-foreground hover:bg-foreground"
+            >
+              Delete sample
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
