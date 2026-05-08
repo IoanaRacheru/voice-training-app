@@ -9,6 +9,9 @@ import RecordingControls from "@/components/training/RecordingControls";
 import PitchChart from "@/components/training/PitchChart";
 import FeedbackCards from "@/components/training/FeedbackCards";
 import GoalBadge from "@/components/training/GoalBadge";
+import VoiceMetricsPanel from "@/components/training/VoiceMetricsPanel";
+import ReadingExercises from "@/components/training/ReadingExercises";
+import { VoiceAnalyticsDashboard } from "@/components/voice-analytics";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
@@ -37,13 +40,19 @@ export default function Training() {
   const { user } = useAuth();
   const [exerciseType] = useState("pitch");
 
-  const goal = user?.voice_goal || "feminize";
+  const goal = user?.voice_goal || "feminine";
+  const normalizedGoal =
+    goal === "feminize" ? "feminine" : goal === "masculinize" ? "masculine" : goal;
   const targetRange =
     user?.target_pitch_range?.length === 2
       ? user.target_pitch_range
-      : goal === "feminize"
+      : normalizedGoal === "feminine"
         ? [180, 240]
-        : [100, 150];
+        : normalizedGoal === "androgynous"
+          ? [145, 185]
+          : normalizedGoal === "custom"
+            ? [120, 220]
+            : [100, 150];
 
   const {
     isRecording,
@@ -117,7 +126,7 @@ export default function Training() {
             <span className="font-mono text-[11px] uppercase text-muted-foreground">
               Module 03
             </span>
-            <GoalBadge goal={goal} />
+            <GoalBadge goal={normalizedGoal} />
           </div>
 
           <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">
@@ -172,16 +181,12 @@ export default function Training() {
               waveformData={waveformData ? Array.from(waveformData) : []}
             />
 
-            <div className="grid gap-5 sm:grid-cols-3">
-              <div>
-                <p className="font-mono text-[11px] uppercase text-muted-foreground">
-                  Pitch
-                </p>
-                <p className="mt-2 font-display text-4xl uppercase leading-none">
-                  {isRecording ? `${safePitch} Hz` : "-- Hz"}
-                </p>
-              </div>
+            <VoiceMetricsPanel
+              isRecording={isRecording}
+              currentPitch={safePitch}
+            />
 
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <p className="font-mono text-[11px] uppercase text-muted-foreground">
                   Time
@@ -261,6 +266,21 @@ export default function Training() {
           </div>
         </aside>
       </section>
+
+      <section className="space-y-6">
+        <div>
+          <p className="font-mono text-[11px] uppercase text-muted-foreground">
+            Voice Analytics - Dashboard
+          </p>
+          <h2 className="mt-1 text-2xl font-black uppercase text-foreground">
+            Voice analytics
+          </h2>
+        </div>
+
+        <VoiceAnalyticsDashboard />
+      </section>
+
+      <ReadingExercises />
 
       <FeedbackCards
         currentPitch={safePitch}
