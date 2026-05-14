@@ -17,8 +17,10 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 
 const AuthenticatedApp = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [authPage, setAuthPage] = useState("login");
+
+  if (isLoading) return null;
 
   if (!isAuthenticated) {
     if (authPage === "register") {
