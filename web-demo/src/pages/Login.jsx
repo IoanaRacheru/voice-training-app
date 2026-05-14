@@ -11,19 +11,19 @@ export default function Login({ onGoToRegister }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  /**
-   * @param {React.FormEvent<HTMLFormElement>} e
-   */
-  const handleSubmit = (e) => {
+  /** @param {React.FormEvent<HTMLFormElement>} e */
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+    setLoading(true);
     try {
-      // TODO: Replace with backend login and use returned user id
-      login({ id: email });
+      await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -55,8 +55,8 @@ export default function Login({ onGoToRegister }) {
           required
         />
 
-        <button className="primary-btn" type="submit">
-          Login
+        <button className="primary-btn" type="submit" disabled={loading}>
+          {loading ? "Logging in…" : "Login"}
         </button>
 
         <p className="auth-switch">

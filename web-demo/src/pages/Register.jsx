@@ -8,15 +8,13 @@ import DuckMark from "@/components/layout/DuckMark";
 export default function Register({ onGoToLogin }) {
   const { register } = useAuth();
 
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  /**
-   * @param {React.FormEvent<HTMLFormElement>} e
-   */
-  const handleSubmit = (e) => {
+  /** @param {React.FormEvent<HTMLFormElement>} e */
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -25,10 +23,13 @@ export default function Register({ onGoToLogin }) {
       return;
     }
 
-      try {
-        register({ username, email });
+    setLoading(true);
+    try {
+      await register(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,14 +44,6 @@ export default function Register({ onGoToLogin }) {
         <p>Set up your account before creating your voice profile.</p>
 
         {error && <div className="auth-error">{error}</div>}
-
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
 
         <input
           type="email"
@@ -68,8 +61,8 @@ export default function Register({ onGoToLogin }) {
           required
         />
 
-        <button className="primary-btn" type="submit">
-          Register
+        <button className="primary-btn" type="submit" disabled={loading}>
+          {loading ? "Creating account…" : "Register"}
         </button>
 
         <p className="auth-switch">
