@@ -41,11 +41,11 @@ pub async fn appwrite_middleware(
         }
     };
 
-    let url = format!("{}/v1/account", state.config.appwrite_endpoint);
+    let url = format!("{}/account", state.config.appwrite_endpoint);
     let result = state
         .http
         .get(&url)
-        .header("Authorization", format!("Bearer {}", token))
+        .header("X-Appwrite-JWT", &token)
         .header("X-Appwrite-Project", &state.config.appwrite_project_id)
         .send()
         .await;

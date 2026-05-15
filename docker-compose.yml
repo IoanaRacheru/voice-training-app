@@ -21,30 +21,15 @@ services:
       dockerfile: api/Dockerfile
     environment:
       MONGODB_URI: ${MONGODB_URI}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRY_HOURS: ${JWT_EXPIRY_HOURS:-24}
       SERVER_PORT: ${SERVER_PORT:-3000}
-      RUST_LOG: info
+      APPWRITE_ENDPOINT: ${APPWRITE_ENDPOINT}
+      APPWRITE_PROJECT_ID: ${APPWRITE_PROJECT_ID}
+      RUST_LOG: debug
     ports:
       - "3000:3000"
     depends_on:
       mongodb:
         condition: service_healthy
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./web-demo
-      dockerfile: Dockerfile
-    environment:
-      VITE_API_URL: http://localhost:3000
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./web-demo:/app
-      - /app/node_modules
-    depends_on:
-      - api
     restart: unless-stopped
 
 volumes:

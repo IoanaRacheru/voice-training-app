@@ -5,10 +5,10 @@ use axum::{
     routing::{get, patch},
     Extension, Json, Router,
 };
-use mongodb::bson::{doc, oid::ObjectId};
+use mongodb::bson::doc;
 use serde::Deserialize;
 
-use crate::{auth::Claims, errors::AppError, models::user::User, AppState};
+use crate::{auth::AppwriteUser, errors::AppError, models::profile::Profile, AppState};
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/api/me", get(me).patch(patch_me))
@@ -16,23 +16,26 @@ pub fn router() -> Router<Arc<AppState>> {
 
 async fn me(
     State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
+    Extension(user): Extension<AppwriteUser>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let col = state.db.collection::<User>("users");
-    let oid = ObjectId::parse_str(&claims.sub).map_err(|_| AppError::Unauthorized)?;
+    let col = state.db.collection::<Profile>("profiles");
 
-    let user = col
-        .find_one(doc! { "_id": oid })
-        .await?
-        .ok_or(AppError::Unauthorized)?;
+    let profile = col
+        .find_one(doc! { "appwrite_user_id": &user.id })
+        .await?;
+
+    let (voice_goal, experience_level, target_pitch_range, training_focus) = match profile {
+        Some(p) => (p.voice_goal, p.experience_level, p.target_pitch_range, p.training_focus),
+        None => (None, None, None, None),
+    };
 
     Ok(Json(serde_json::json!({
-        "user_id": claims.sub,
+        "user_id": user.id,
         "email": user.email,
-        "voice_goal": user.voice_goal,
-        "experience_level": user.experience_level,
-        "target_pitch_range": user.target_pitch_range,
-        "training_focus": user.training_focus,
+        "voice_goal": voice_goal,
+        "experience_level": experience_level,
+        "target_pitch_range": target_pitch_range,
+        "training_focus": training_focus,
     })))
 }
 
@@ -46,13 +49,12 @@ pub struct PatchMeRequest {
 
 async fn patch_me(
     State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
+    Extension(user): Extension<AppwriteUser>,
     Json(body): Json<PatchMeRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let col = state.db.collection::<User>("users");
-    let oid = ObjectId::parse_str(&claims.sub).map_err(|_| AppError::Unauthorized)?;
+    let col = state.db.collection::<Profile>("profiles");
 
-    let mut set = doc! {};
+    let mut set = doc! { "email": &user.email };
     if let Some(v) = body.voice_goal {
         set.insert("voice_goal", v);
     }
@@ -72,10 +74,12 @@ async fn patch_me(
         );
     }
 
-    if !set.is_empty() {
-        col.update_one(doc! { "_id": oid }, doc! { "$set": set })
-            .await?;
-    }
+    col.update_one(
+        doc! { "appwrite_user_id": &user.id },
+        doc! { "$set": set },
+    )
+    .upsert(true)
+    .await?;
 
     Ok(Json(serde_json::json!({ "message": "Profile updated" })))
 }

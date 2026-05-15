@@ -5,7 +5,9 @@
       "Bash(Select-Object Name, Mode)",
       "Bash(docker compose *)",
       "Bash(Test-Path *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(~/.cargo/bin/cargo check *)",
+      "Bash(npm run *)"
     ]
   }
 }

@@ -12,12 +12,12 @@ pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> 
         .default_database()
         .unwrap_or_else(|| client.database("voice_training"));
 
-    // Unique index on users.email
-    let users = db.collection::<mongodb::bson::Document>("users");
-    users
+    // Unique index on profiles.appwrite_user_id
+    let profiles = db.collection::<mongodb::bson::Document>("profiles");
+    profiles
         .create_index(
             IndexModel::builder()
-                .keys(doc! { "email": 1 })
+                .keys(doc! { "appwrite_user_id": 1 })
                 .options(IndexOptions::builder().unique(true).build())
                 .build(),
         )

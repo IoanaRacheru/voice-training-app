@@ -9,7 +9,7 @@ use futures::TryStreamExt;
 use mongodb::bson::{doc, DateTime};
 use serde::Deserialize;
 
-use crate::{auth::Claims, errors::AppError, models::session::Session, AppState};
+use crate::{auth::AppwriteUser, errors::AppError, models::session::Session, AppState};
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
@@ -28,14 +28,14 @@ pub struct CreateRequest {
 
 async fn create(
     State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
+    Extension(user): Extension<AppwriteUser>,
     Json(body): Json<CreateRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let col = state.db.collection::<Session>("sessions");
 
     let session = Session {
         id: None,
-        user_id: claims.sub.clone(),
+        user_id: user.id.clone(),
         date: DateTime::now(),
         duration_seconds: body.duration_seconds,
         average_pitch: body.average_pitch,
@@ -52,12 +52,12 @@ async fn create(
 
 async fn list(
     State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
+    Extension(user): Extension<AppwriteUser>,
 ) -> Result<Json<Vec<serde_json::Value>>, AppError> {
     let col = state.db.collection::<Session>("sessions");
 
     let sessions: Vec<Session> = col
-        .find(doc! { "user_id": &claims.sub })
+        .find(doc! { "user_id": &user.id })
         .sort(doc! { "date": -1 })
         .await?
         .try_collect()

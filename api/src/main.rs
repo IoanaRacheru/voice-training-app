@@ -7,17 +7,19 @@ mod routes;
 
 use std::sync::Arc;
 
-use axum::{middleware as axum_middleware, routing::post, Router};
+use axum::{middleware as axum_middleware, Router};
 use mongodb::Database;
+use reqwest::Client;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
-use auth::middleware::jwt_middleware;
+use auth::middleware::appwrite_middleware;
 use config::Config;
 
 pub struct AppState {
     pub db: Database,
     pub config: Arc<Config>,
+    pub http: Client,
 }
 
 #[tokio::main]
@@ -40,6 +42,7 @@ async fn main() {
     let state = Arc::new(AppState {
         db: database,
         config: config.clone(),
+        http: Client::new(),
     });
 
     let protected = Router::new()
@@ -47,13 +50,11 @@ async fn main() {
         .merge(routes::sessions::router())
         .route_layer(axum_middleware::from_fn_with_state(
             state.clone(),
-            jwt_middleware,
+            appwrite_middleware,
         ));
 
     let app = Router::new()
         .merge(routes::health::router())
-        .route("/auth/register", post(auth::handlers::register))
-        .route("/auth/login", post(auth::handlers::login))
         .merge(protected)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
