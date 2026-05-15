@@ -22,12 +22,14 @@ export default function Progress() {
 
   const hasSessions = sessions.length > 0;
 
-  const pitchData = sessions.map((s) => ({
+  const chronological = [...sessions].reverse();
+
+  const pitchData = chronological.map((s) => ({
     date: format(new Date(s.date), "MMM d"),
     pitch: s.average_pitch,
   }));
 
-  const scoreData = sessions.map((s) => ({
+  const scoreData = chronological.map((s) => ({
     date: format(new Date(s.date), "MMM d"),
     score: s.score,
   }));
