@@ -23,35 +23,29 @@ import { account, ID } from "@/lib/appwrite";
  *     saved_at?: string;
  *   };
  * }} User
- *
- * @typedef {{
- *   user: User | null;
- *   userId: string | null;
- *   isAuthenticated: boolean;
- *   isLoading: boolean;
- *   login: (email: string, password: string) => Promise<void>;
- *   register: (email: string, password: string) => Promise<void>;
- *   logout: () => Promise<void>;
- *   updateUser: (updates: Partial<User>) => Promise<void>;
- * }} AuthContextValue
  */
 
-const AuthContext = createContext(/** @type {AuthContextValue | null} */ (null));
+const AuthContext = createContext(/** @type {any} */ (null));
 
-/** @param {{ user_id: string, email: string, voice_goal?: string, experience_level?: string, target_pitch_range?: number[], training_focus?: string[] }} data */
-function buildUser(data) {
+/** @returns {User} */
+function buildUser(/** @type {any} */ data) {
   return {
     id: data.user_id,
-    username: data.email.split("@")[0],
+    username: data.email?.split("@")[0] ?? data.user_id,
     email: data.email,
-    voice_goal: data.voice_goal ?? "feminize",
-    experience_level: data.experience_level ?? "beginner",
+    voice_goal: data.voice_goal,
+    experience_level: data.experience_level,
     target_pitch_range: data.target_pitch_range ?? [180, 240],
     training_focus: data.training_focus ?? ["pitch"],
+    identity_background: data.identity_background,
+    personalization_goals: data.personalization_goals,
+    age: data.age,
+    puberty_background: data.puberty_background,
+    initial_voice_sample: data.initial_voice_sample,
   };
 }
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider(/** @type {{ children: import("react").ReactNode }} */ { children }) {
   const [user, setUser] = useState(/** @type {User | null} */ (null));
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,19 +54,17 @@ export const AuthProvider = ({ children }) => {
       .get()
       .then(() => authApi.getMe())
       .then((data) => setUser(buildUser(data)))
-      .catch(() => {})
+      .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
   }, []);
 
-  /** @param {string} email @param {string} password */
-  const login = async (email, password) => {
+  const login = async (/** @type {string} */ email, /** @type {string} */ password) => {
     await account.createEmailPasswordSession(email, password);
     const data = await authApi.getMe();
     setUser(buildUser(data));
   };
 
-  /** @param {string} email @param {string} password */
-  const register = async (email, password) => {
+  const register = async (/** @type {string} */ email, /** @type {string} */ password) => {
     await account.create(ID.unique(), email, password);
     await login(email, password);
   };
@@ -81,24 +73,12 @@ export const AuthProvider = ({ children }) => {
     try {
       await account.deleteSession("current");
     } catch {}
-    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   };
 
-  /** @param {Partial<User>} updates */
-  const updateUser = async (updates) => {
+  const updateUser = async (/** @type {Partial<User>} */ updates) => {
     if (!user) return;
-
-    const { voice_goal, experience_level, target_pitch_range, training_focus } = updates;
-    const patch = {};
-    if (voice_goal !== undefined) patch.voice_goal = voice_goal;
-    if (experience_level !== undefined) patch.experience_level = experience_level;
-    if (target_pitch_range !== undefined) patch.target_pitch_range = target_pitch_range;
-    if (training_focus !== undefined) patch.training_focus = training_focus;
-
-    if (Object.keys(patch).length > 0) {
-      await authApi.patchMe(patch);
-    }
+    await authApi.patchMe(updates);
     setUser({ ...user, ...updates });
   };
 
@@ -118,10 +98,10 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
-};
+}
