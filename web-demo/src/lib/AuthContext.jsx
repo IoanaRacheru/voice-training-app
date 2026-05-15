@@ -7,10 +7,21 @@ import { account, ID } from "@/lib/appwrite";
  *   id: string;
  *   username: string;
  *   email: string;
- *   voice_goal?: "feminize" | "masculinize";
+ *   voice_goal?: "feminize" | "masculinize" | "feminine" | "masculine" | "androgynous" | "custom";
  *   experience_level?: "beginner" | "intermediate" | "advanced";
  *   target_pitch_range?: number[];
  *   training_focus?: string[];
+ *   identity_background?: string;
+ *   personalization_goals?: string[];
+ *   age?: string | number;
+ *   puberty_background?: string;
+ *   initial_voice_sample?: {
+ *     name: string;
+ *     type?: string;
+ *     size?: number;
+ *     source?: "recording" | "upload";
+ *     saved_at?: string;
+ *   };
  * }} User
  *
  * @typedef {{

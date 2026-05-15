@@ -7,7 +7,15 @@ import { Badge } from "@/components/ui/badge";
 export default function ProfileCard({ user }) {
   const displayName = user?.username || user?.id || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
-  const goal = user?.voice_goal === "masculinize" ? "Masculinize" : "Feminize";
+  const goalLabels = {
+    feminize: "Feminine",
+    feminine: "Feminine",
+    masculinize: "Masculine",
+    masculine: "Masculine",
+    androgynous: "Androgynous",
+    custom: "Custom",
+  };
+  const goal = goalLabels[user?.voice_goal] || "Feminine";
   const level = user?.experience_level || "beginner";
 
   return (
