@@ -23,7 +23,14 @@ const focusAreas = [
 ];
 
 export default function ProfileSettings({ user, onUpdate }) {
-  const [goal, setGoal] = useState(user?.voice_goal || "feminize");
+  const initialGoal =
+    user?.voice_goal === "feminize"
+      ? "feminine"
+      : user?.voice_goal === "masculinize"
+        ? "masculine"
+        : user?.voice_goal || "feminine";
+
+  const [goal, setGoal] = useState(initialGoal);
   const [level, setLevel] = useState(user?.experience_level || "beginner");
   const [pitchRange, setPitchRange] = useState(
     user?.target_pitch_range || [160, 220]
@@ -76,8 +83,10 @@ export default function ProfileSettings({ user, onUpdate }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="feminize">Feminize Voice</SelectItem>
-                <SelectItem value="masculinize">Masculinize Voice</SelectItem>
+                <SelectItem value="feminine">Feminine</SelectItem>
+                <SelectItem value="masculine">Masculine</SelectItem>
+                <SelectItem value="androgynous">Androgynous</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
             </Select>
           </div>
