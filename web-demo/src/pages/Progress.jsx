@@ -1,38 +1,38 @@
 // @ts-nocheck
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import PitchEvolutionChart from "@/components/progress/PitchEvolutionChart";
 import ScoreChart from "@/components/progress/ScoreChart";
 import SessionHistory from "@/components/progress/SessionHistory";
 import { Activity } from "lucide-react";
-import { safeJsonParse } from "@/lib/utils";
+import { useAuth } from "@/lib/AuthContext";
+import { getSessions } from "@/api/authClient";
 
 export default function Progress() {
-  const sessions = safeJsonParse(
-    localStorage.getItem("voiceSessions"),
-    [],
-    (value) => Array.isArray(value)
-  );
+  const { getToken } = useAuth();
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getSessions(getToken())
+      .then(setSessions)
+      .catch(() => setSessions([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const hasSessions = sessions.length > 0;
 
-  const pitchData = sessions
-    .slice()
-    .reverse()
-    .map((session) => ({
-      date: format(new Date(session.date), "MMM d"),
-      pitch: session.average_pitch,
-    }));
+  const pitchData = sessions.map((s) => ({
+    date: format(new Date(s.date), "MMM d"),
+    pitch: s.average_pitch,
+  }));
 
-  const scoreData = sessions
-    .slice()
-    .reverse()
-    .map((session) => ({
-      date: format(new Date(session.date), "MMM d"),
-      score: session.score,
-    }));
+  const scoreData = sessions.map((s) => ({
+    date: format(new Date(s.date), "MMM d"),
+    score: s.score,
+  }));
 
   return (
     <div className="mx-auto max-w-6xl space-y-10">
@@ -47,11 +47,15 @@ export default function Progress() {
           Progress
         </h1>
         <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-muted-foreground">
-          Recorded sessions, pitch movement, and score history from local practice data.
+          Recorded sessions, pitch movement, and score history.
         </p>
       </motion.header>
 
-      {!hasSessions ? (
+      {loading ? (
+        <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+          Loading sessions…
+        </div>
+      ) : !hasSessions ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -60,7 +64,6 @@ export default function Progress() {
           <div className="grid h-14 w-14 place-items-center bg-background">
             <Activity className="h-7 w-7 text-primary" />
           </div>
-
           <div>
             <p className="text-2xl font-black uppercase text-foreground">
               No sessions yet
@@ -76,8 +79,7 @@ export default function Progress() {
             <PitchEvolutionChart data={pitchData} />
             <ScoreChart data={scoreData} />
           </div>
-
-          <SessionHistory sessions={sessions.slice().reverse()} />
+          <SessionHistory sessions={sessions} />
         </>
       )}
     </div>

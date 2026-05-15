@@ -44,6 +44,7 @@ async fn main() {
 
     let protected = Router::new()
         .merge(routes::user::router())
+        .merge(routes::sessions::router())
         .route_layer(axum_middleware::from_fn_with_state(
             state.clone(),
             jwt_middleware,
