@@ -1,9 +1,16 @@
+import { account } from "@/lib/appwrite";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 async function request(path, options = {}) {
+  const { jwt } = await account.createJWT();
   const { headers: optHeaders, ...rest } = options;
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...optHeaders },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${jwt}`,
+      ...optHeaders,
+    },
     ...rest,
   });
   const data = await res.json();
@@ -11,30 +18,24 @@ async function request(path, options = {}) {
   return data;
 }
 
-export function getMe(token) {
-  return request("/api/me", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export function getMe() {
+  return request("/api/me");
 }
 
-export function patchMe(token, updates) {
+export function patchMe(updates) {
   return request("/api/me", {
     method: "PATCH",
-    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(updates),
   });
 }
 
-export function createSession(token, session) {
+export function createSession(session) {
   return request("/api/sessions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(session),
   });
 }
 
-export function getSessions(token) {
-  return request("/api/sessions", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export function getSessions() {
+  return request("/api/sessions");
 }

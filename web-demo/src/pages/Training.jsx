@@ -38,7 +38,7 @@ function formatTime(seconds) {
 }
 
 export default function Training() {
-  const { user, getToken } = useAuth();
+  const { user } = useAuth();
   const [exerciseType] = useState("pitch");
 
   const goal = user?.voice_goal || "feminine";
@@ -82,7 +82,7 @@ export default function Training() {
         const sessionScore = computeScore(averagePitch, targetRange) ?? 0;
 
         try {
-          await createSession(getToken(), {
+          await createSession({
             duration_seconds: duration,
             average_pitch: averagePitch,
             score: sessionScore,

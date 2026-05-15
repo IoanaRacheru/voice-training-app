@@ -29,15 +29,12 @@ import { account, ID } from "@/lib/appwrite";
  *   userId: string | null;
  *   isAuthenticated: boolean;
  *   isLoading: boolean;
- *   getToken: () => string | null;
  *   login: (email: string, password: string) => Promise<void>;
  *   register: (email: string, password: string) => Promise<void>;
  *   logout: () => Promise<void>;
  *   updateUser: (updates: Partial<User>) => Promise<void>;
  * }} AuthContextValue
  */
-
-const TOKEN_KEY = "vta_token";
 
 const AuthContext = createContext(/** @type {AuthContextValue | null} */ (null));
 
@@ -61,24 +58,16 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     account
       .get()
-      .then(async () => {
-        const { jwt } = await account.createJWT();
-        localStorage.setItem(TOKEN_KEY, jwt);
-        return authApi.getMe(jwt);
-      })
+      .then(() => authApi.getMe())
       .then((data) => setUser(buildUser(data)))
-      .catch(() => localStorage.removeItem(TOKEN_KEY))
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
-
-  const getToken = () => localStorage.getItem(TOKEN_KEY);
 
   /** @param {string} email @param {string} password */
   const login = async (email, password) => {
     await account.createEmailPasswordSession(email, password);
-    const { jwt } = await account.createJWT();
-    localStorage.setItem(TOKEN_KEY, jwt);
-    const data = await authApi.getMe(jwt);
+    const data = await authApi.getMe();
     setUser(buildUser(data));
   };
 
@@ -99,8 +88,6 @@ export const AuthProvider = ({ children }) => {
   /** @param {Partial<User>} updates */
   const updateUser = async (updates) => {
     if (!user) return;
-    const token = getToken();
-    if (!token) return;
 
     const { voice_goal, experience_level, target_pitch_range, training_focus } = updates;
     const patch = {};
@@ -110,7 +97,7 @@ export const AuthProvider = ({ children }) => {
     if (training_focus !== undefined) patch.training_focus = training_focus;
 
     if (Object.keys(patch).length > 0) {
-      await authApi.patchMe(token, patch);
+      await authApi.patchMe(patch);
     }
     setUser({ ...user, ...updates });
   };
@@ -122,7 +109,6 @@ export const AuthProvider = ({ children }) => {
         userId: user?.id ?? null,
         isAuthenticated: Boolean(user),
         isLoading,
-        getToken,
         login,
         register,
         logout,
