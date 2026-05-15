@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import * as authApi from "@/api/authClient";
+import { account, ID } from "@/lib/appwrite";
 
 /**
  * @typedef {{
@@ -20,7 +21,7 @@ import * as authApi from "@/api/authClient";
  *   getToken: () => string | null;
  *   login: (email: string, password: string) => Promise<void>;
  *   register: (email: string, password: string) => Promise<void>;
- *   logout: () => void;
+ *   logout: () => Promise<void>;
  *   updateUser: (updates: Partial<User>) => Promise<void>;
  * }} AuthContextValue
  */
@@ -47,10 +48,13 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) { setIsLoading(false); return; }
-    authApi
-      .getMe(token)
+    account
+      .get()
+      .then(async () => {
+        const { jwt } = await account.createJWT();
+        localStorage.setItem(TOKEN_KEY, jwt);
+        return authApi.getMe(jwt);
+      })
       .then((data) => setUser(buildUser(data)))
       .catch(() => localStorage.removeItem(TOKEN_KEY))
       .finally(() => setIsLoading(false));
@@ -60,19 +64,23 @@ export const AuthProvider = ({ children }) => {
 
   /** @param {string} email @param {string} password */
   const login = async (email, password) => {
-    const { token } = await authApi.login(email, password);
-    localStorage.setItem(TOKEN_KEY, token);
-    const data = await authApi.getMe(token);
+    await account.createEmailPasswordSession(email, password);
+    const { jwt } = await account.createJWT();
+    localStorage.setItem(TOKEN_KEY, jwt);
+    const data = await authApi.getMe(jwt);
     setUser(buildUser(data));
   };
 
   /** @param {string} email @param {string} password */
   const register = async (email, password) => {
-    await authApi.register(email, password);
+    await account.create(ID.unique(), email, password);
     await login(email, password);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await account.deleteSession("current");
+    } catch {}
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   };

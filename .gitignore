@@ -28,3 +28,10 @@ web-demo/node_modules/
 
 # Logs
 *.log
+
+# Secrets — never commit
+.env
+.env.local
+web-demo/.env
+web-demo/.env.local
+.claude/settings.local.json

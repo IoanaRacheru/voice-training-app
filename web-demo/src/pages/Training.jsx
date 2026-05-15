@@ -83,7 +83,8 @@ export default function Training() {
           toast.success(
             `Session saved. Avg pitch: ${averagePitch}Hz — Score: ${sessionScore}/100`
           );
-        } catch {
+        } catch (err) {
+          console.error("Session save failed:", err);
           toast.error("Failed to save session. Please try again.");
         }
       }
