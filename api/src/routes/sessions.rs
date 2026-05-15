@@ -26,11 +26,47 @@ pub struct CreateRequest {
     pub goal: String,
 }
 
+const VALID_EXERCISE_TYPES: &[&str] = &["pitch", "resonance", "intonation", "breath_control"];
+const VALID_GOALS: &[&str] = &[
+    "feminize", "masculinize", "feminine", "masculine", "androgynous", "custom",
+];
+
+fn validate_create(body: &CreateRequest) -> Result<(), AppError> {
+    if body.duration_seconds == 0 || body.duration_seconds > 7200 {
+        return Err(AppError::Validation(
+            "duration_seconds must be between 1 and 7200".into(),
+        ));
+    }
+    if !(50.0..=500.0).contains(&body.average_pitch) {
+        return Err(AppError::Validation(
+            "average_pitch must be between 50 and 500 Hz".into(),
+        ));
+    }
+    if body.score > 100 {
+        return Err(AppError::Validation("score must be between 0 and 100".into()));
+    }
+    if !VALID_EXERCISE_TYPES.contains(&body.exercise_type.as_str()) {
+        return Err(AppError::Validation(format!(
+            "exercise_type must be one of: {}",
+            VALID_EXERCISE_TYPES.join(", ")
+        )));
+    }
+    if !VALID_GOALS.contains(&body.goal.as_str()) {
+        return Err(AppError::Validation(format!(
+            "goal must be one of: {}",
+            VALID_GOALS.join(", ")
+        )));
+    }
+    Ok(())
+}
+
 async fn create(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
     Json(body): Json<CreateRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    validate_create(&body)?;
+
     let col = state.db.collection::<Session>("sessions");
 
     let session = Session {
