@@ -7,16 +7,14 @@ import PitchEvolutionChart from "@/components/progress/PitchEvolutionChart";
 import ScoreChart from "@/components/progress/ScoreChart";
 import SessionHistory from "@/components/progress/SessionHistory";
 import { Activity } from "lucide-react";
-import { useAuth } from "@/lib/AuthContext";
 import { getSessions } from "@/api/authClient";
 
 export default function Progress() {
-  const { getToken } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getSessions(getToken())
+    getSessions()
       .then(setSessions)
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));
