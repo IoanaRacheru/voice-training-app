@@ -12,6 +12,7 @@ import GoalBadge from "@/components/training/GoalBadge";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { createSession } from "@/api/authClient";
 
 function computeScore(pitch, targetRange) {
   if (!pitch || !targetRange) return null;
@@ -34,7 +35,7 @@ function formatTime(seconds) {
 }
 
 export default function Training() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const [exerciseType] = useState("pitch");
 
   const goal = user?.voice_goal || "feminize";
@@ -71,34 +72,20 @@ export default function Training() {
       if (duration >= 3 && averagePitch) {
         const sessionScore = computeScore(averagePitch, targetRange) ?? 0;
 
-        const newSession = {
-          id: crypto.randomUUID(),
-          date: new Date().toISOString(),
-          duration_seconds: duration,
-          average_pitch: averagePitch,
-          score: sessionScore,
-          exercise_type: exerciseType,
-          goal,
-        };
-
-        let existingSessions = [];
         try {
-          const parsed = JSON.parse(localStorage.getItem("voiceSessions") || "[]");
-          if (Array.isArray(parsed)) {
-            existingSessions = parsed;
-          }
-        } catch (e) {
-          existingSessions = [];
+          await createSession(getToken(), {
+            duration_seconds: duration,
+            average_pitch: averagePitch,
+            score: sessionScore,
+            exercise_type: exerciseType,
+            goal,
+          });
+          toast.success(
+            `Session saved. Avg pitch: ${averagePitch}Hz — Score: ${sessionScore}/100`
+          );
+        } catch {
+          toast.error("Failed to save session. Please try again.");
         }
-
-        localStorage.setItem(
-          "voiceSessions",
-          JSON.stringify([...existingSessions, newSession])
-        );
-
-        toast.success(
-          `Session saved. Avg pitch: ${averagePitch}Hz - Score: ${sessionScore}/100`
-        );
       }
     } else {
       await startRecording();

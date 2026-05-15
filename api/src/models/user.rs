@@ -8,4 +8,8 @@ pub struct User {
     pub email: String,
     pub password_hash: String,
     pub created_at: DateTime,
+    pub voice_goal: Option<String>,
+    pub experience_level: Option<String>,
+    pub target_pitch_range: Option<Vec<f64>>,
+    pub training_focus: Option<Vec<String>>,
 }

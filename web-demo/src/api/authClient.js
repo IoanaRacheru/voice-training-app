@@ -29,3 +29,25 @@ export function getMe(token) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export function patchMe(token, updates) {
+  return request("/api/me", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(updates),
+  });
+}
+
+export function createSession(token, session) {
+  return request("/api/sessions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(session),
+  });
+}
+
+export function getSessions(token) {
+  return request("/api/sessions", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

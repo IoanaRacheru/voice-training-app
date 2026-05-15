@@ -48,6 +48,10 @@ pub async fn register(
         email: payload.email,
         password_hash: hash_password(&payload.password)?,
         created_at: DateTime::now(),
+        voice_goal: None,
+        experience_level: None,
+        target_pitch_range: None,
+        training_focus: None,
     };
 
     collection.insert_one(user).await?;

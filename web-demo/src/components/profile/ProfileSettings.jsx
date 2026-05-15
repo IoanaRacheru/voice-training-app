@@ -39,19 +39,19 @@ export default function ProfileSettings({ user, onUpdate }) {
 
   const handleSave = async () => {
     setSaving(true);
-
-    const updatedUser = {
-      ...user,
-      voice_goal: goal,
-      experience_level: level,
-      target_pitch_range: pitchRange,
-      training_focus: focus,
-    };
-
-    onUpdate?.(updatedUser);
-
-    toast.success("Profile updated successfully");
-    setSaving(false);
+    try {
+      await onUpdate?.({
+        voice_goal: goal,
+        experience_level: level,
+        target_pitch_range: pitchRange,
+        training_focus: focus,
+      });
+      toast.success("Profile updated successfully");
+    } catch {
+      toast.error("Failed to save profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -149,7 +149,7 @@ export default function ProfileSettings({ user, onUpdate }) {
 
         <Button onClick={handleSave} disabled={saving} className="h-11 w-full md:w-auto md:px-8">
           <Save className="h-4 w-4" />
-          {saving ? "Saving" : "Save settings"}
+          {saving ? "Saving…" : "Save settings"}
         </Button>
       </div>
     </section>
