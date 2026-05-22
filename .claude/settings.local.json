@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"E:\\\\BEST\\\\voice-training-app\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(docker compose *)",
+      "Bash(Test-Path *)",
+      "Bash(curl *)",
+      "Bash(~/.cargo/bin/cargo check *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

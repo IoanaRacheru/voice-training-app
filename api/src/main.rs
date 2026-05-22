@@ -14,12 +14,14 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use auth::middleware::appwrite_middleware;
+use auth::{JwkKey, Jwks};
 use config::Config;
 
 pub struct AppState {
     pub db: Database,
     pub config: Arc<Config>,
     pub http: Client,
+    pub jwks: Vec<JwkKey>,
 }
 
 #[tokio::main]
@@ -39,10 +41,22 @@ async fn main() {
         .await
         .expect("Failed to connect to MongoDB and create indexes");
 
+    let http = Client::new();
+
+    let jwks: Jwks = http
+        .get(&config.keycloak_realm_url)
+        .send()
+        .await
+        .expect("Failed to fetch JWKS from Keycloak")
+        .json()
+        .await
+        .expect("Failed to parse JWKS response");
+
     let state = Arc::new(AppState {
         db: database,
         config: config.clone(),
-        http: Client::new(),
+        http,
+        jwks: jwks.keys,
     });
 
     let protected = Router::new()

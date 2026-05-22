@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import * as authApi from "@/api/authClient";
-import { account, ID } from "@/lib/appwrite";
+import keycloak from "@/lib/keycloak";
 
 /**
  * @typedef {{
@@ -50,30 +50,24 @@ export function AuthProvider(/** @type {{ children: import("react").ReactNode }}
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    account
-      .get()
-      .then(() => authApi.getMe())
-      .then((data) => setUser(buildUser(data)))
+    keycloak
+      .init({ onLoad: "check-sso", pkceMethod: "S256" })
+      .then((authenticated) => {
+        if (authenticated) {
+          return authApi.getMe().then((data) => setUser(buildUser(data)));
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = async (/** @type {string} */ email, /** @type {string} */ password) => {
-    await account.createEmailPasswordSession(email, password);
-    const data = await authApi.getMe();
-    setUser(buildUser(data));
-  };
+  const login = () => keycloak.login();
 
-  const register = async (/** @type {string} */ email, /** @type {string} */ password) => {
-    await account.create(ID.unique(), email, password);
-    await login(email, password);
-  };
+  const register = () => keycloak.register();
 
-  const logout = async () => {
-    try {
-      await account.deleteSession("current");
-    } catch {}
+  const logout = () => {
     setUser(null);
+    keycloak.logout();
   };
 
   const updateUser = async (/** @type {Partial<User>} */ updates) => {

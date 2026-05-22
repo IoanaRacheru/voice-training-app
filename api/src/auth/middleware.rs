@@ -6,16 +6,24 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Json, Response},
 };
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use serde::Deserialize;
 use serde_json::json;
 
 use crate::{auth::AppwriteUser, AppState};
 
 #[derive(Deserialize)]
-struct AppwriteAccountResponse {
-    #[serde(rename = "$id")]
-    id: String,
-    email: String,
+struct KeycloakClaims {
+    sub: String,
+    email: Option<String>,
+}
+
+fn unauthorized() -> Response {
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({ "error": "Unauthorized" })),
+    )
+        .into_response()
 }
 
 pub async fn appwrite_middleware(
@@ -32,45 +40,40 @@ pub async fn appwrite_middleware(
 
     let token = match token {
         Some(t) => t,
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({ "error": "Unauthorized" })),
-            )
-                .into_response();
-        }
+        None => return unauthorized(),
     };
 
-    let url = format!("{}/account", state.config.appwrite_endpoint);
-    let result = state
-        .http
-        .get(&url)
-        .header("X-Appwrite-JWT", &token)
-        .header("X-Appwrite-Project", &state.config.appwrite_project_id)
-        .send()
-        .await;
+    let kid = match decode_header(&token).ok().and_then(|h| h.kid) {
+        Some(k) => k,
+        None => return unauthorized(),
+    };
 
-    match result {
-        Ok(resp) if resp.status().is_success() => {
-            match resp.json::<AppwriteAccountResponse>().await {
-                Ok(account) => {
-                    request.extensions_mut().insert(AppwriteUser {
-                        id: account.id,
-                        email: account.email,
-                    });
-                    next.run(request).await
-                }
-                Err(_) => (
-                    StatusCode::UNAUTHORIZED,
-                    Json(json!({ "error": "Unauthorized" })),
-                )
-                    .into_response(),
-            }
+    let jwk = match state.jwks.iter().find(|k| k.kid == kid) {
+        Some(k) => k,
+        None => return unauthorized(),
+    };
+
+    let (n, e) = match (&jwk.n, &jwk.e) {
+        (Some(n), Some(e)) => (n.as_str(), e.as_str()),
+        _ => return unauthorized(),
+    };
+
+    let decoding_key = match DecodingKey::from_rsa_components(n, e) {
+        Ok(k) => k,
+        Err(_) => return unauthorized(),
+    };
+
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.validate_aud = false;
+
+    match decode::<KeycloakClaims>(&token, &decoding_key, &validation) {
+        Ok(data) => {
+            request.extensions_mut().insert(AppwriteUser {
+                id: data.claims.sub,
+                email: data.claims.email.unwrap_or_default(),
+            });
+            next.run(request).await
         }
-        _ => (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({ "error": "Unauthorized" })),
-        )
-            .into_response(),
+        Err(_) => unauthorized(),
     }
 }
