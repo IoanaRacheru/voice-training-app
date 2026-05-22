@@ -1,10 +1,12 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import * as authApi from "@/api/authClient";
+import keycloak from "@/lib/keycloak";
 
 /**
  * @typedef {{
  *   id: string;
  *   username: string;
- *   email?: string;
+ *   email: string;
  *   voice_goal?: "feminize" | "masculinize" | "feminine" | "masculine" | "androgynous" | "custom";
  *   experience_level?: "beginner" | "intermediate" | "advanced";
  *   target_pitch_range?: number[];
@@ -21,101 +23,66 @@ import { createContext, useContext, useState } from "react";
  *     saved_at?: string;
  *   };
  * }} User
- *
- * @typedef {{
- *   user: User | null;
- *   userId: string | null;
- *   isAuthenticated: boolean;
- *   login: (data: { id: string }) => void;
- *   register: (data?: { username?: string; email?: string }) => void;
- *   logout: () => void;
- *   updateUser: (updates: Partial<User>) => void;
- * }} AuthContextValue
  */
 
-const AuthContext = createContext(/** @type {AuthContextValue | null} */ (null));
+const AuthContext = createContext(/** @type {any} */ (null));
 
-/**
- * Provides temporary frontend authentication state.
- *
- * This does not persist data in localStorage.
- * Later, login/register/logout/updateUser should be replaced with backend API calls.
- *
- * @param {{ children: React.ReactNode }} props
- */
-export const AuthProvider = ({ children }) => {
+/** @returns {User} */
+function buildUser(/** @type {any} */ data) {
+  return {
+    id: data.user_id,
+    username: data.email?.split("@")[0] ?? data.user_id,
+    email: data.email,
+    voice_goal: data.voice_goal,
+    experience_level: data.experience_level,
+    target_pitch_range: data.target_pitch_range ?? [180, 240],
+    training_focus: data.training_focus ?? ["pitch"],
+    identity_background: data.identity_background,
+    personalization_goals: data.personalization_goals,
+    age: data.age,
+    puberty_background: data.puberty_background,
+    initial_voice_sample: data.initial_voice_sample,
+  };
+}
+
+export function AuthProvider(/** @type {{ children: import("react").ReactNode }} */ { children }) {
   const [user, setUser] = useState(/** @type {User | null} */ (null));
+  const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * Temporary login placeholder.
-   * Later this should call the backend login endpoint.
-   *
-   * @param {{ id: string }} data
-   */
-  const login = ({ id }) => {
-    if (!id) {
-      throw new Error("Please provide a username or email.");
-    }
+  useEffect(() => {
+    keycloak
+      .init({ onLoad: "check-sso", pkceMethod: "S256" })
+      .then((authenticated) => {
+        if (authenticated) {
+          return authApi.getMe().then((data) => setUser(buildUser(data)));
+        }
+      })
+      .catch(() => setUser(null))
+      .finally(() => setIsLoading(false));
+  }, []);
 
-    /** @type {User} */
-    const demoUser = {
-      id,
-      username: id.includes("@") ? id.split("@")[0] : id,
-      email: id.includes("@") ? id : "",
-      voice_goal: "feminine",
-      experience_level: "beginner",
-      target_pitch_range: [180, 240],
-      training_focus: ["pitch"],
-    };
+  const login = () => keycloak.login();
 
-    setUser(demoUser);
-  };
+  const register = () => keycloak.register();
 
-  /**
-   * Temporary register placeholder.
-   * Later this should call the backend register endpoint.
-   *
-   * @param {{ username?: string; email?: string }} data
-   */
-  const register = (data = {}) => {
-    const id = data.email || data.username;
-
-    if (!id) {
-      throw new Error("Please provide a username or email.");
-    }
-
-    login({ id });
-  };
-
-  /**
-   * Temporary logout placeholder.
-   * Later this should call the backend logout endpoint.
-   */
   const logout = () => {
     setUser(null);
+    keycloak.logout();
   };
 
-  /**
-   * Updates user data only in React state.
-   * Later this should call PATCH /me or PATCH /profile.
-   *
-   * @param {Partial<User>} updates
-   */
-  const updateUser = (updates) => {
+  const updateUser = async (/** @type {Partial<User>} */ updates) => {
     if (!user) return;
-
-    setUser({
-      ...user,
-      ...updates,
-    });
+    await authApi.patchMe(updates);
+    setUser({ ...user, ...updates });
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        userId: user?.id || null,
+        userId: user?.id ?? null,
         isAuthenticated: Boolean(user),
+        isLoading,
         login,
         register,
         logout,
@@ -125,17 +92,10 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-/**
- * Access authentication state and actions.
- */
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
-};
+}
