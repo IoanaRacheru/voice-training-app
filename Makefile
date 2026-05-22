@@ -1,6 +1,10 @@
-.PHONY: setup up down build logs restart clean dev \
+.PHONY: all setup up down build logs restart clean dev \
         install-frontend run-frontend lint-frontend check-frontend clean-frontend \
         keycloak-setup help
+
+# ── All-in-one ───────────────────────────────────────────────────────────────
+
+all: setup up keycloak-setup dev
 
 # ── Onboarding ──────────────────────────────────────────────────────────────
 
@@ -106,6 +110,9 @@ keycloak-setup:
 help:
 	@echo ""
 	@echo "Usage: make <target>"
+	@echo ""
+	@echo "All-in-one"
+	@echo "  all              setup → up → keycloak-setup → dev"
 	@echo ""
 	@echo "Onboarding"
 	@echo "  setup            Copy .env files and install frontend deps"
