@@ -1,6 +1,6 @@
 .PHONY: all setup up down build logs restart clean dev \
         install-frontend run-frontend lint-frontend check-frontend clean-frontend \
-        keycloak-setup help
+        keycloak-setup keycloak-status help
 
 # ── All-in-one ───────────────────────────────────────────────────────────────
 
@@ -55,55 +55,13 @@ check-frontend:
 clean-frontend:
 	$(MAKE) -C web-demo clean
 
-# ── Keycloak manual setup ────────────────────────────────────────────────────
+# ── Keycloak (delegated) ─────────────────────────────────────────────────────
 
 keycloak-setup:
-	@echo ""
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  Keycloak manual setup (run after: make up)"
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo ""
-	@echo "1. Open http://localhost:8080 and log in with:"
-	@echo "   User: admin"
-	@echo "   Password: value of KEYCLOAK_ADMIN_PASSWORD in your .env (default: admin)"
-	@echo ""
-	@echo "2. Create a new Realm:"
-	@echo "   Left sidebar → Create Realm"
-	@echo "   Name: voice-training   → Create"
-	@echo ""
-	@echo "3. Create a Client:"
-	@echo "   Clients → Create client"
-	@echo "   Client ID:          voice-training-app"
-	@echo "   Client type:        OpenID Connect   → Next"
-	@echo "   Client authentication: OFF (public client)"
-	@echo "   Standard flow:      ON   → Next"
-	@echo "   Valid redirect URIs: http://localhost:5173/*"
-	@echo "   Web origins:         http://localhost:5173"
-	@echo "   → Save"
-	@echo ""
-	@echo "4. Enable user registration:"
-	@echo "   Realm settings → Login tab"
-	@echo "   User registration:  ON"
-	@echo "   Forgot password:    ON"
-	@echo "   → Save"
-	@echo ""
-	@echo "5. Use email as username:"
-	@echo "   Realm settings → Login tab"
-	@echo "   Email as username:  ON"
-	@echo "   → Save"
-	@echo ""
-	@echo "6. Apply the custom theme:"
-	@echo "   Realm settings → Themes tab"
-	@echo "   Login theme: voice-training"
-	@echo "   → Save"
-	@echo ""
-	@echo "7. Copy the realm URL into your .env:"
-	@echo "   KEYCLOAK_REALM_URL=http://localhost:8080/realms/voice-training"
-	@echo ""
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  Done. Run 'make dev' to start the full stack."
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo ""
+	$(MAKE) -C keycloak all
+
+keycloak-status:
+	$(MAKE) -C keycloak status
 
 # ── Help ─────────────────────────────────────────────────────────────────────
 
@@ -112,22 +70,23 @@ help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "All-in-one"
-	@echo "  all              setup → up → keycloak-setup → dev"
+	@echo "  all               setup → up → keycloak-setup → dev"
 	@echo ""
 	@echo "Onboarding"
-	@echo "  setup            Copy .env files and install frontend deps"
-	@echo "  keycloak-setup   Print step-by-step Keycloak configuration guide"
+	@echo "  setup             Copy .env files and install frontend deps"
+	@echo "  keycloak-setup    Configure Keycloak via Admin API (realm, client, settings, theme)"
+	@echo "  keycloak-status   Print current Keycloak realm configuration"
 	@echo ""
 	@echo "Docker"
-	@echo "  up               Start all services (detached)"
-	@echo "  down             Stop all services"
-	@echo "  build            Rebuild and restart the API container"
-	@echo "  logs             Stream logs from all containers"
-	@echo "  restart          Restart all containers"
-	@echo "  clean            Stop all containers and delete volumes"
+	@echo "  up                Start all services (detached)"
+	@echo "  down              Stop all services"
+	@echo "  build             Rebuild and restart the API container"
+	@echo "  logs              Stream logs from all containers"
+	@echo "  restart           Restart all containers"
+	@echo "  clean             Stop all containers and delete volumes"
 	@echo ""
 	@echo "Development"
-	@echo "  dev              Start Docker stack then launch the frontend dev server"
+	@echo "  dev               Start Docker stack then launch the frontend dev server"
 	@echo ""
 	@echo "Frontend (delegated to web-demo/Makefile)"
 	@echo "  install-frontend  npm install in web-demo/"
@@ -135,4 +94,6 @@ help:
 	@echo "  lint-frontend     npm run lint in web-demo/"
 	@echo "  check-frontend    lint + typecheck in web-demo/"
 	@echo "  clean-frontend    Remove web-demo/node_modules"
+	@echo ""
+	@echo "Run 'make -C keycloak help' for granular Keycloak targets."
 	@echo ""
