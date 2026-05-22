@@ -1,14 +1,14 @@
-import { account } from "@/lib/appwrite";
+import keycloak from "@/lib/keycloak";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 async function request(path, options = {}) {
-  const { jwt } = await account.createJWT();
+  await keycloak.updateToken(30);
   const { headers: optHeaders, ...rest } = options;
   const res = await fetch(`${API_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${jwt}`,
+      Authorization: `Bearer ${keycloak.token}`,
       ...optHeaders,
     },
     ...rest,
