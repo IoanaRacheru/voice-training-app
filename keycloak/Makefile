@@ -14,14 +14,25 @@ ADMIN_PASS := $(if $(ADMIN_PASS),$(ADMIN_PASS),admin)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-# Fetches a short-lived admin token and writes it to .token
+# Fetches a short-lived admin token and writes it to .token.
+# Falls back to the default `admin` password to handle existing DB state
+# where KEYCLOAK_ADMIN_PASSWORD in .env no longer matches current credentials.
 define fetch_token
 	@echo "  → authenticating as $(ADMIN_USER)..."
-	@curl -sf -X POST "$(KEYCLOAK_URL)/realms/master/protocol/openid-connect/token" \
+	@curl -s -X POST "$(KEYCLOAK_URL)/realms/master/protocol/openid-connect/token" \
 	  -H "Content-Type: application/x-www-form-urlencoded" \
 	  -d "grant_type=password&client_id=admin-cli&username=$(ADMIN_USER)&password=$(ADMIN_PASS)" \
 	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 > .token
-	@test -s .token || (echo "ERROR: could not get admin token — is Keycloak running? (make up)" && rm -f .token && exit 1)
+	@if [ ! -s .token ] && [ "$(ADMIN_PASS)" != "admin" ]; then \
+	  curl -s -X POST "$(KEYCLOAK_URL)/realms/master/protocol/openid-connect/token" \
+	    -H "Content-Type: application/x-www-form-urlencoded" \
+	    -d "grant_type=password&client_id=admin-cli&username=$(ADMIN_USER)&password=admin" \
+	    | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 > .token; \
+	  if [ -s .token ]; then \
+	    echo "    (fallback auth with default password 'admin' succeeded)"; \
+	  fi; \
+	fi
+	@test -s .token || (echo "ERROR: could not get admin token — check KEYCLOAK_ADMIN_PASSWORD in .env and Keycloak container state." && rm -f .token && exit 1)
 endef
 
 # ── Targets ───────────────────────────────────────────────────────────────────
@@ -42,18 +53,24 @@ all: realm client settings theme
 realm:
 	@echo "[1/4] Creating realm '$(REALM)'..."
 	$(fetch_token)
-	@curl -sf -o /dev/null -X POST "$(KEYCLOAK_URL)/admin/realms" \
+	@status=$$(curl -s -o /dev/null -w "%{http_code}" -X POST "$(KEYCLOAK_URL)/admin/realms" \
 	  -H "Authorization: Bearer $$(cat .token)" \
 	  -H "Content-Type: application/json" \
-	  -d '{"realm":"$(REALM)","enabled":true,"displayName":"Voice Training"}' \
-	  && echo "      realm created." \
-	  || echo "      realm already exists, skipping."
+	  -d '{"realm":"$(REALM)","enabled":true,"displayName":"Voice Training"}'); \
+	if [ "$$status" = "201" ]; then \
+	  echo "      realm created."; \
+	elif [ "$$status" = "409" ]; then \
+	  echo "      realm already exists, skipping."; \
+	else \
+	  echo "ERROR: realm creation failed (HTTP $$status)"; \
+	  exit 1; \
+	fi
 
 ## client: create the voice-training-app OIDC client
 client:
 	@echo "[2/4] Creating client '$(CLIENT_ID)'..."
 	$(fetch_token)
-	@curl -sf -o /dev/null -X POST "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients" \
+	@status=$$(curl -s -o /dev/null -w "%{http_code}" -X POST "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients" \
 	  -H "Authorization: Bearer $$(cat .token)" \
 	  -H "Content-Type: application/json" \
 	  -d '{ \
@@ -65,15 +82,21 @@ client:
 	    "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
 	    "webOrigins":["$(FRONTEND_ORIGIN)"], \
 	    "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN)"} \
-	  }' \
-	  && echo "      client created." \
-	  || echo "      client already exists, skipping."
+	  }'); \
+	if [ "$$status" = "201" ]; then \
+	  echo "      client created."; \
+	elif [ "$$status" = "409" ]; then \
+	  echo "      client already exists, skipping."; \
+	else \
+	  echo "ERROR: client creation failed (HTTP $$status)"; \
+	  exit 1; \
+	fi
 
 ## settings: enable registration, forgot-password, email-as-username
 settings:
 	@echo "[3/4] Configuring realm settings..."
 	$(fetch_token)
-	@curl -sf -o /dev/null -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)" \
+	@status=$$(curl -s -o .keycloak-settings-response -w "%{http_code}" -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)" \
 	  -H "Authorization: Bearer $$(cat .token)" \
 	  -H "Content-Type: application/json" \
 	  -d '{ \
@@ -82,18 +105,34 @@ settings:
 	    "loginWithEmailAllowed":true, \
 	    "registrationEmailAsUsername":true, \
 	    "duplicateEmailsAllowed":false \
-	  }' \
-	  && echo "      registration, forgot-password, email-as-username enabled."
+	  }'); \
+	if [ "$$status" = "204" ]; then \
+	  echo "      registration, forgot-password, email-as-username enabled."; \
+	else \
+	  echo "ERROR: realm settings update failed (HTTP $$status)"; \
+	  cat .keycloak-settings-response; \
+	  rm -f .keycloak-settings-response; \
+	  exit 1; \
+	fi; \
+	rm -f .keycloak-settings-response
 
 ## theme: apply the voice-training login theme
 theme:
 	@echo "[4/4] Applying login theme..."
 	$(fetch_token)
-	@curl -sf -o /dev/null -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)" \
+	@status=$$(curl -s -o .keycloak-theme-response -w "%{http_code}" -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)" \
 	  -H "Authorization: Bearer $$(cat .token)" \
 	  -H "Content-Type: application/json" \
-	  -d '{"loginTheme":"voice-training"}' \
-	  && echo "      theme applied."
+	  -d '{"loginTheme":"voice-training"}'); \
+	if [ "$$status" = "204" ]; then \
+	  echo "      theme applied."; \
+	else \
+	  echo "ERROR: theme update failed (HTTP $$status)"; \
+	  cat .keycloak-theme-response; \
+	  rm -f .keycloak-theme-response; \
+	  exit 1; \
+	fi; \
+	rm -f .keycloak-theme-response
 
 ## status: show current realm configuration
 status:
