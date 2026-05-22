@@ -1,10 +1,10 @@
 .PHONY: all setup up down build logs restart clean dev \
         install-frontend run-frontend lint-frontend check-frontend clean-frontend \
-        keycloak-setup keycloak-status help
+        keycloak-setup keycloak-status wait-keycloak help
 
 # ── All-in-one ───────────────────────────────────────────────────────────────
 
-all: setup up keycloak-setup dev
+all: setup up wait-keycloak keycloak-setup dev
 
 # ── Onboarding ──────────────────────────────────────────────────────────────
 
@@ -57,6 +57,14 @@ clean-frontend:
 
 # ── Keycloak (delegated) ─────────────────────────────────────────────────────
 
+wait-keycloak:
+	@echo "Waiting for Keycloak to be ready..."
+	@until curl -sf http://localhost:8080/realms/master > /dev/null 2>&1; do \
+	  printf '.'; \
+	  sleep 3; \
+	done
+	@echo " ready."
+
 keycloak-setup:
 	$(MAKE) -C keycloak all
 
@@ -76,6 +84,7 @@ help:
 	@echo "  setup             Copy .env files and install frontend deps"
 	@echo "  keycloak-setup    Configure Keycloak via Admin API (realm, client, settings, theme)"
 	@echo "  keycloak-status   Print current Keycloak realm configuration"
+	@echo "  wait-keycloak     Block until Keycloak is ready to accept requests"
 	@echo ""
 	@echo "Docker"
 	@echo "  up                Start all services (detached)"
