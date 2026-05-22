@@ -7,9 +7,14 @@ use axum::{
 };
 use futures::TryStreamExt;
 use mongodb::bson::{doc, DateTime};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 use crate::{auth::AppwriteUser, errors::AppError, models::session::Session, AppState};
+
+const MAX_DURATION_SECONDS: u32 = 86_400;
+const MIN_AVERAGE_PITCH: f64 = 50.0;
+const MAX_AVERAGE_PITCH: f64 = 2_000.0;
+const MAX_ENUM_LIKE_LEN: usize = 64;
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
@@ -17,12 +22,83 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/api/sessions", get(list))
 }
 
+fn deserialize_duration_seconds<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = u32::deserialize(deserializer)?;
+    if (1..=MAX_DURATION_SECONDS).contains(&value) {
+        Ok(value)
+    } else {
+        Err(serde::de::Error::custom(format!(
+            "duration_seconds must be between 1 and {MAX_DURATION_SECONDS}"
+        )))
+    }
+}
+
+fn deserialize_average_pitch<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = f64::deserialize(deserializer)?;
+    if value.is_finite() && (MIN_AVERAGE_PITCH..=MAX_AVERAGE_PITCH).contains(&value) {
+        Ok(value)
+    } else {
+        Err(serde::de::Error::custom(format!(
+            "average_pitch must be finite and between {MIN_AVERAGE_PITCH} and {MAX_AVERAGE_PITCH}"
+        )))
+    }
+}
+
+fn deserialize_score<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = u32::deserialize(deserializer)?;
+    if value <= 100 {
+        Ok(value)
+    } else {
+        Err(serde::de::Error::custom("score must be between 0 and 100"))
+    }
+}
+
+fn deserialize_enum_like_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    let trimmed = value.trim();
+
+    if trimmed.is_empty() || trimmed.len() > MAX_ENUM_LIKE_LEN {
+        return Err(serde::de::Error::custom(format!(
+            "value must be between 1 and {MAX_ENUM_LIKE_LEN} characters"
+        )));
+    }
+
+    if trimmed
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c == '_')
+    {
+        Ok(trimmed.to_string())
+    } else {
+        Err(serde::de::Error::custom(
+            "value must use lowercase letters and underscores only",
+        ))
+    }
+}
+
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CreateRequest {
+    #[serde(deserialize_with = "deserialize_duration_seconds")]
     pub duration_seconds: u32,
+    #[serde(deserialize_with = "deserialize_average_pitch")]
     pub average_pitch: f64,
+    #[serde(deserialize_with = "deserialize_score")]
     pub score: u32,
+    #[serde(deserialize_with = "deserialize_enum_like_string")]
     pub exercise_type: String,
+    #[serde(deserialize_with = "deserialize_enum_like_string")]
     pub goal: String,
 }
 
