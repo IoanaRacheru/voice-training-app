@@ -22,7 +22,7 @@ export default function MobileNav() {
           </span>
           <div>
             <h1 className="font-display text-xl uppercase leading-none text-foreground">
-              VoxShift
+              StillCisTho
             </h1>
             <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">
               Voice training

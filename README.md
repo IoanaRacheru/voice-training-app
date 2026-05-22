@@ -5,7 +5,32 @@ A voice training application [in development] for guided vocal exercises and voi
 > [!IMPORTANT]
 > This project is in its early stages of development and is not yet functional. Core features are still under active development.
 
-# Roadmap overview 
+# Getting started
+
+> Prerequisites: [Docker](https://docs.docker.com/get-docker/) and [Node.js 20+](https://nodejs.org/) must be installed.
+
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd voice-training-app
+
+# 2. Copy environment files and install frontend dependencies
+make setup
+#    → Edit .env and fill in any secrets before the next step.
+
+# 3. Start the full Docker stack (MongoDB, PostgreSQL, Keycloak, API)
+make up
+
+# 4. Configure Keycloak (one-time, follow the printed instructions)
+make keycloak-setup
+
+# 5. Start the frontend dev server (keeps Docker running in the background)
+make dev
+```
+
+Run `make help` at any time to see all available targets.
+
+# Roadmap overview
 TODO
 
 # License
