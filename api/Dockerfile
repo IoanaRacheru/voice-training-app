@@ -1,10 +1,10 @@
 # edition = "2024" + resolver = "3" require >= 1.85; time 0.3.47 dep requires >= 1.88
-FROM rust:1.88-slim AS builder
+FROM rust:1.88-alpine3.22 AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    pkgconf \
+    openssl-dev \
+    build-base
 
 WORKDIR /app
 
@@ -30,15 +30,15 @@ RUN cargo build --release -p api
 RUN rm api/src/main.rs
 COPY api/src api/src
 RUN touch api/src/main.rs && cargo build --release -p api
+RUN strip /app/target/release/api
 
-FROM debian:bookworm-slim AS runtime
+FROM alpine:3.22 AS runtime
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     ca-certificates \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
+    libssl3
 
-RUN useradd -r -u 1001 -s /bin/false appuser
+RUN addgroup -S appgroup && adduser -S -u 1001 -G appgroup appuser
 
 WORKDIR /app
 
