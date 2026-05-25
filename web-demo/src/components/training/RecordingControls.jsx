@@ -10,6 +10,7 @@ export default function RecordingControls({
   onToggle,
   onReset,
   duration,
+  timeLabel = "Elapsed",
 }) {
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -67,7 +68,7 @@ export default function RecordingControls({
 
       <div className="grid gap-3">
         <div className="flex items-center justify-between border-t border-white/20 pt-3 font-mono text-xs uppercase text-white/65">
-          <span>Elapsed</span>
+          <span>{timeLabel}</span>
           <span className="text-white">{formatTime(duration)}</span>
         </div>
 

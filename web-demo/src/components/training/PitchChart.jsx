@@ -3,6 +3,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   XAxis,
@@ -15,6 +16,15 @@ import {
  * }} props
  */
 export default function PitchChart({ data, targetRange }) {
+  const hasTargetRange =
+    Array.isArray(targetRange) &&
+    targetRange.length === 2 &&
+    Number.isFinite(Number(targetRange[0])) &&
+    Number.isFinite(Number(targetRange[1])) &&
+    Number(targetRange[1]) > Number(targetRange[0]);
+  const lowTarget = hasTargetRange ? Number(targetRange[0]) : null;
+  const highTarget = hasTargetRange ? Number(targetRange[1]) : null;
+
   return (
     <div className="h-48 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -36,17 +46,24 @@ export default function PitchChart({ data, targetRange }) {
             tickFormatter={(value) => `${value}Hz`}
           />
 
-          {targetRange && (
+          {hasTargetRange && (
             <>
+              <ReferenceArea
+                y1={lowTarget}
+                y2={highTarget}
+                fill="#22c55e"
+                fillOpacity={0.16}
+                strokeOpacity={0}
+              />
               <ReferenceLine
-                y={targetRange[0]}
-                stroke="hsl(var(--primary))"
+                y={lowTarget}
+                stroke="#16a34a"
                 strokeDasharray="6 4"
                 strokeWidth={2}
               />
               <ReferenceLine
-                y={targetRange[1]}
-                stroke="hsl(var(--primary))"
+                y={highTarget}
+                stroke="#16a34a"
                 strokeDasharray="6 4"
                 strokeWidth={2}
               />
