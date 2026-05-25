@@ -1,10 +1,14 @@
 // @ts-nocheck
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { sessionService } from "@/services/sessionService";
 
 export default function ProfileCard({ user }) {
+  const [sessionCount, setSessionCount] = useState(() =>
+    Math.max(user?.total_sessions || 0, sessionService.getSessionCount())
+  );
   const displayName = user?.username || user?.id || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
   const goalLabels = {
@@ -17,6 +21,21 @@ export default function ProfileCard({ user }) {
   };
   const goal = goalLabels[user?.voice_goal] || "Feminine";
   const level = user?.experience_level || "beginner";
+
+  useEffect(() => {
+    const updateSessionCount = () => {
+      setSessionCount(Math.max(user?.total_sessions || 0, sessionService.getSessionCount()));
+    };
+
+    updateSessionCount();
+    window.addEventListener("voiceSessions:changed", updateSessionCount);
+    window.addEventListener("storage", updateSessionCount);
+
+    return () => {
+      window.removeEventListener("voiceSessions:changed", updateSessionCount);
+      window.removeEventListener("storage", updateSessionCount);
+    };
+  }, [user?.total_sessions]);
 
   return (
     <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
@@ -69,7 +88,7 @@ export default function ProfileCard({ user }) {
           <dt className="text-[10px] font-bold uppercase text-muted-foreground">
             Sessions
           </dt>
-          <dd className="mt-1 text-2xl font-black">{user?.total_sessions || 0}</dd>
+          <dd className="mt-1 text-2xl font-black">{sessionCount}</dd>
         </div>
       </dl>
     </section>

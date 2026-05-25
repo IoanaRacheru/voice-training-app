@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { analysisService } from "@/services/analysisService";
 
 export default function VoiceInput({ user, onUpdate }) {
   const [status, setStatus] = useState(user?.initial_voice_sample ? "uploaded" : "idle");
@@ -24,9 +25,6 @@ export default function VoiceInput({ user, onUpdate }) {
   const [lastAveragePitch, setLastAveragePitch] = useState(
     user?.initial_voice_sample?.average_pitch || null
   );
-  const mediaRecorderRef = useRef(null);
-  const recorderStreamRef = useRef(null);
-  const chunksRef = useRef([]);
   const fileInputRef = useRef(null);
   const objectUrlRef = useRef(user?.initial_voice_sample?.audioUrl || null);
   const {
@@ -43,7 +41,6 @@ export default function VoiceInput({ user, onUpdate }) {
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
       }
-      recorderStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
@@ -70,60 +67,49 @@ export default function VoiceInput({ user, onUpdate }) {
 
   const handleRecordingToggle = async () => {
     if (isRecording) {
+      const audioData = await stopRecording();
+      const analysis = analysisService.process(audioData);
       const { averagePitch } = getSessionStats();
-      stopRecording();
-      mediaRecorderRef.current?.stop();
 
       setLastAveragePitch(averagePitch);
+      setStatus(sample ? (sample.type === "upload" ? "uploaded" : "recorded") : "idle");
+
+      if (!audioData?.blob || audioData.blob.size === 0) {
+        toast.error("Recording is empty and was not saved");
+        return;
+      }
+
+      const audioUrl = URL.createObjectURL(audioData.blob);
+      const recordingSample = {
+        id: crypto.randomUUID(),
+        type: "recording",
+        name: "Initial voice recording",
+        audioUrl,
+        mimeType: audioData.blob.type,
+        size: audioData.blob.size,
+        createdAt: new Date().toISOString(),
+        average_pitch: analysis.ok ? analysis.averagePitch : null,
+      };
+
+      replaceSample(recordingSample);
       toast.success(
-        averagePitch
-          ? `Initial voice recording saved. Avg pitch: ${averagePitch}Hz`
+        recordingSample.average_pitch
+          ? `Initial voice recording saved. Avg pitch: ${recordingSample.average_pitch}Hz`
           : "Initial voice recording saved"
       );
       return;
     }
 
     try {
-      const recorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(recorderStream);
-
-      chunksRef.current = [];
-      recorderStreamRef.current = recorderStream;
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        recorderStream.getTracks().forEach((track) => track.stop());
-        recorderStreamRef.current = null;
-
-        if (chunksRef.current.length === 0) return;
-
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const audioUrl = URL.createObjectURL(blob);
-        const { averagePitch } = getSessionStats();
-        const recordingSample = {
-          id: crypto.randomUUID(),
-          type: "recording",
-          name: "Initial voice recording",
-          audioUrl,
-          mimeType: blob.type,
-          size: blob.size,
-          createdAt: new Date().toISOString(),
-          average_pitch: averagePitch,
-        };
-
-        replaceSample(recordingSample);
-      };
+      setLastAveragePitch(null);
+      const recorderState = await startRecording();
+      if (!recorderState?.isRecording) {
+        setStatus(sample ? (sample.type === "recording" ? "recorded" : "uploaded") : "idle");
+        toast.error(recorderState?.error || "Microphone access is unavailable");
+        return;
+      }
 
       setStatus("recording");
-      setLastAveragePitch(null);
-      mediaRecorder.start();
-      await startRecording();
     } catch (error) {
       setStatus(sample ? (sample.type === "recording" ? "recorded" : "uploaded") : "idle");
       toast.error("Microphone access is unavailable");

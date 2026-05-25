@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import DuckNatureBackdrop from "@/components/layout/DuckNatureBackdrop";
 import Training from "@/pages/Training";
+import Exercises from "@/pages/Exercises";
+import Challenge from "@/pages/Challenge";
 import Profile from "@/pages/Profile";
 import Progress from "@/pages/Progress";
 import Chatbot from "@/pages/Chatbot";
@@ -21,6 +23,8 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Training />} />
+        <Route path="/exercises" element={<Exercises />} />
+        <Route path="/challenge" element={<Challenge />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/progress" element={<Progress />} />
         <Route path="/chatbot" element={<Chatbot />} />
