@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Toaster } from "sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import PageNotFound from "./lib/PageNotFound";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -13,22 +12,10 @@ import Profile from "@/pages/Profile";
 import Progress from "@/pages/Progress";
 import Chatbot from "@/pages/Chatbot";
 
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-
 const AuthenticatedApp = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [authPage, setAuthPage] = useState("login");
+  const { isLoading } = useAuth();
 
   if (isLoading) return null;
-
-  if (!isAuthenticated) {
-    if (authPage === "register") {
-      return <Register onGoToLogin={() => setAuthPage("login")} />;
-    }
-
-    return <Login onGoToRegister={() => setAuthPage("register")} />;
-  }
 
   return (
     <Routes>
@@ -37,8 +24,6 @@ const AuthenticatedApp = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/progress" element={<Progress />} />
         <Route path="/chatbot" element={<Chatbot />} />
-        <Route path="/login" element={<Navigate to="/" replace />} />
-        <Route path="/register" element={<Navigate to="/" replace />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
