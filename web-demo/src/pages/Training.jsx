@@ -10,26 +10,12 @@ import PitchChart from "@/components/training/PitchChart";
 import FeedbackCards from "@/components/training/FeedbackCards";
 import GoalBadge from "@/components/training/GoalBadge";
 import VoiceMetricsPanel from "@/components/training/VoiceMetricsPanel";
-import ReadingExercises from "@/components/training/ReadingExercises";
 import { VoiceAnalyticsDashboard } from "@/components/voice-analytics";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
-import { createSession } from "@/api/authClient";
-
-function computeScore(pitch, targetRange) {
-  if (!pitch || !targetRange) return null;
-
-  const [low, high] = targetRange;
-  const center = (low + high) / 2;
-  const margin = (high - low) / 2;
-  const dist = Math.abs(pitch - center);
-
-  return Math.max(
-    0,
-    Math.min(100, Math.round(100 - (dist / (margin * 2)) * 100))
-  );
-}
+import { analysisService } from "@/services/analysisService";
+import { computeSessionScore, sessionService } from "@/services/sessionService";
 
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -59,46 +45,46 @@ export default function Training() {
     isRecording,
     duration,
     currentPitch,
+    currentVolume,
+    resonanceCentroid,
+    voicePresentation,
     pitchData,
     waveformData,
     error,
     startRecording,
     stopRecording,
     reset,
-    getSessionStats,
   } = useVoiceRecorder();
 
-  const safePitch = currentPitch ?? 0;
-  const score = computeScore(currentPitch, targetRange) ?? 0;
+  const safePitch = analysisService.isValidPitch(currentPitch) ? currentPitch : 0;
+  const score = computeSessionScore(currentPitch, targetRange) ?? 0;
   const targetCenter = Math.round((targetRange[0] + targetRange[1]) / 2);
 
   const handleToggle = async () => {
     if (isRecording) {
-      stopRecording();
+      const audioData = await stopRecording();
+      const analysis = analysisService.process(audioData);
+      const result = sessionService.createSession({
+        audioData,
+        analysis,
+        targetRange,
+        exerciseType,
+        goal,
+      });
 
-      const { averagePitch } = getSessionStats();
-
-      if (duration >= 3 && averagePitch) {
-        const sessionScore = computeScore(averagePitch, targetRange) ?? 0;
-
-        try {
-          await createSession({
-            duration_seconds: duration,
-            average_pitch: averagePitch,
-            score: sessionScore,
-            exercise_type: exerciseType,
-            goal,
-          });
-          toast.success(
-            `Session saved. Avg pitch: ${averagePitch}Hz — Score: ${sessionScore}/100`
-          );
-        } catch (err) {
-          console.error("Session save failed:", err);
-          toast.error("Failed to save session. Please try again.");
-        }
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
       }
+
+      toast.success(
+        `Session saved. Avg pitch: ${result.session.average_pitch}Hz - Score: ${result.session.score}/100`
+      );
     } else {
-      await startRecording();
+      const recorderState = await startRecording();
+      if (recorderState?.error) {
+        toast.error(recorderState.error);
+      }
     }
   };
 
@@ -172,6 +158,9 @@ export default function Training() {
             <VoiceMetricsPanel
               isRecording={isRecording}
               currentPitch={safePitch}
+              currentVolume={currentVolume}
+              resonanceCentroid={resonanceCentroid}
+              voicePresentation={voicePresentation}
             />
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -267,8 +256,6 @@ export default function Training() {
 
         <VoiceAnalyticsDashboard />
       </section>
-
-      <ReadingExercises />
 
       <FeedbackCards
         currentPitch={safePitch}

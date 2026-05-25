@@ -1,13 +1,15 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { MessageSquare, Mic, TrendingUp, User } from "lucide-react";
+import { Dumbbell, MessageSquare, Mic, Trophy, TrendingUp, User } from "lucide-react";
 import DuckMark from "./DuckMark";
 
 const navItems = [
   { path: "/", label: "Training", code: "01", icon: Mic },
-  { path: "/progress", label: "Progress", code: "02", icon: TrendingUp },
-  { path: "/profile", label: "Profile", code: "03", icon: User },
-  { path: "/chatbot", label: "Chatbot", code: "04", icon: MessageSquare },
+  { path: "/exercises", label: "Exercises", code: "02", icon: Dumbbell },
+  { path: "/challenge", label: "Challenge", code: "03", icon: Trophy },
+  { path: "/progress", label: "Progress", code: "04", icon: TrendingUp },
+  { path: "/profile", label: "Profile", code: "05", icon: User },
+  { path: "/chatbot", label: "Chatbot", code: "06", icon: MessageSquare },
 ];
 
 export default function MobileNav() {
