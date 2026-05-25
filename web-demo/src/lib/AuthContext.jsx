@@ -51,7 +51,7 @@ export function AuthProvider(/** @type {{ children: import("react").ReactNode }}
 
   useEffect(() => {
     keycloak
-      .init({ onLoad: "check-sso", pkceMethod: "S256" })
+      .init({ onLoad: "login-required", pkceMethod: "S256" })
       .then((authenticated) => {
         if (authenticated) {
           return authApi.getMe().then((data) => setUser(buildUser(data)));
