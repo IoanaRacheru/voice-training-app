@@ -3,7 +3,7 @@
         dev dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
-        check-vosk build-api-image-vosk \
+        check-vosk test-vosk-runtime build-api-image-vosk \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak wait-api verify-stack \
@@ -163,6 +163,14 @@ test-dsp-bench:
 check-vosk:
 	cargo check -p app_core --features asr_vosk
 	cargo check -p api --features asr_vosk
+
+test-vosk-runtime:
+	@test -n "$$VOSK_MODEL_PATH" || { \
+	  echo "VOSK_MODEL_PATH is required. Example:"; \
+	  echo "  VOSK_MODEL_PATH=/abs/path/to/vosk-model make test-vosk-runtime"; \
+	  exit 1; \
+	}
+	VOSK_MODEL_PATH="$$VOSK_MODEL_PATH" cargo test -p app_core --features asr_vosk vosk_runtime_smoke -- --nocapture
 
 dep-tree:
 	cargo tree --workspace

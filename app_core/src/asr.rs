@@ -170,4 +170,23 @@ mod tests {
         let fb = eval.evaluate("hello training", &asr);
         assert!(fb.token_match_ratio >= 0.5);
     }
+
+    #[cfg(feature = "asr_vosk")]
+    #[test]
+    fn vosk_runtime_smoke() {
+        let model_path = std::env::var("VOSK_MODEL_PATH")
+            .expect("VOSK_MODEL_PATH must be set for vosk runtime smoke test");
+        let asr = VoskAsr { model_path };
+        let sr = 16_000u32;
+        let samples: Vec<f32> = (0..sr as usize)
+            .map(|i| {
+                let t = i as f32 / sr as f32;
+                (2.0 * std::f32::consts::PI * 180.0 * t).sin() * 0.2
+            })
+            .collect();
+        let out = asr
+            .recognize(&samples, sr)
+            .expect("vosk recognition should execute");
+        assert!((0.0..=1.0).contains(&out.confidence));
+    }
 }
