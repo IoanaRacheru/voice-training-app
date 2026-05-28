@@ -2,23 +2,22 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main", "dev-ariimia"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main", "dev-ariimia"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-      working-directory: api
-    - name: Run tests
-      run: cargo test --verbose
-      working-directory: api
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cargo check (workspace)
+        run: cargo check --workspace --all-targets
+      - name: Run tests (workspace)
+        run: cargo test --workspace --verbose

@@ -23,6 +23,8 @@
   - `make dep-deny`
   - `make dep-check`
 - Added baseline `deny.toml` and dependency workflow notes in `docs/CARGO_QUALITY.md`.
+- Added CI dependency gates workflow for `cargo-audit` and `cargo-deny`.
+- Expanded Rust CI workflow to run workspace checks/tests on `main` and `dev-ariimia`.
 
 ### Next In Queue
 - Implement provider-backed LLM adapters (OpenAI-compatible, Groq, OpenRouter).
@@ -34,3 +36,4 @@
 - `feat/analyze-integration-tests-make-docs`: analysis repository abstraction, integration tests, Make targets, docstrings.
 - `feat/openapi-swagger`: OpenAPI/Swagger wiring and API docs tests.
 - `feat/cargo-quality-gates`: Cargo-native dependency and advisory quality gates.
+- `feat/ci-dependency-gates`: CI enforcement for dependency security and workspace Rust checks.
