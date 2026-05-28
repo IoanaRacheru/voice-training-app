@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use axum::{middleware as axum_middleware, Router};
 use app_core::{
-    llm::RuleBasedCoach,
+    llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
     tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
     Engine,
 };
@@ -29,6 +29,46 @@ pub struct AppState {
     pub http: Client,
     pub jwks: Vec<JwkKey>,
     pub engine: Arc<Engine>,
+    pub llm_provider: String,
+}
+
+fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
+    match config.llm_provider.as_str() {
+        "openrouter" => match &config.openrouter_api_key {
+            Some(key) => HttpLlmCoach::new(LlmProviderConfig {
+                provider: LlmProvider::OpenRouter,
+                api_key: key.clone(),
+                model: config.openrouter_model.clone(),
+                base_url: None,
+            })
+            .map(|c| Box::new(c) as Box<dyn LlmCoach>)
+            .unwrap_or_else(|_| Box::new(RuleBasedCoach)),
+            None => Box::new(RuleBasedCoach),
+        },
+        "groq" => match &config.groq_api_key {
+            Some(key) => HttpLlmCoach::new(LlmProviderConfig {
+                provider: LlmProvider::Groq,
+                api_key: key.clone(),
+                model: config.groq_model.clone(),
+                base_url: None,
+            })
+            .map(|c| Box::new(c) as Box<dyn LlmCoach>)
+            .unwrap_or_else(|_| Box::new(RuleBasedCoach)),
+            None => Box::new(RuleBasedCoach),
+        },
+        "openai" => match &config.llm_api_key {
+            Some(key) => HttpLlmCoach::new(LlmProviderConfig {
+                provider: LlmProvider::OpenAiCompatible,
+                api_key: key.clone(),
+                model: config.llm_model.clone(),
+                base_url: config.llm_base_url.clone(),
+            })
+            .map(|c| Box::new(c) as Box<dyn LlmCoach>)
+            .unwrap_or_else(|_| Box::new(RuleBasedCoach)),
+            None => Box::new(RuleBasedCoach),
+        },
+        _ => Box::new(RuleBasedCoach),
+    }
 }
 
 #[tokio::main]
@@ -67,8 +107,9 @@ async fn main() {
         engine: Arc::new(Engine::new(
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
-            Box::new(RuleBasedCoach),
+            build_llm_coach(&config),
         )),
+        llm_provider: config.llm_provider.clone(),
     });
 
     let protected = Router::new()
@@ -82,6 +123,7 @@ async fn main() {
 
     let app = Router::new()
         .merge(routes::health::router())
+        .merge(routes::llm::router())
         .merge(protected)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
