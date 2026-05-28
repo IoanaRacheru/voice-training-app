@@ -125,3 +125,163 @@ pub struct PatchMeResponse {
     /// Human-readable operation status.
     pub message: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use app_core::{
+        asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        llm::RuleBasedCoach,
+        tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+        Engine,
+    };
+    use async_trait::async_trait;
+    use axum::{extract::State, Extension, Json};
+    use mongodb::Client;
+    use tokio::sync::RwLock;
+
+    use super::{me, patch_me, PatchMeRequest};
+    use crate::{
+        auth::AppwriteUser,
+        config::Config,
+        models::profile::Profile,
+        repositories::{
+            analysis::MongoAnalysisRepository,
+            profile::{ProfilePatch, ProfileRepository},
+            session::MongoSessionRepository,
+        },
+        AppState,
+    };
+
+    struct MemoryProfileRepository {
+        profile: Arc<Mutex<Option<Profile>>>,
+    }
+
+    #[async_trait]
+    impl ProfileRepository for MemoryProfileRepository {
+        async fn find_by_user_id(
+            &self,
+            _user_id: &str,
+        ) -> Result<Option<Profile>, mongodb::error::Error> {
+            Ok(self.profile.lock().expect("lock").clone())
+        }
+
+        async fn upsert_by_user_id(
+            &self,
+            user_id: &str,
+            _email: &str,
+            patch: ProfilePatch,
+        ) -> Result<(), mongodb::error::Error> {
+            let mut guard = self.profile.lock().expect("lock");
+            let mut current = guard.clone().unwrap_or(Profile {
+                id: None,
+                appwrite_user_id: user_id.to_string(),
+                voice_goal: None,
+                experience_level: None,
+                target_pitch_range: None,
+                training_focus: None,
+            });
+            if patch.voice_goal.is_some() {
+                current.voice_goal = patch.voice_goal;
+            }
+            if patch.experience_level.is_some() {
+                current.experience_level = patch.experience_level;
+            }
+            if patch.target_pitch_range.is_some() {
+                current.target_pitch_range = patch.target_pitch_range;
+            }
+            if patch.training_focus.is_some() {
+                current.training_focus = patch.training_focus;
+            }
+            *guard = Some(current);
+            Ok(())
+        }
+    }
+
+    async fn build_state(profile: Option<Profile>) -> Arc<AppState> {
+        let client = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+        Arc::new(AppState {
+            db: client.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+            }),
+            http: reqwest::Client::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new(
+                Box::new(HeuristicProsodyTool),
+                Box::new(HeuristicVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
+            profile_repo: Arc::new(MemoryProfileRepository {
+                profile: Arc::new(Mutex::new(profile)),
+            }),
+            session_repo: Arc::new(MongoSessionRepository::new(client.database("voice_training"))),
+        })
+    }
+
+    #[tokio::test]
+    async fn me_returns_profile_payload() {
+        let state = build_state(Some(Profile {
+            id: None,
+            appwrite_user_id: "u-1".into(),
+            voice_goal: Some("feminine".into()),
+            experience_level: Some("beginner".into()),
+            target_pitch_range: Some(vec![160.0, 220.0]),
+            training_focus: Some(vec!["pitch".into()]),
+        }))
+        .await;
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let resp = me(State(state), Extension(user)).await.expect("ok");
+        assert_eq!(resp.0.user_id, "u-1");
+        assert_eq!(resp.0.voice_goal.as_deref(), Some("feminine"));
+    }
+
+    #[tokio::test]
+    async fn patch_me_updates_profile() {
+        let state = build_state(None).await;
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let _ = patch_me(
+            State(state.clone()),
+            Extension(user.clone()),
+            Json(PatchMeRequest {
+                voice_goal: Some("androgynous".into()),
+                experience_level: Some("intermediate".into()),
+                target_pitch_range: None,
+                training_focus: Some(vec!["resonance".into()]),
+            }),
+        )
+        .await
+        .expect("ok");
+        let me_resp = me(State(state), Extension(user)).await.expect("ok");
+        assert_eq!(me_resp.0.voice_goal.as_deref(), Some("androgynous"));
+        assert_eq!(me_resp.0.experience_level.as_deref(), Some("intermediate"));
+    }
+}
