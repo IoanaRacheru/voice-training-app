@@ -2,19 +2,16 @@ use std::sync::Arc;
 
 use app_core::AnalysisInput;
 use axum::{
+    Extension, Json, Router,
     extract::{DefaultBodyLimit, State},
     routing::post,
-    Extension, Json, Router,
 };
 use mongodb::bson::DateTime;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    auth::AppwriteUser,
-    errors::AppError,
-    repositories::analysis::AnalysisArtifact,
-    AppState,
+    AppState, auth::AppwriteUser, errors::AppError, repositories::analysis::AnalysisArtifact,
 };
 
 /// Register analysis routes with a configurable body-size guard.
@@ -130,8 +127,9 @@ pub async fn analyze(
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{analyze, router, AnalyzeRequest};
+    use super::{AnalyzeRequest, analyze, router};
     use crate::{
+        AppState,
         auth::AppwriteUser,
         config::Config,
         repositories::{
@@ -139,23 +137,22 @@ mod tests {
             profile::MongoProfileRepository,
             session::MongoSessionRepository,
         },
-        AppState,
     };
     use app_core::{
+        Engine,
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
-        Engine,
     };
     use async_trait::async_trait;
     use axum::{
+        Extension, Json,
         body::Body,
         extract::State,
         http::{Request, StatusCode},
-        Extension, Json,
     };
-    use mongodb::{bson::DateTime, Client};
+    use mongodb::{Client, bson::DateTime};
     use reqwest::Client as HttpClient;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
@@ -234,7 +231,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
                 vad_provider: "energy".into(),
                 asr_provider: "stub".into(),
-                vosk_model_path: None,
+                vosk_server_url: None,
             }),
             http: HttpClient::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -250,8 +247,12 @@ mod tests {
             analysis_repo: Arc::new(MemoryAnalysisRepository {
                 saved: Arc::clone(&saved),
             }),
-            profile_repo: Arc::new(MongoProfileRepository::new(mongo.database("voice_training"))),
-            session_repo: Arc::new(MongoSessionRepository::new(mongo.database("voice_training"))),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
         });
 
         let user = AppwriteUser {
@@ -315,7 +316,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
                 vad_provider: "energy".into(),
                 asr_provider: "stub".into(),
-                vosk_model_path: None,
+                vosk_server_url: None,
             }),
             http: HttpClient::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -331,8 +332,12 @@ mod tests {
             analysis_repo: Arc::new(MemoryAnalysisRepository {
                 saved: Arc::new(Mutex::new(Vec::new())),
             }),
-            profile_repo: Arc::new(MongoProfileRepository::new(mongo.database("voice_training"))),
-            session_repo: Arc::new(MongoSessionRepository::new(mongo.database("voice_training"))),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
         });
 
         let app = router(1024)

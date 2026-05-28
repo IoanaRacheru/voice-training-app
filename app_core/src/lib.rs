@@ -1,11 +1,11 @@
 //! Core voice-analysis orchestration library.
 
-/// Engine orchestration and input/output contracts.
-pub mod engine;
 /// ASR and pronunciation abstractions and baseline adapters.
 pub mod asr;
 /// DSP feature extraction helpers used by the engine.
 pub mod dsp;
+/// Engine orchestration and input/output contracts.
+pub mod engine;
 /// Shared error types.
 pub mod errors;
 /// LLM coach abstractions and adapters.

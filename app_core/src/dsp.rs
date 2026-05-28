@@ -1,7 +1,7 @@
 //! Basic DSP utilities used by the core engine.
 
-use rustfft::{num_complex::Complex, FftPlanner};
-use silero::{detect_speech, SampleRate, Session, SpeechOptions};
+use rustfft::{FftPlanner, num_complex::Complex};
+use silero::{SampleRate, Session, SpeechOptions, detect_speech};
 
 /// Voice activity detector abstraction.
 pub trait VadDetector: Send + Sync {
@@ -58,13 +58,25 @@ impl VadDetector for SileroVadDetector {
         let sr = match SampleRate::from_hz(sample_rate) {
             Ok(v) => v,
             Err(_) => {
-                return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+                return EnergyVadDetector.voiced_mask(
+                    samples,
+                    sample_rate,
+                    frame_size,
+                    hop,
+                    rms_values,
+                );
             }
         };
         let mut session = match Session::bundled() {
             Ok(s) => s,
             Err(_) => {
-                return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+                return EnergyVadDetector.voiced_mask(
+                    samples,
+                    sample_rate,
+                    frame_size,
+                    hop,
+                    rms_values,
+                );
             }
         };
         let segments = match detect_speech(
@@ -74,7 +86,13 @@ impl VadDetector for SileroVadDetector {
         ) {
             Ok(s) => s,
             Err(_) => {
-                return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+                return EnergyVadDetector.voiced_mask(
+                    samples,
+                    sample_rate,
+                    frame_size,
+                    hop,
+                    rms_values,
+                );
             }
         };
         let mut mask = vec![false; rms_values.len()];
@@ -278,8 +296,9 @@ fn spectral_brightness(frame: &[f32]) -> f64 {
         .iter()
         .enumerate()
         .map(|(i, s)| {
-            let w =
-                0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / (n.saturating_sub(1) as f64)).cos();
+            let w = 0.5
+                - 0.5
+                    * (2.0 * std::f64::consts::PI * i as f64 / (n.saturating_sub(1) as f64)).cos();
             Complex::new(*s as f64 * w, 0.0)
         })
         .collect();
@@ -349,7 +368,8 @@ mod tests {
                 (2.0 * std::f32::consts::PI * 220.0 * t).sin() * 0.5
             })
             .collect();
-        let f = extract_signal_features_with_vad(&samples, sr, &SileroVadDetector).expect("features");
+        let f =
+            extract_signal_features_with_vad(&samples, sr, &SileroVadDetector).expect("features");
         assert_eq!(f.vad_name, "silero_vad");
     }
 

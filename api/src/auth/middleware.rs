@@ -6,11 +6,11 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Json, Response},
 };
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::{auth::AppwriteUser, AppState};
+use crate::{AppState, auth::AppwriteUser};
 
 #[derive(Deserialize)]
 struct KeycloakClaims {
@@ -118,20 +118,20 @@ mod tests {
     use std::sync::Arc;
 
     use app_core::{
+        Engine,
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
-        Engine,
     };
     use axum::{
+        Router,
         body::Body,
         extract::State,
         http::{Request, StatusCode},
         middleware as axum_middleware,
         response::IntoResponse,
         routing::get,
-        Router,
     };
     use jsonwebtoken::{Algorithm, EncodingKey, Header};
     use mongodb::Client;
@@ -140,14 +140,13 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
-        auth::{middleware::appwrite_middleware, JwkKey},
+        AppState,
+        auth::{JwkKey, middleware::appwrite_middleware},
         config::Config,
         repositories::{
-            analysis::MongoAnalysisRepository,
-            profile::MongoProfileRepository,
+            analysis::MongoAnalysisRepository, profile::MongoProfileRepository,
             session::MongoSessionRepository,
         },
-        AppState,
     };
 
     const TEST_PRIVATE_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
@@ -213,7 +212,7 @@ xDcBwamKcKejhkO6y4v4yfFcp7clWuANXQ3TGMRdin2qDmObIr52U3QjWE9C9E+U
                 groq_model: "llama-3.3-70b-versatile".into(),
                 vad_provider: "energy".into(),
                 asr_provider: "stub".into(),
-                vosk_model_path: None,
+                vosk_server_url: None,
             }),
             http: reqwest::Client::new(),
             jwks: Arc::new(RwLock::new(vec![JwkKey {

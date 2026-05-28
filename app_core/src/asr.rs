@@ -69,43 +69,70 @@ impl SpeechRecognizer for VoskAsrStub {
     }
 }
 
-/// Vosk-based ASR adapter (feature-gated).
+/// Vosk-server ASR adapter.
 ///
-/// Enable with Cargo feature `asr_vosk` and provide a local Vosk model path.
-#[cfg(feature = "asr_vosk")]
+/// Expects a running Vosk websocket endpoint (for example
+/// `ws://vosk:2700` in Docker Compose).
 pub struct VoskAsr {
-    /// Filesystem path to the unpacked Vosk model directory.
-    pub model_path: String,
+    /// Vosk websocket endpoint URL.
+    pub server_url: String,
 }
 
-#[cfg(feature = "asr_vosk")]
 impl SpeechRecognizer for VoskAsr {
     fn recognize(&self, audio_samples: &[f32], sample_rate: u32) -> Result<AsrResult, CoreError> {
-        use vosk::{CompleteResult, Model, Recognizer};
+        use tungstenite::{Message, connect};
 
         if sample_rate < 8_000 || audio_samples.len() < 800 {
             return Err(CoreError::Validation(
                 "audio too short or sample rate too low for ASR".into(),
             ));
         }
-        let model = Model::new(self.model_path.clone())
-            .ok_or_else(|| CoreError::Tool("failed to load Vosk model".into()))?;
-        let mut recognizer = Recognizer::new(&model, sample_rate as f32)
-            .ok_or_else(|| CoreError::Tool("failed to construct Vosk recognizer".into()))?;
+
+        let (mut socket, _) = connect(self.server_url.as_str())
+            .map_err(|e| CoreError::Tool(format!("failed to connect to vosk server: {e}")))?;
+
+        let cfg = serde_json::json!({ "config": { "sample_rate": sample_rate } }).to_string();
+        socket
+            .send(Message::Text(cfg))
+            .map_err(|e| CoreError::Tool(format!("failed to send vosk config: {e}")))?;
+
         let pcm: Vec<i16> = audio_samples
             .iter()
             .map(|s| ((*s).clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
             .collect();
-        let _ = recognizer.accept_waveform(&pcm);
-        let result = recognizer.final_result();
-        let transcript = match result {
-            CompleteResult::Single(single) => single.text.to_string(),
-            CompleteResult::Multiple(multi) => multi
-                .alternatives
-                .first()
-                .map(|a| a.text.to_string())
-                .unwrap_or_default(),
-        };
+        let mut bytes = Vec::with_capacity(pcm.len() * 2);
+        for sample in pcm {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        socket
+            .send(Message::Binary(bytes))
+            .map_err(|e| CoreError::Tool(format!("failed to send vosk audio: {e}")))?;
+        socket
+            .send(Message::Text("{\"eof\":1}".into()))
+            .map_err(|e| CoreError::Tool(format!("failed to finalize vosk stream: {e}")))?;
+
+        let mut transcript = String::new();
+        while let Ok(msg) = socket.read() {
+            let text = match msg {
+                Message::Text(t) => t,
+                _ => continue,
+            };
+            let parsed: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| CoreError::Tool(format!("invalid vosk response: {e}")))?;
+            if let Some(result) = parsed.get("result").and_then(|v| v.as_array()) {
+                if let Some(first) = result.first() {
+                    if let Some(word) = first.get("word").and_then(|w| w.as_str()) {
+                        transcript.push_str(word);
+                        transcript.push(' ');
+                    }
+                }
+            }
+            if let Some(final_text) = parsed.get("text").and_then(|v| v.as_str()) {
+                transcript = final_text.trim().to_string();
+                break;
+            }
+        }
+
         let confidence = if transcript.is_empty() { 0.2 } else { 0.75 };
         Ok(AsrResult {
             transcript,
@@ -171,12 +198,12 @@ mod tests {
         assert!(fb.token_match_ratio >= 0.5);
     }
 
-    #[cfg(feature = "asr_vosk")]
     #[test]
     fn vosk_runtime_smoke() {
-        let model_path = std::env::var("VOSK_MODEL_PATH")
-            .expect("VOSK_MODEL_PATH must be set for vosk runtime smoke test");
-        let asr = VoskAsr { model_path };
+        let Ok(server_url) = std::env::var("VOSK_SERVER_URL") else {
+            return;
+        };
+        let asr = VoskAsr { server_url };
         let sr = 16_000u32;
         let samples: Vec<f32> = (0..sr as usize)
             .map(|i| {

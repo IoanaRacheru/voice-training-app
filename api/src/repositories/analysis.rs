@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use mongodb::bson::{doc, DateTime, Document};
+use mongodb::bson::{DateTime, Document, doc};
 use serde::{Deserialize, Serialize};
 
 /// Persisted analytics artifact produced by `/api/analyze`.

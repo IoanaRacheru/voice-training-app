@@ -9,14 +9,14 @@ mod routes;
 
 use std::sync::Arc;
 
-use axum::{middleware as axum_middleware, Router};
 use app_core::{
+    Engine,
     asr::{SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
     dsp::{EnergyVadDetector, SileroVadDetector, VadDetector},
     llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
     tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
-    Engine,
 };
+use axum::{Router, middleware as axum_middleware};
 use mongodb::Database;
 use repositories::{
     analysis::{AnalysisRepository, MongoAnalysisRepository},
@@ -95,12 +95,11 @@ fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
 }
 
 /// Build an ASR backend from runtime configuration.
-fn build_asr(_config: &Config) -> Box<dyn SpeechRecognizer> {
-    #[cfg(feature = "asr_vosk")]
-    if _config.asr_provider == "vosk" {
-        if let Some(model_path) = &_config.vosk_model_path {
+fn build_asr(config: &Config) -> Box<dyn SpeechRecognizer> {
+    if config.asr_provider == "vosk_remote" {
+        if let Some(server_url) = &config.vosk_server_url {
             return Box::new(app_core::asr::VoskAsr {
-                model_path: model_path.clone(),
+                server_url: server_url.clone(),
             });
         }
     }
@@ -122,8 +121,7 @@ async fn main() {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -176,7 +174,10 @@ async fn main() {
         .merge(routes::health::router())
         .merge(routes::llm::router())
         .merge(openapi::swagger_ui())
-        .route("/api/openapi.json", axum::routing::get(openapi::openapi_json))
+        .route(
+            "/api/openapi.json",
+            axum::routing::get(openapi::openapi_json),
+        )
         .merge(protected)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

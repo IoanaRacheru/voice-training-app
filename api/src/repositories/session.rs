@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use futures::TryStreamExt;
-use mongodb::bson::{doc, DateTime};
+use mongodb::bson::{DateTime, doc};
 
 use crate::models::session::Session;
 
@@ -86,7 +86,7 @@ fn build_session_from_input(input: CreateSessionInput, now: DateTime) -> Session
 mod tests {
     use mongodb::bson::DateTime;
 
-    use super::{build_session_from_input, CreateSessionInput};
+    use super::{CreateSessionInput, build_session_from_input};
 
     #[test]
     fn maps_create_input_to_session_model() {

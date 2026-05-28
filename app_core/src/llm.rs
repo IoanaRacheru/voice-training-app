@@ -94,7 +94,9 @@ impl HttpLlmCoach {
     /// Build a new HTTP coach from provider configuration.
     pub fn new(cfg: LlmProviderConfig) -> Result<Self, CoreError> {
         if cfg.api_key.trim().is_empty() {
-            return Err(CoreError::Validation("LLM api key must not be empty".into()));
+            return Err(CoreError::Validation(
+                "LLM api key must not be empty".into(),
+            ));
         }
         if cfg.model.trim().is_empty() {
             return Err(CoreError::Validation("LLM model must not be empty".into()));
@@ -208,7 +210,10 @@ mod tests {
             base_url: None,
         })
         .expect("coach");
-        assert_eq!(groq.chat_url(), "https://api.groq.com/openai/v1/chat/completions");
+        assert_eq!(
+            groq.chat_url(),
+            "https://api.groq.com/openai/v1/chat/completions"
+        );
     }
 
     #[test]
@@ -220,6 +225,9 @@ mod tests {
             base_url: Some("http://localhost:1234/v1".into()),
         })
         .expect("coach");
-        assert_eq!(coach.chat_url(), "http://localhost:1234/v1/chat/completions");
+        assert_eq!(
+            coach.chat_url(),
+            "http://localhost:1234/v1/chat/completions"
+        );
     }
 }

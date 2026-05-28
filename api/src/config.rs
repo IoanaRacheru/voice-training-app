@@ -30,17 +30,17 @@ pub struct Config {
     pub groq_model: String,
     /// VAD provider (`energy` | `silero`).
     pub vad_provider: String,
-    /// ASR provider (`stub` | `vosk`).
+    /// ASR provider (`stub` | `vosk_remote`).
     pub asr_provider: String,
-    /// Optional Vosk model path for `asr_provider=vosk`.
-    pub vosk_model_path: Option<String>,
+    /// Optional Vosk server URL for `asr_provider=vosk_remote`.
+    pub vosk_server_url: Option<String>,
 }
 
 impl Config {
     /// Build configuration by reading process environment variables.
     pub fn from_env() -> Self {
-        let keycloak_realm_url = std::env::var("KEYCLOAK_REALM_URL")
-            .expect("KEYCLOAK_REALM_URL must be set");
+        let keycloak_realm_url =
+            std::env::var("KEYCLOAK_REALM_URL").expect("KEYCLOAK_REALM_URL must be set");
         let derived_issuer = keycloak_realm_url
             .strip_suffix("/protocol/openid-connect/certs")
             .unwrap_or(&keycloak_realm_url)
@@ -79,7 +79,7 @@ impl Config {
                 .unwrap_or_else(|_| "llama-3.3-70b-versatile".to_string()),
             vad_provider: std::env::var("VAD_PROVIDER").unwrap_or_else(|_| "energy".to_string()),
             asr_provider: std::env::var("ASR_PROVIDER").unwrap_or_else(|_| "stub".to_string()),
-            vosk_model_path: std::env::var("VOSK_MODEL_PATH").ok(),
+            vosk_server_url: std::env::var("VOSK_SERVER_URL").ok(),
         }
     }
 }
