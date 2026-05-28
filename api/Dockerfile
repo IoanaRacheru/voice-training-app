@@ -1,11 +1,13 @@
 # edition = "2024" + resolver = "3" require >= 1.85; time 0.3.47 dep requires >= 1.88
-FROM rust:1.88-alpine3.22 AS builder
+FROM rust:1.88-bookworm AS builder
 ARG API_FEATURES=""
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     pkgconf \
-    openssl-dev \
-    build-base
+    libssl-dev \
+    build-essential \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -20,30 +22,32 @@ COPY web/Cargo.toml web/Cargo.toml
 RUN mkdir -p api/src app_core/src desktop/src web/src && \
     printf 'fn main(){}' | tee \
         api/src/main.rs \
-        app_core/src/main.rs \
         desktop/src/main.rs \
         web/src/main.rs > /dev/null
+RUN printf 'pub fn _stub() {}' > app_core/src/lib.rs
 
 # Build deps only (stubs compile but produce nothing useful)
-RUN cargo build --release -p api ${API_FEATURES}
+RUN cargo build -p api ${API_FEATURES}
 
-# Replace stub with real source and rebuild only the api crate
+# Replace stubs with real source and rebuild only the api crate
 RUN rm api/src/main.rs
 COPY api/src api/src
-RUN touch api/src/main.rs && cargo build --release -p api ${API_FEATURES}
-RUN strip /app/target/release/api
+RUN rm app_core/src/lib.rs
+COPY app_core/src app_core/src
+RUN touch api/src/main.rs app_core/src/lib.rs && cargo build -p api ${API_FEATURES}
 
-FROM alpine:3.22 AS runtime
+FROM debian:bookworm-slim AS runtime
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    libssl3
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -S appgroup && adduser -S -u 1001 -G appgroup appuser
+RUN groupadd --system appgroup && useradd --system --uid 1001 --gid appgroup appuser
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/api ./api
+COPY --from=builder /app/target/debug/api ./api
 
 USER appuser
 

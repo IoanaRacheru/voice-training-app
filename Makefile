@@ -1,5 +1,6 @@
 .PHONY: all bootstrap setup setup-env install up down start stop build-api-image rebuild-api-image logs logs-api logs-keycloak logs-db \
         ps status health restart clean clean-data clean-all prune docker-check \
+        pull-images \
         dev dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
@@ -16,7 +17,7 @@ DOCKER_COMPOSE ?= docker compose
 
 all: bootstrap dev
 
-bootstrap: setup up wait-keycloak keycloak-setup verify-stack
+bootstrap: setup pull-images up wait-keycloak keycloak-setup verify-stack
 
 # ── Onboarding ──────────────────────────────────────────────────────────────
 
@@ -41,6 +42,9 @@ docker-check:
 
 up: docker-check
 	$(DOCKER_COMPOSE) up -d
+
+pull-images: docker-check
+	$(DOCKER_COMPOSE) pull mongodb postgres keycloak vosk
 
 down: docker-check
 	$(DOCKER_COMPOSE) down
@@ -241,10 +245,10 @@ verify-stack: docker-check wait-keycloak wait-api
 	@echo "Stack verification complete."
 
 verify-vosk-api: docker-check
-	@echo "Starting api_vosk with ASR_PROVIDER=vosk_remote..."
-	@$(DOCKER_COMPOSE) up -d vosk mongodb postgres keycloak api_vosk
-	@echo "Waiting for Vosk API (http://localhost:3001/health)..."
-	@until curl -sf http://localhost:3001/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
+	@echo "Starting stack with Dockerized Vosk..."
+	@$(DOCKER_COMPOSE) up -d vosk mongodb postgres keycloak api
+	@echo "Waiting for API (http://localhost:3000/health)..."
+	@until curl -sf http://localhost:3000/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
 	@echo "Requesting service-account token from Keycloak..."
 	@token=$$(curl -s -X POST http://localhost:8080/realms/voice-training/protocol/openid-connect/token \
 	  -H "Content-Type: application/x-www-form-urlencoded" \
@@ -252,11 +256,11 @@ verify-vosk-api: docker-check
 	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4); \
 	test -n "$$token" || (echo "failed to fetch service-account token" && exit 1); \
 	audio=$$(awk 'BEGIN{for(i=0;i<4096;i++){v=(i%64<32?0.2:-0.2); printf("%s%.3f",(i==0?"":","),v)}}'); \
-	resp=$$(curl -sf -X POST http://localhost:3001/api/analyze \
+	resp=$$(curl -sf -X POST http://localhost:3000/api/analyze \
 	  -H "Authorization: Bearer $$token" \
 	  -H "Content-Type: application/json" \
 	  --data "{\"median_pitch_hz\":180.0,\"pitch_stability\":0.7,\"pause_ratio\":0.2,\"spectral_brightness\":0.6,\"sample_rate\":16000,\"audio_samples\":[$$audio]}"); \
-	echo "$$resp" | grep -q '"asr":{' || (echo "ASR output missing in analyze response"; exit 1); \
+	echo "$$resp" | grep -q '"asr":{' || { echo "ASR output missing in analyze response"; echo "$$resp"; exit 1; }; \
 	echo "Vosk API verification passed."
 
 # ── Diagnostics / Debug ─────────────────────────────────────────────────────
@@ -306,6 +310,7 @@ help:
 	@echo ""
 	@echo "Docker"
 	@echo "  up/down           start/stop stack"
+	@echo "  pull-images       pull core runtime images (mongo/postgres/keycloak/vosk)"
 	@echo "  build-api-image   rebuild and start api Docker image"
 	@echo "  rebuild-api-image clean then build api Docker image"
 	@echo "  logs              stream all service logs"

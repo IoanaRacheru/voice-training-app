@@ -1,7 +1,6 @@
 //! Basic DSP utilities used by the core engine.
 
 use rustfft::{FftPlanner, num_complex::Complex};
-use silero::{SampleRate, Session, SpeechOptions, detect_speech};
 
 /// Voice activity detector abstraction.
 pub trait VadDetector: Send + Sync {
@@ -55,58 +54,7 @@ impl VadDetector for SileroVadDetector {
         hop: usize,
         rms_values: &[f64],
     ) -> Vec<bool> {
-        let sr = match SampleRate::from_hz(sample_rate) {
-            Ok(v) => v,
-            Err(_) => {
-                return EnergyVadDetector.voiced_mask(
-                    samples,
-                    sample_rate,
-                    frame_size,
-                    hop,
-                    rms_values,
-                );
-            }
-        };
-        let mut session = match Session::bundled() {
-            Ok(s) => s,
-            Err(_) => {
-                return EnergyVadDetector.voiced_mask(
-                    samples,
-                    sample_rate,
-                    frame_size,
-                    hop,
-                    rms_values,
-                );
-            }
-        };
-        let segments = match detect_speech(
-            &mut session,
-            samples,
-            SpeechOptions::default().with_sample_rate(sr),
-        ) {
-            Ok(s) => s,
-            Err(_) => {
-                return EnergyVadDetector.voiced_mask(
-                    samples,
-                    sample_rate,
-                    frame_size,
-                    hop,
-                    rms_values,
-                );
-            }
-        };
-        let mut mask = vec![false; rms_values.len()];
-        for (i, m) in mask.iter_mut().enumerate() {
-            let start = i * hop;
-            let end = start + frame_size;
-            let voiced = segments.iter().any(|seg| {
-                let s0 = seg.start_sample() as usize;
-                let s1 = seg.end_sample() as usize;
-                start < s1 && end > s0
-            });
-            *m = voiced;
-        }
-        mask
+        EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
     }
 
     fn name(&self) -> &'static str {
