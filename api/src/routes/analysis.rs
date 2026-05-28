@@ -140,7 +140,8 @@ mod tests {
     };
     use app_core::{
         Engine,
-        asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        asr::{AsrResult, SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
+        errors::CoreError,
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
@@ -156,6 +157,18 @@ mod tests {
     use reqwest::Client as HttpClient;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
+
+    struct FailingAsr;
+
+    impl SpeechRecognizer for FailingAsr {
+        fn recognize(
+            &self,
+            _audio_samples: &[f32],
+            _sample_rate: u32,
+        ) -> Result<AsrResult, CoreError> {
+            Err(CoreError::Tool("forced asr failure".into()))
+        }
+    }
 
     struct MemoryAnalysisRepository {
         saved: Arc<Mutex<Vec<AnalysisArtifact>>>,
@@ -373,5 +386,83 @@ mod tests {
             .expect("request should execute");
 
         assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[tokio::test]
+    async fn analyze_route_strict_mode_surfaces_asr_runtime_failure() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_server_url: None,
+                provider_strict: true,
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new_with_policy(
+                Box::new(HeuristicProsodyTool),
+                Box::new(HeuristicVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(FailingAsr),
+                Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
+                true,
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::new(Mutex::new(Vec::new())),
+            }),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+        });
+
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let samples = vec![0.2_f32; 4096];
+
+        let err = analyze(
+            State(state),
+            Extension(user),
+            Json(AnalyzeRequest {
+                median_pitch_hz: 180.0,
+                pitch_stability: 0.7,
+                pause_ratio: 0.2,
+                spectral_brightness: 0.6,
+                audio_samples: Some(samples),
+                sample_rate: Some(16_000),
+                expected_text: Some("hello world".into()),
+            }),
+        )
+        .await
+        .expect_err("strict mode should surface ASR failure");
+
+        assert!(err.to_string().contains("ASR provider failed"));
     }
 }
