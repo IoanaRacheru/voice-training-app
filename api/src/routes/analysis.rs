@@ -459,8 +459,8 @@ mod tests {
             http: HttpClient::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
             engine: Arc::new(Engine::new_with_policy(
-                Box::new(HeuristicProsodyTool),
-                Box::new(HeuristicVoicePresentationTool),
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
                 Box::new(RuleBasedCoach),
                 Box::new(FailingAsr),
                 Box::new(SimplePronunciationEvaluator),
