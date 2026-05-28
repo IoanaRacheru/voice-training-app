@@ -32,7 +32,7 @@
 - Avoid merging branches with failing tests.
 
 ## Active Backlog
-- [ ] Provider-backed LLM coach adapters.
+- [x] Provider-backed LLM coach adapters.
 - [ ] `/api/analyze` integration tests.
 - [ ] DSP tool replacement for heuristics.
 - [ ] PostgreSQL repository integration.
