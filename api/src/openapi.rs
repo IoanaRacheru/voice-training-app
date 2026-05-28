@@ -19,7 +19,8 @@ use utoipa_swagger_ui::SwaggerUi;
             crate::routes::analysis::AnalyzeRequest,
             crate::routes::analysis::AnalyzeResponse,
             crate::routes::health::HealthResponse,
-            crate::routes::llm::LlmHealthResponse
+            crate::routes::llm::LlmHealthResponse,
+            app_core::engine::SignalQuality
         )
     ),
     tags(

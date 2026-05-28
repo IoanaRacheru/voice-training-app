@@ -53,6 +53,12 @@ pub struct AnalyzeResponse {
     pub prosody: app_core::tools::ProsodyOutput,
     /// Voice presentation estimate and confidence.
     pub voice_presentation: app_core::tools::VoicePresentationOutput,
+    /// Signal extraction confidence in `[0, 1]` when audio is supplied.
+    pub signal_confidence: Option<f64>,
+    /// Signal quality diagnostics.
+    pub signal_quality: Option<app_core::engine::SignalQuality>,
+    /// Name of the VAD implementation used.
+    pub vad_used: Option<String>,
 }
 
 /// Perform voice analysis and persist a compact analysis artifact.
@@ -100,6 +106,9 @@ pub async fn analyze(
         llm_coach_feedback: output.llm_coach_feedback,
         prosody: output.prosody,
         voice_presentation: output.voice_presentation,
+        signal_confidence: output.signal_confidence,
+        signal_quality: output.signal_quality,
+        vad_used: output.vad_used,
     }))
 }
 
@@ -230,6 +239,8 @@ mod tests {
         let payload = response.0;
         assert!(!payload.summary.is_empty());
         assert!((0.0..=100.0).contains(&payload.voice_presentation.score));
+        assert!(payload.signal_confidence.is_none());
+        assert!(payload.signal_quality.is_none());
 
         let saved_entries = saved.lock().expect("lock");
         assert_eq!(saved_entries.len(), 1);

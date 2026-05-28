@@ -31,6 +31,12 @@
   - FFT-based spectral brightness
 - Extended analysis input contract with optional PCM payload (`audio_samples`, `sample_rate`) while preserving backward compatibility for numeric-only clients.
 - Integrated DSP-derived metrics into engine pipeline when audio is provided.
+- Added DSP robustness metadata:
+  - signal confidence score
+  - quality flags (low energy, low voiced ratio, insufficient pitch frames, unstable pitch)
+  - VAD implementation identifier in analysis output
+- Added pluggable VAD interface with `EnergyVadDetector` and `SileroVadDetector` stub adapter hook.
+- Added `make test-dsp-bench` and extra DSP regression threshold tests.
 
 ### Next In Queue
 - Implement provider-backed LLM adapters (OpenAI-compatible, Groq, OpenRouter).
@@ -44,3 +50,4 @@
 - `feat/cargo-quality-gates`: Cargo-native dependency and advisory quality gates.
 - `feat/ci-dependency-gates`: CI enforcement for dependency security and workspace Rust checks.
 - `feat/dsp-tools-v1`: DSP feature extraction and audio-aware analysis pipeline.
+- `feat/dsp-robustness-v2`: confidence/quality diagnostics and pluggable VAD contracts.
