@@ -12,7 +12,11 @@ use utoipa_swagger_ui::SwaggerUi;
     paths(
         crate::routes::health::health,
         crate::routes::llm::health,
-        crate::routes::analysis::analyze
+        crate::routes::analysis::analyze,
+        crate::routes::user::me,
+        crate::routes::user::patch_me,
+        crate::routes::sessions::create,
+        crate::routes::sessions::list
     ),
     components(
         schemas(
@@ -20,6 +24,12 @@ use utoipa_swagger_ui::SwaggerUi;
             crate::routes::analysis::AnalyzeResponse,
             crate::routes::health::HealthResponse,
             crate::routes::llm::LlmHealthResponse,
+            crate::routes::user::MeResponse,
+            crate::routes::user::PatchMeRequest,
+            crate::routes::user::PatchMeResponse,
+            crate::routes::sessions::CreateRequest,
+            crate::routes::sessions::CreateResponse,
+            crate::routes::sessions::SessionItem,
             app_core::engine::SignalQuality,
             app_core::asr::AsrResult,
             app_core::asr::PronunciationFeedback
@@ -28,7 +38,9 @@ use utoipa_swagger_ui::SwaggerUi;
     tags(
         (name = "Health"),
         (name = "Analysis"),
-        (name = "LLM")
+        (name = "LLM"),
+        (name = "User"),
+        (name = "Sessions")
     )
 )]
 pub struct ApiDoc;
@@ -55,5 +67,7 @@ mod tests {
         assert!(paths.contains_key("/health"));
         assert!(paths.contains_key("/api/llm/health"));
         assert!(paths.contains_key("/api/analyze"));
+        assert!(paths.contains_key("/api/me"));
+        assert!(paths.contains_key("/api/sessions"));
     }
 }
