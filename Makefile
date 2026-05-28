@@ -2,7 +2,7 @@
         ps status health restart clean clean-data clean-all prune docker-check \
         dev dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
-        check-backend build-backend test-backend test-api test-core test-fast \
+        check-backend build-backend test-backend test-api test-core test-fast test-openapi \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak \
         doctor debug-env debug-keycloak debug-api help
@@ -140,6 +140,9 @@ test-core:
 test-fast:
 	cargo test -p app_core -p api
 
+test-openapi:
+	cargo test -p api openapi -- --nocapture
+
 # ── Automation (CI-like local) ───────────────────────────────────────────────
 
 check: check-backend check-frontend
@@ -233,6 +236,7 @@ help:
 	@echo "  test-api          cargo test -p api"
 	@echo "  test-core         cargo test -p app_core"
 	@echo "  test-fast         cargo test -p app_core -p api"
+	@echo "  test-openapi      run OpenAPI-focused tests in api crate"
 	@echo "  fmt               cargo fmt --all"
 	@echo ""
 	@echo "Debug / Agenting"

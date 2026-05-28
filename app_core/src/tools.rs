@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::errors::CoreError;
 
 /// Prosodic metrics derived from pitch and pause behavior.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProsodyOutput {
     /// Pitch stability score in `[0, 1]`.
     pub stability: f64,
@@ -14,7 +15,7 @@ pub struct ProsodyOutput {
 }
 
 /// Voice presentation estimate with confidence metadata.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct VoicePresentationOutput {
     /// Estimated score in `[0, 100]`.
     pub score: f64,
