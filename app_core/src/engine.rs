@@ -253,7 +253,7 @@ mod tests {
         asr::{AsrResult, SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
-        tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+        tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
     };
 
     struct FailingAsr;
@@ -267,8 +267,8 @@ mod tests {
     #[tokio::test]
     async fn analyze_returns_estimate_with_uncertainty() {
         let engine = Engine::new(
-            Box::new(HeuristicProsodyTool),
-            Box::new(HeuristicVoicePresentationTool),
+            Box::new(DeterministicDspProsodyTool),
+            Box::new(DeterministicDspVoicePresentationTool),
             Box::new(RuleBasedCoach),
             Box::new(VoskAsrStub),
             Box::new(SimplePronunciationEvaluator),
@@ -302,8 +302,8 @@ mod tests {
     #[tokio::test]
     async fn analyze_can_use_signal_features_when_audio_is_present() {
         let engine = Engine::new(
-            Box::new(HeuristicProsodyTool),
-            Box::new(HeuristicVoicePresentationTool),
+            Box::new(DeterministicDspProsodyTool),
+            Box::new(DeterministicDspVoicePresentationTool),
             Box::new(RuleBasedCoach),
             Box::new(VoskAsrStub),
             Box::new(SimplePronunciationEvaluator),
@@ -338,8 +338,8 @@ mod tests {
     #[tokio::test]
     async fn analyze_returns_error_when_strict_asr_fails() {
         let engine = Engine::new_with_policy(
-            Box::new(HeuristicProsodyTool),
-            Box::new(HeuristicVoicePresentationTool),
+            Box::new(DeterministicDspProsodyTool),
+            Box::new(DeterministicDspVoicePresentationTool),
             Box::new(RuleBasedCoach),
             Box::new(FailingAsr),
             Box::new(SimplePronunciationEvaluator),

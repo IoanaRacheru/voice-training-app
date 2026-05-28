@@ -256,7 +256,7 @@ mod tests {
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
-        tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+        tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
     };
     use async_trait::async_trait;
     use axum::{Extension, Json, extract::State};
@@ -346,8 +346,8 @@ mod tests {
             http: reqwest::Client::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
             engine: Arc::new(Engine::new(
-                Box::new(HeuristicProsodyTool),
-                Box::new(HeuristicVoicePresentationTool),
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
                 Box::new(RuleBasedCoach),
                 Box::new(VoskAsrStub),
                 Box::new(SimplePronunciationEvaluator),
