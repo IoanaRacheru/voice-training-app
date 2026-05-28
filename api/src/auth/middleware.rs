@@ -141,7 +141,11 @@ mod tests {
     use crate::{
         auth::{middleware::appwrite_middleware, JwkKey},
         config::Config,
-        repositories::analysis::MongoAnalysisRepository,
+        repositories::{
+            analysis::MongoAnalysisRepository,
+            profile::MongoProfileRepository,
+            session::MongoSessionRepository,
+        },
         AppState,
     };
 
@@ -222,6 +226,8 @@ xDcBwamKcKejhkO6y4v4yfFcp7clWuANXQ3TGMRdin2qDmObIr52U3QjWE9C9E+U
             )),
             llm_provider: "rule".into(),
             analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
+            profile_repo: Arc::new(MongoProfileRepository::new(client.database("voice_training"))),
+            session_repo: Arc::new(MongoSessionRepository::new(client.database("voice_training"))),
         })
     }
 

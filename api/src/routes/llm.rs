@@ -64,7 +64,11 @@ mod tests {
     };
 use mongodb::Client;
     use tokio::sync::RwLock;
-    use crate::repositories::analysis::MongoAnalysisRepository;
+    use crate::repositories::{
+        analysis::MongoAnalysisRepository,
+        profile::MongoProfileRepository,
+        session::MongoSessionRepository,
+    };
 
     #[tokio::test]
     async fn llm_health_reports_provider_configuration() {
@@ -100,6 +104,8 @@ use mongodb::Client;
             )),
             llm_provider: "openrouter".into(),
             analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
+            profile_repo: Arc::new(MongoProfileRepository::new(client.database("voice_training"))),
+            session_repo: Arc::new(MongoSessionRepository::new(client.database("voice_training"))),
         });
 
         let Json(payload) = health(State(state)).await;

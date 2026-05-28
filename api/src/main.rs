@@ -17,7 +17,11 @@ use app_core::{
     Engine,
 };
 use mongodb::Database;
-use repositories::analysis::{AnalysisRepository, MongoAnalysisRepository};
+use repositories::{
+    analysis::{AnalysisRepository, MongoAnalysisRepository},
+    profile::{MongoProfileRepository, ProfileRepository},
+    session::{MongoSessionRepository, SessionRepository},
+};
 use reqwest::Client;
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
@@ -43,6 +47,10 @@ pub struct AppState {
     pub llm_provider: String,
     /// Analysis artifact repository abstraction.
     pub analysis_repo: Arc<dyn AnalysisRepository>,
+    /// User profile repository abstraction.
+    pub profile_repo: Arc<dyn ProfileRepository>,
+    /// Session repository abstraction.
+    pub session_repo: Arc<dyn SessionRepository>,
 }
 
 /// Build a coach implementation from runtime configuration.
@@ -126,7 +134,9 @@ async fn main() {
             Box::new(SimplePronunciationEvaluator),
         )),
         llm_provider: config.llm_provider.clone(),
-        analysis_repo: Arc::new(MongoAnalysisRepository::new(database)),
+        analysis_repo: Arc::new(MongoAnalysisRepository::new(database.clone())),
+        profile_repo: Arc::new(MongoProfileRepository::new(database.clone())),
+        session_repo: Arc::new(MongoSessionRepository::new(database.clone())),
     });
 
     let protected = Router::new()
