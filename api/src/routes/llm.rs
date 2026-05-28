@@ -57,6 +57,7 @@ mod tests {
     use super::*;
     use crate::config::Config;
     use app_core::{
+        asr::{SimplePronunciationEvaluator, VoskAsrStub},
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
         Engine,
@@ -90,6 +91,8 @@ mod tests {
                 Box::new(HeuristicProsodyTool),
                 Box::new(HeuristicVoicePresentationTool),
                 Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
             )),
             llm_provider: "openrouter".into(),
             analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),

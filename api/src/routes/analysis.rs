@@ -38,6 +38,8 @@ pub struct AnalyzeRequest {
     pub audio_samples: Option<Vec<f32>>,
     /// Sample rate for `audio_samples`.
     pub sample_rate: Option<u32>,
+    /// Optional target phrase used for pronunciation feedback.
+    pub expected_text: Option<String>,
 }
 
 /// Response body for on-demand voice analysis.
@@ -59,6 +61,10 @@ pub struct AnalyzeResponse {
     pub signal_quality: Option<app_core::engine::SignalQuality>,
     /// Name of the VAD implementation used.
     pub vad_used: Option<String>,
+    /// ASR transcript output for provided audio.
+    pub asr: Option<app_core::asr::AsrResult>,
+    /// Pronunciation feedback against `expected_text`.
+    pub pronunciation: Option<app_core::asr::PronunciationFeedback>,
 }
 
 /// Perform voice analysis and persist a compact analysis artifact.
@@ -87,6 +93,7 @@ pub async fn analyze(
             spectral_brightness: body.spectral_brightness,
             audio_samples: body.audio_samples,
             sample_rate: body.sample_rate,
+            expected_text: body.expected_text,
         })
         .await
         .map_err(|e| AppError::Validation(e.to_string()))?;
@@ -109,6 +116,8 @@ pub async fn analyze(
         signal_confidence: output.signal_confidence,
         signal_quality: output.signal_quality,
         vad_used: output.vad_used,
+        asr: output.asr,
+        pronunciation: output.pronunciation,
     }))
 }
 
@@ -124,6 +133,7 @@ mod tests {
         AppState,
     };
     use app_core::{
+        asr::{SimplePronunciationEvaluator, VoskAsrStub},
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
         Engine,
@@ -209,6 +219,8 @@ mod tests {
                 Box::new(HeuristicProsodyTool),
                 Box::new(HeuristicVoicePresentationTool),
                 Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
             )),
             llm_provider: "rule".into(),
             analysis_repo: Arc::new(MemoryAnalysisRepository {
@@ -231,6 +243,7 @@ mod tests {
                 spectral_brightness: 0.62,
                 audio_samples: None,
                 sample_rate: None,
+                expected_text: None,
             }),
         )
         .await
@@ -241,6 +254,8 @@ mod tests {
         assert!((0.0..=100.0).contains(&payload.voice_presentation.score));
         assert!(payload.signal_confidence.is_none());
         assert!(payload.signal_quality.is_none());
+        assert!(payload.asr.is_none());
+        assert!(payload.pronunciation.is_none());
 
         let saved_entries = saved.lock().expect("lock");
         assert_eq!(saved_entries.len(), 1);

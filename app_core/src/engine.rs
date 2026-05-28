@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
+    asr::{AsrResult, PronunciationEvaluator, PronunciationFeedback, SpeechRecognizer},
     dsp::extract_signal_features,
     errors::CoreError,
     llm::{LlmCoach, LlmContext},
@@ -23,6 +24,8 @@ pub struct AnalysisInput {
     pub audio_samples: Option<Vec<f32>>,
     /// Sample rate for `audio_samples`.
     pub sample_rate: Option<u32>,
+    /// Optional phrase target for pronunciation feedback.
+    pub expected_text: Option<String>,
 }
 
 /// Output contract for analysis and coaching results.
@@ -44,6 +47,10 @@ pub struct AnalysisOutput {
     pub signal_quality: Option<SignalQuality>,
     /// VAD implementation used in extraction.
     pub vad_used: Option<String>,
+    /// ASR transcription result if audio is provided.
+    pub asr: Option<AsrResult>,
+    /// Pronunciation feedback if `expected_text` and ASR result are available.
+    pub pronunciation: Option<PronunciationFeedback>,
 }
 
 /// Signal quality diagnostics exposed to API consumers.
@@ -64,6 +71,8 @@ pub struct Engine {
     prosody_tool: Box<dyn ProsodyTool>,
     voice_tool: Box<dyn VoicePresentationTool>,
     llm_coach: Box<dyn LlmCoach>,
+    asr: Box<dyn SpeechRecognizer>,
+    pronunciation: Box<dyn PronunciationEvaluator>,
 }
 
 impl Engine {
@@ -72,11 +81,15 @@ impl Engine {
         prosody_tool: Box<dyn ProsodyTool>,
         voice_tool: Box<dyn VoicePresentationTool>,
         llm_coach: Box<dyn LlmCoach>,
+        asr: Box<dyn SpeechRecognizer>,
+        pronunciation: Box<dyn PronunciationEvaluator>,
     ) -> Self {
         Self {
             prosody_tool,
             voice_tool,
             llm_coach,
+            asr,
+            pronunciation,
         }
     }
 
@@ -143,6 +156,21 @@ impl Engine {
             })
             .await?;
 
+        let asr = if let (Some(samples), Some(sample_rate)) =
+            (input.audio_samples.as_deref(), input.sample_rate)
+        {
+            self.asr.recognize(samples, sample_rate).ok()
+        } else {
+            None
+        };
+
+        let pronunciation = match (&input.expected_text, &asr) {
+            (Some(expected), Some(asr_result)) => {
+                Some(self.pronunciation.evaluate(expected, asr_result))
+            }
+            _ => None,
+        };
+
         Ok(AnalysisOutput {
             prosody,
             voice_presentation,
@@ -152,6 +180,8 @@ impl Engine {
             signal_confidence,
             signal_quality,
             vad_used,
+            asr,
+            pronunciation,
         })
     }
 }
@@ -182,6 +212,7 @@ fn build_practice_focus(
 mod tests {
     use super::*;
     use crate::{
+        asr::{SimplePronunciationEvaluator, VoskAsrStub},
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
     };
@@ -192,6 +223,8 @@ mod tests {
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
             Box::new(RuleBasedCoach),
+            Box::new(VoskAsrStub),
+            Box::new(SimplePronunciationEvaluator),
         );
         let result = engine
             .analyze(AnalysisInput {
@@ -201,6 +234,7 @@ mod tests {
                 spectral_brightness: 0.64,
                 audio_samples: None,
                 sample_rate: None,
+                expected_text: None,
             })
             .await
             .expect("analysis should succeed");
@@ -212,6 +246,7 @@ mod tests {
             .uncertainty_note
             .contains("not a definitive label"));
         assert!(result.signal_confidence.is_none());
+        assert!(result.asr.is_none());
     }
 
     #[tokio::test]
@@ -220,6 +255,8 @@ mod tests {
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
             Box::new(RuleBasedCoach),
+            Box::new(VoskAsrStub),
+            Box::new(SimplePronunciationEvaluator),
         );
         let sr = 16_000u32;
         let samples: Vec<f32> = (0..sr as usize)
@@ -236,11 +273,14 @@ mod tests {
                 spectral_brightness: 0.1,
                 audio_samples: Some(samples),
                 sample_rate: Some(sr),
+                expected_text: Some("hello voice".into()),
             })
             .await
             .expect("analysis should succeed");
         assert!(result.summary.contains("Pitch median"));
         assert!(result.signal_confidence.is_some());
         assert_eq!(result.vad_used.as_deref(), Some("energy_vad"));
+        assert!(result.asr.is_some());
+        assert!(result.pronunciation.is_some());
     }
 }

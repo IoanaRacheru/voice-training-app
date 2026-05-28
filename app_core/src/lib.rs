@@ -2,6 +2,8 @@
 
 /// Engine orchestration and input/output contracts.
 pub mod engine;
+/// ASR and pronunciation abstractions and baseline adapters.
+pub mod asr;
 /// DSP feature extraction helpers used by the engine.
 pub mod dsp;
 /// Shared error types.

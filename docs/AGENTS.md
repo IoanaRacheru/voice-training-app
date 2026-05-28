@@ -41,4 +41,4 @@
 - [x] `/api/analyze` integration tests.
 - [x] DSP tool replacement for heuristics.
 - [ ] PostgreSQL repository integration.
-- [ ] ASR/pronunciation tool adapters.
+- [x] ASR/pronunciation tool adapters.
