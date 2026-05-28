@@ -12,10 +12,12 @@ thiserror = "1"
 utoipa = "4"
 rustfft = "6"
 tungstenite = { version = "0.23", features = ["rustls-tls-webpki-roots"] }
+silero = { version = "0.4", features = ["bundled"], optional = true }
 
 [features]
 default = []
 asr_vosk = []
+vad_silero = ["dep:silero"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
