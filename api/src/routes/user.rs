@@ -25,6 +25,9 @@ pub fn router() -> Router<Arc<AppState>> {
     get,
     path = "/api/me",
     tag = "User",
+    security(
+        ("bearer_auth" = [])
+    ),
     responses(
         (status = 200, description = "Authenticated profile payload", body = MeResponse),
         (status = 401, description = "Unauthorized")
@@ -88,6 +91,9 @@ pub struct PatchMeRequest {
     patch,
     path = "/api/me",
     tag = "User",
+    security(
+        ("bearer_auth" = [])
+    ),
     request_body = PatchMeRequest,
     responses(
         (status = 200, description = "Profile updated", body = PatchMeResponse),

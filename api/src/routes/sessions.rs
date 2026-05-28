@@ -147,6 +147,9 @@ fn validate_create(body: &CreateRequest) -> Result<(), AppError> {
     post,
     path = "/api/sessions",
     tag = "Sessions",
+    security(
+        ("bearer_auth" = [])
+    ),
     request_body = CreateRequest,
     responses(
         (status = 200, description = "Session persisted", body = CreateResponse),
@@ -183,6 +186,9 @@ pub async fn create(
     get,
     path = "/api/sessions",
     tag = "Sessions",
+    security(
+        ("bearer_auth" = [])
+    ),
     responses(
         (status = 200, description = "Session list", body = [SessionItem]),
         (status = 401, description = "Unauthorized")
