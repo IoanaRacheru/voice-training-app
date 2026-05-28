@@ -2,6 +2,8 @@
 
 /// Engine orchestration and input/output contracts.
 pub mod engine;
+/// DSP feature extraction helpers used by the engine.
+pub mod dsp;
 /// Shared error types.
 pub mod errors;
 /// LLM coach abstractions and adapters.

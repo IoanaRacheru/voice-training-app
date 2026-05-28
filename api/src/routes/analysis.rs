@@ -34,6 +34,10 @@ pub struct AnalyzeRequest {
     pub pause_ratio: f64,
     /// Spectral brightness score in `[0, 1]`.
     pub spectral_brightness: f64,
+    /// Optional mono PCM samples in `[-1.0, 1.0]` for signal-derived analysis.
+    pub audio_samples: Option<Vec<f32>>,
+    /// Sample rate for `audio_samples`.
+    pub sample_rate: Option<u32>,
 }
 
 /// Response body for on-demand voice analysis.
@@ -75,6 +79,8 @@ pub async fn analyze(
             pitch_stability: body.pitch_stability,
             pause_ratio: body.pause_ratio,
             spectral_brightness: body.spectral_brightness,
+            audio_samples: body.audio_samples,
+            sample_rate: body.sample_rate,
         })
         .await
         .map_err(|e| AppError::Validation(e.to_string()))?;
@@ -214,6 +220,8 @@ mod tests {
                 pitch_stability: 0.71,
                 pause_ratio: 0.2,
                 spectral_brightness: 0.62,
+                audio_samples: None,
+                sample_rate: None,
             }),
         )
         .await
