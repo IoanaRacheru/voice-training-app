@@ -301,4 +301,33 @@ xDcBwamKcKejhkO6y4v4yfFcp7clWuANXQ3TGMRdin2qDmObIr52U3QjWE9C9E+U
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
+
+    #[tokio::test]
+    async fn middleware_accepts_token_with_valid_claims() {
+        let state = build_state().await;
+        let app = Router::new()
+            .route("/protected", get(ok_handler))
+            .route_layer(axum_middleware::from_fn_with_state(
+                state.clone(),
+                appwrite_middleware,
+            ))
+            .with_state(state);
+
+        let token = build_token(
+            "https://issuer.example/realms/voice-training",
+            "voice-training-api",
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/protected")
+                    .header("Authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should succeed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
 }
