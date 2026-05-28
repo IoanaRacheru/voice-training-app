@@ -3,6 +3,16 @@
 ## 2026-05-29
 
 ### Completed
+- Added strict `/api/analyze` route coverage for strict-provider ASR runtime failure handling.
+- Added Dockerized Vosk + Silero runtime verification path:
+  - `make build-api-image-vosk-silero`
+  - `make verify-vosk-silero-api`
+- Added authenticated analysis artifact history APIs:
+  - `GET /api/analysis-artifacts`
+  - `GET /api/analysis-artifacts/:id`
+- Expanded analysis repository abstraction with user-scoped list/detail methods.
+- Added MongoDB TTL retention index for `analysis_artifacts` (90-day default).
+- Renamed analysis tool implementations from `Heuristic*` to deterministic DSP names across `app_core` and `api`.
 - Calibrated deterministic DSP v2 scoring in `app_core` prosody/voice tools while preserving API output ranges and labels.
 - Added pronunciation v3 improvements with sequence-alignment scoring and timing-aware feedback cues.
 - Added strict provider fail-fast test coverage:
@@ -112,6 +122,11 @@
 - Add integration tests around `/api/analyze` behavior.
 
 ### Branches
+- `feat-analyze-strict-auth-matrix`: strict `/api/analyze` failure-path tests with strict auth config coverage.
+- `feat-vosk-silero-runtime-e2e`: Vosk+Silero Docker build and verification targets.
+- `feat-analysis-artifacts-api`: artifact list/detail endpoints, repository expansion, and TTL retention index.
+- `refactor-dsp-tool-names`: hard rename from heuristic tool names to deterministic DSP tool names.
+- `fix-post-merge-tool-rename`: post-merge fixture rename consistency fix.
 - `feat-dsp-v2-deterministic`: deterministic DSP v2 scoring calibration for prosody and voice presentation.
 - `feat-pronunciation-v3-token-timing`: pronunciation v3 token sequence alignment and timing feedback cues.
 - `feat-strict-runtime-test-hardening`: strict-provider runtime test coverage in `app_core` and `api`.
