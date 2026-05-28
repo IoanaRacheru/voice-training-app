@@ -122,7 +122,7 @@ mod tests {
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
-        tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+        tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
     };
     use axum::{
         Router,
@@ -222,8 +222,8 @@ xDcBwamKcKejhkO6y4v4yfFcp7clWuANXQ3TGMRdin2qDmObIr52U3QjWE9C9E+U
                 e: Some("AQAB".into()),
             }])),
             engine: Arc::new(Engine::new(
-                Box::new(HeuristicProsodyTool),
-                Box::new(HeuristicVoicePresentationTool),
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
                 Box::new(RuleBasedCoach),
                 Box::new(VoskAsrStub),
                 Box::new(SimplePronunciationEvaluator),

@@ -14,7 +14,7 @@ use app_core::{
     asr::{SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
     dsp::{EnergyVadDetector, VadDetector},
     llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
-    tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+    tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
 };
 #[cfg(feature = "vad_silero")]
 use app_core::dsp::SileroVadDetector;
@@ -243,8 +243,8 @@ async fn main() {
         http,
         jwks: Arc::new(RwLock::new(jwks.keys)),
         engine: Arc::new(Engine::new_with_policy(
-            Box::new(HeuristicProsodyTool),
-            Box::new(HeuristicVoicePresentationTool),
+            Box::new(DeterministicDspProsodyTool),
+            Box::new(DeterministicDspVoicePresentationTool),
             build_llm_coach(&config),
             asr,
             Box::new(SimplePronunciationEvaluator),

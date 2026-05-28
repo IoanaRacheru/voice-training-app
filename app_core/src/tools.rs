@@ -46,9 +46,9 @@ pub trait VoicePresentationTool: Send + Sync {
 
 /// Baseline deterministic prosody tool used for MVP/testing.
 #[derive(Default)]
-pub struct HeuristicProsodyTool;
+pub struct DeterministicDspProsodyTool;
 
-impl ProsodyTool for HeuristicProsodyTool {
+impl ProsodyTool for DeterministicDspProsodyTool {
     fn analyze(&self, pitch_stability: f64, pause_ratio: f64) -> Result<ProsodyOutput, CoreError> {
         if !(0.0..=1.0).contains(&pitch_stability) {
             return Err(CoreError::Validation(
@@ -79,9 +79,9 @@ impl ProsodyTool for HeuristicProsodyTool {
 
 /// Baseline deterministic voice presentation estimator used for MVP/testing.
 #[derive(Default)]
-pub struct HeuristicVoicePresentationTool;
+pub struct DeterministicDspVoicePresentationTool;
 
-impl VoicePresentationTool for HeuristicVoicePresentationTool {
+impl VoicePresentationTool for DeterministicDspVoicePresentationTool {
     fn estimate(
         &self,
         median_pitch_hz: f64,
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn prosody_rejects_invalid_pause_ratio() {
-        let tool = HeuristicProsodyTool;
+        let tool = DeterministicDspProsodyTool;
         let err = tool
             .analyze(0.4, 1.2)
             .expect_err("expected validation error");
@@ -170,7 +170,7 @@ mod tests {
             pause_ratio: 0.2,
             rhythm_score: 0.8,
         };
-        let tool = HeuristicVoicePresentationTool;
+        let tool = DeterministicDspVoicePresentationTool;
         let result = tool
             .estimate(180.0, 0.5, &prosody)
             .expect("estimate should succeed");
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn rhythm_score_penalizes_large_pause_ratio() {
-        let tool = HeuristicProsodyTool;
+        let tool = DeterministicDspProsodyTool;
         let stable_low_pause = tool.analyze(0.8, 0.2).expect("valid");
         let stable_high_pause = tool.analyze(0.8, 0.7).expect("valid");
         assert!(stable_low_pause.rhythm_score > stable_high_pause.rhythm_score);
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn confidence_drops_for_unstable_voice() {
-        let tool = HeuristicVoicePresentationTool;
+        let tool = DeterministicDspVoicePresentationTool;
         let good = ProsodyOutput {
             stability: 0.85,
             pause_ratio: 0.18,
