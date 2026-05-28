@@ -39,6 +39,6 @@
 ## Active Backlog
 - [x] Provider-backed LLM coach adapters.
 - [x] `/api/analyze` integration tests.
-- [ ] DSP tool replacement for heuristics.
+- [x] DSP tool replacement for heuristics.
 - [ ] PostgreSQL repository integration.
 - [ ] ASR/pronunciation tool adapters.

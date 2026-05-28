@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    dsp::extract_signal_features,
     errors::CoreError,
     llm::{LlmCoach, LlmContext},
     tools::{ProsodyOutput, ProsodyTool, VoicePresentationOutput, VoicePresentationTool},
@@ -17,6 +18,10 @@ pub struct AnalysisInput {
     pub pause_ratio: f64,
     /// Spectral brightness score in `[0, 1]`.
     pub spectral_brightness: f64,
+    /// Optional mono PCM samples in `[-1.0, 1.0]` for signal-derived analysis.
+    pub audio_samples: Option<Vec<f32>>,
+    /// Sample rate for `audio_samples`.
+    pub sample_rate: Option<u32>,
 }
 
 /// Output contract for analysis and coaching results.
@@ -57,18 +62,43 @@ impl Engine {
 
     /// Execute the end-to-end analysis and coaching pipeline.
     pub async fn analyze(&self, input: AnalysisInput) -> Result<AnalysisOutput, CoreError> {
+        let (median_pitch_hz, pitch_stability, pause_ratio, spectral_brightness) =
+            if let (Some(samples), Some(sample_rate)) =
+                (input.audio_samples.as_deref(), input.sample_rate)
+            {
+                match extract_signal_features(samples, sample_rate) {
+                    Some(f) => (
+                        f.median_pitch_hz,
+                        f.pitch_stability,
+                        f.pause_ratio,
+                        f.spectral_brightness,
+                    ),
+                    None => (
+                        input.median_pitch_hz,
+                        input.pitch_stability,
+                        input.pause_ratio,
+                        input.spectral_brightness,
+                    ),
+                }
+            } else {
+                (
+                    input.median_pitch_hz,
+                    input.pitch_stability,
+                    input.pause_ratio,
+                    input.spectral_brightness,
+                )
+            };
+
         let prosody = self
             .prosody_tool
-            .analyze(input.pitch_stability, input.pause_ratio)?;
-        let voice_presentation = self.voice_tool.estimate(
-            input.median_pitch_hz,
-            input.spectral_brightness,
-            &prosody,
-        )?;
+            .analyze(pitch_stability, pause_ratio)?;
+        let voice_presentation =
+            self.voice_tool
+                .estimate(median_pitch_hz, spectral_brightness, &prosody)?;
 
         let summary = format!(
             "Pitch median {:.1} Hz, stability {:.2}, pause ratio {:.2}",
-            input.median_pitch_hz, prosody.stability, prosody.pause_ratio
+            median_pitch_hz, prosody.stability, prosody.pause_ratio
         );
         let practice_next = build_practice_focus(&prosody, &voice_presentation);
         let llm_coach_feedback = self
@@ -132,6 +162,8 @@ mod tests {
                 pitch_stability: 0.72,
                 pause_ratio: 0.22,
                 spectral_brightness: 0.64,
+                audio_samples: None,
+                sample_rate: None,
             })
             .await
             .expect("analysis should succeed");
@@ -142,5 +174,33 @@ mod tests {
             .voice_presentation
             .uncertainty_note
             .contains("not a definitive label"));
+    }
+
+    #[tokio::test]
+    async fn analyze_can_use_signal_features_when_audio_is_present() {
+        let engine = Engine::new(
+            Box::new(HeuristicProsodyTool),
+            Box::new(HeuristicVoicePresentationTool),
+            Box::new(RuleBasedCoach),
+        );
+        let sr = 16_000u32;
+        let samples: Vec<f32> = (0..sr as usize)
+            .map(|i| {
+                let t = i as f32 / sr as f32;
+                (2.0 * std::f32::consts::PI * 210.0 * t).sin() * 0.5
+            })
+            .collect();
+        let result = engine
+            .analyze(AnalysisInput {
+                median_pitch_hz: 120.0,
+                pitch_stability: 0.2,
+                pause_ratio: 0.7,
+                spectral_brightness: 0.1,
+                audio_samples: Some(samples),
+                sample_rate: Some(sr),
+            })
+            .await
+            .expect("analysis should succeed");
+        assert!(result.summary.contains("Pitch median"));
     }
 }
