@@ -126,6 +126,72 @@ fn build_vad(config: &Config) -> Result<Box<dyn VadDetector>, String> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{build_asr, build_vad};
+    use crate::config::Config;
+
+    fn base_config() -> Config {
+        Config {
+            mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+            keycloak_realm_url:
+                "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs".into(),
+            keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+            keycloak_expected_audiences: vec!["account".into()],
+            analyze_max_body_bytes: 1024 * 1024,
+            server_port: 3000,
+            llm_provider: "rule".into(),
+            llm_api_key: None,
+            llm_model: "openai/gpt-4o-mini".into(),
+            llm_base_url: None,
+            openrouter_api_key: None,
+            openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+            groq_api_key: None,
+            groq_model: "llama-3.3-70b-versatile".into(),
+            vad_provider: "energy".into(),
+            asr_provider: "stub".into(),
+            vosk_server_url: None,
+            provider_strict: true,
+        }
+    }
+
+    #[test]
+    fn build_asr_rejects_vosk_without_url() {
+        let mut cfg = base_config();
+        cfg.asr_provider = "vosk_remote".into();
+        cfg.vosk_server_url = None;
+        match build_asr(&cfg) {
+            Ok(_) => panic!("must fail without URL"),
+            Err(err) => assert!(err.contains("VOSK_SERVER_URL")),
+        }
+    }
+
+    #[test]
+    fn build_asr_accepts_vosk_with_url() {
+        let mut cfg = base_config();
+        cfg.asr_provider = "vosk_remote".into();
+        cfg.vosk_server_url = Some("ws://localhost:2700".into());
+        build_asr(&cfg).expect("vosk config should build");
+    }
+
+    #[test]
+    fn build_vad_rejects_silero_without_feature() {
+        let mut cfg = base_config();
+        cfg.vad_provider = "silero".into();
+        #[cfg(not(feature = "vad_silero"))]
+        {
+            match build_vad(&cfg) {
+                Ok(_) => panic!("must fail without feature"),
+                Err(err) => assert!(err.contains("vad_silero")),
+            }
+        }
+        #[cfg(feature = "vad_silero")]
+        {
+            build_vad(&cfg).expect("silero should build when feature enabled");
+        }
+    }
+}
+
 /// Start the API service with a Tokio multi-thread runtime.
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {

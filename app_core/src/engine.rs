@@ -250,11 +250,19 @@ fn build_practice_focus(
 mod tests {
     use super::*;
     use crate::{
-        asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        asr::{AsrResult, SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
     };
+
+    struct FailingAsr;
+
+    impl SpeechRecognizer for FailingAsr {
+        fn recognize(&self, _audio_samples: &[f32], _sample_rate: u32) -> Result<AsrResult, CoreError> {
+            Err(CoreError::Tool("simulated asr failure".into()))
+        }
+    }
 
     #[tokio::test]
     async fn analyze_returns_estimate_with_uncertainty() {
@@ -325,5 +333,38 @@ mod tests {
         assert_eq!(result.vad_used.as_deref(), Some("energy_vad"));
         assert!(result.asr.is_some());
         assert!(result.pronunciation.is_some());
+    }
+
+    #[tokio::test]
+    async fn analyze_returns_error_when_strict_asr_fails() {
+        let engine = Engine::new_with_policy(
+            Box::new(HeuristicProsodyTool),
+            Box::new(HeuristicVoicePresentationTool),
+            Box::new(RuleBasedCoach),
+            Box::new(FailingAsr),
+            Box::new(SimplePronunciationEvaluator),
+            Box::new(EnergyVadDetector),
+            true,
+        );
+        let sr = 16_000u32;
+        let samples: Vec<f32> = (0..sr as usize)
+            .map(|i| {
+                let t = i as f32 / sr as f32;
+                (2.0 * std::f32::consts::PI * 190.0 * t).sin() * 0.4
+            })
+            .collect();
+        let err = engine
+            .analyze(AnalysisInput {
+                median_pitch_hz: 180.0,
+                pitch_stability: 0.7,
+                pause_ratio: 0.2,
+                spectral_brightness: 0.6,
+                audio_samples: Some(samples),
+                sample_rate: Some(sr),
+                expected_text: Some("hello".into()),
+            })
+            .await
+            .expect_err("strict mode must fail");
+        assert!(err.to_string().contains("ASR provider failed"));
     }
 }
