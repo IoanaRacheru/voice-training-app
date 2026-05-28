@@ -12,6 +12,8 @@
 ## Local Validation
 - Compile-check real Vosk integration:
   - `make check-vosk`
+- Runtime smoke-check with real Vosk model:
+  - `VOSK_MODEL_PATH=/abs/path/to/vosk-model make test-vosk-runtime`
 - Regular test suite:
   - `cargo test -p app_core -p api`
 
