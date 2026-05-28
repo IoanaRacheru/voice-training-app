@@ -18,6 +18,23 @@ struct KeycloakClaims {
     email: Option<String>,
 }
 
+/// Attempt to refresh JWKS cache from Keycloak.
+async fn refresh_jwks(state: &Arc<AppState>) -> Option<()> {
+    let fetched = state
+        .http
+        .get(&state.config.keycloak_realm_url)
+        .send()
+        .await
+        .ok()?
+        .json::<crate::auth::Jwks>()
+        .await
+        .ok()?;
+
+    let mut jwks = state.jwks.write().await;
+    *jwks = fetched.keys;
+    Some(())
+}
+
 fn unauthorized() -> Response {
     (
         StatusCode::UNAUTHORIZED,
@@ -48,7 +65,18 @@ pub async fn appwrite_middleware(
         None => return unauthorized(),
     };
 
-    let jwk = match state.jwks.iter().find(|k| k.kid == kid) {
+    let mut jwk = {
+        let jwks = state.jwks.read().await;
+        jwks.iter().find(|k| k.kid == kid).cloned()
+    };
+    if jwk.is_none() {
+        let _ = refresh_jwks(&state).await;
+        jwk = {
+            let jwks = state.jwks.read().await;
+            jwks.iter().find(|k| k.kid == kid).cloned()
+        };
+    }
+    let jwk = match jwk {
         Some(k) => k,
         None => return unauthorized(),
     };
@@ -64,7 +92,14 @@ pub async fn appwrite_middleware(
     };
 
     let mut validation = Validation::new(Algorithm::RS256);
-    validation.validate_aud = false;
+    validation.set_issuer(&[state.config.keycloak_expected_issuer.as_str()]);
+    let expected_audiences = state
+        .config
+        .keycloak_expected_audiences
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    validation.set_audience(&expected_audiences);
 
     match decode::<KeycloakClaims>(&token, &decoding_key, &validation) {
         Ok(data) => {

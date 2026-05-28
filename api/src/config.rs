@@ -4,6 +4,12 @@ pub struct Config {
     pub mongodb_uri: String,
     /// Keycloak JWKS endpoint URL.
     pub keycloak_realm_url: String,
+    /// Expected issuer (`iss`) in Keycloak access tokens.
+    pub keycloak_expected_issuer: String,
+    /// Allowed audience values (`aud`) in Keycloak access tokens.
+    pub keycloak_expected_audiences: Vec<String>,
+    /// Maximum accepted analyze payload size in bytes.
+    pub analyze_max_body_bytes: usize,
     /// API bind port.
     pub server_port: u16,
     /// LLM routing mode (`rule`, `openai`, `openrouter`, `groq`).
@@ -27,10 +33,29 @@ pub struct Config {
 impl Config {
     /// Build configuration by reading process environment variables.
     pub fn from_env() -> Self {
+        let keycloak_realm_url = std::env::var("KEYCLOAK_REALM_URL")
+            .expect("KEYCLOAK_REALM_URL must be set");
+        let derived_issuer = keycloak_realm_url
+            .strip_suffix("/protocol/openid-connect/certs")
+            .unwrap_or(&keycloak_realm_url)
+            .to_string();
+        let expected_audiences = std::env::var("KEYCLOAK_EXPECTED_AUDIENCES")
+            .unwrap_or_else(|_| "account".to_string())
+            .split(',')
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>();
         Self {
             mongodb_uri: std::env::var("MONGODB_URI").expect("MONGODB_URI must be set"),
-            keycloak_realm_url: std::env::var("KEYCLOAK_REALM_URL")
-                .expect("KEYCLOAK_REALM_URL must be set"),
+            keycloak_realm_url,
+            keycloak_expected_issuer: std::env::var("KEYCLOAK_EXPECTED_ISSUER")
+                .unwrap_or(derived_issuer),
+            keycloak_expected_audiences: expected_audiences,
+            analyze_max_body_bytes: std::env::var("ANALYZE_MAX_BODY_BYTES")
+                .unwrap_or_else(|_| "1048576".to_string())
+                .parse()
+                .expect("ANALYZE_MAX_BODY_BYTES must be a valid integer"),
             server_port: std::env::var("SERVER_PORT")
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()

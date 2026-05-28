@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use app_core::AnalysisInput;
 use axum::{
-    extract::State,
+    extract::{DefaultBodyLimit, State},
     routing::post,
     Extension, Json, Router,
 };
@@ -17,9 +17,11 @@ use crate::{
     AppState,
 };
 
-/// Register analysis routes.
-pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/api/analyze", post(analyze))
+/// Register analysis routes with a configurable body-size guard.
+pub fn router(max_body_bytes: usize) -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/api/analyze", post(analyze))
+        .layer(DefaultBodyLimit::max(max_body_bytes))
 }
 
 /// Request body for on-demand voice analysis.
@@ -142,6 +144,7 @@ mod tests {
     use axum::{extract::State, Extension, Json};
     use mongodb::{bson::DateTime, Client};
     use reqwest::Client as HttpClient;
+    use tokio::sync::RwLock;
 
     struct MemoryAnalysisRepository {
         saved: Arc<Mutex<Vec<AnalysisArtifact>>>,
@@ -203,6 +206,9 @@ mod tests {
                 keycloak_realm_url:
                     "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
                         .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
                 server_port: 3000,
                 llm_provider: "rule".into(),
                 llm_api_key: None,
@@ -214,7 +220,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
             }),
             http: HttpClient::new(),
-            jwks: Vec::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
             engine: Arc::new(Engine::new(
                 Box::new(HeuristicProsodyTool),
                 Box::new(HeuristicVoicePresentationTool),
