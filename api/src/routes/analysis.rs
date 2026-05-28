@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use app_core::AnalysisInput;
 use axum::{
-    extract::State,
+    extract::{DefaultBodyLimit, State},
     routing::post,
     Extension, Json, Router,
 };
@@ -17,9 +17,11 @@ use crate::{
     AppState,
 };
 
-/// Register analysis routes.
-pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/api/analyze", post(analyze))
+/// Register analysis routes with a configurable body-size guard.
+pub fn router(max_body_bytes: usize) -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/api/analyze", post(analyze))
+        .layer(DefaultBodyLimit::max(max_body_bytes))
 }
 
 /// Request body for on-demand voice analysis.
@@ -125,7 +127,7 @@ pub async fn analyze(
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{analyze, AnalyzeRequest};
+    use super::{analyze, router, AnalyzeRequest};
     use crate::{
         auth::AppwriteUser,
         config::Config,
@@ -139,9 +141,16 @@ mod tests {
         Engine,
     };
     use async_trait::async_trait;
-    use axum::{extract::State, Extension, Json};
+    use axum::{
+        body::Body,
+        extract::State,
+        http::{Request, StatusCode},
+        Extension, Json,
+    };
     use mongodb::{bson::DateTime, Client};
     use reqwest::Client as HttpClient;
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
 
     struct MemoryAnalysisRepository {
         saved: Arc<Mutex<Vec<AnalysisArtifact>>>,
@@ -203,6 +212,9 @@ mod tests {
                 keycloak_realm_url:
                     "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
                         .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
                 server_port: 3000,
                 llm_provider: "rule".into(),
                 llm_api_key: None,
@@ -214,7 +226,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
             }),
             http: HttpClient::new(),
-            jwks: Vec::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
             engine: Arc::new(Engine::new(
                 Box::new(HeuristicProsodyTool),
                 Box::new(HeuristicVoicePresentationTool),
@@ -260,5 +272,79 @@ mod tests {
         let saved_entries = saved.lock().expect("lock");
         assert_eq!(saved_entries.len(), 1);
         assert_eq!(saved_entries[0].user_id, "u-1");
+    }
+
+    #[tokio::test]
+    async fn analyze_route_rejects_oversized_payload_with_413() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new(
+                Box::new(HeuristicProsodyTool),
+                Box::new(HeuristicVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::new(Mutex::new(Vec::new())),
+            }),
+        });
+
+        let app = router(1024)
+            .layer(Extension(AppwriteUser {
+                id: "u-1".into(),
+                email: "u1@example.com".into(),
+            }))
+            .with_state(state);
+
+        let oversized_audio = vec![0.0_f32; 20_000];
+        let body = serde_json::json!({
+            "median_pitch_hz": 180.0,
+            "pitch_stability": 0.7,
+            "pause_ratio": 0.2,
+            "spectral_brightness": 0.6,
+            "audio_samples": oversized_audio,
+            "sample_rate": 16000
+        })
+        .to_string();
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/analyze")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should execute");
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
     }
 }

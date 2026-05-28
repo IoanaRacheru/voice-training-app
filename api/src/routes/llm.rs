@@ -62,7 +62,8 @@ mod tests {
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
         Engine,
     };
-    use mongodb::Client;
+use mongodb::Client;
+    use tokio::sync::RwLock;
     use crate::repositories::analysis::MongoAnalysisRepository;
 
     #[tokio::test]
@@ -75,6 +76,9 @@ mod tests {
             config: Arc::new(Config {
                 mongodb_uri: "mongodb://127.0.0.1:27017".into(),
                 keycloak_realm_url: "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs".into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
                 server_port: 3000,
                 llm_provider: "openrouter".into(),
                 llm_api_key: None,
@@ -86,7 +90,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
             }),
             http: reqwest::Client::new(),
-            jwks: Vec::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
             engine: Arc::new(Engine::new(
                 Box::new(HeuristicProsodyTool),
                 Box::new(HeuristicVoicePresentationTool),

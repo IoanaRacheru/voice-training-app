@@ -19,6 +19,7 @@ use app_core::{
 use mongodb::Database;
 use repositories::analysis::{AnalysisRepository, MongoAnalysisRepository};
 use reqwest::Client;
+use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
@@ -35,7 +36,7 @@ pub struct AppState {
     /// Shared HTTP client for upstream calls.
     pub http: Client,
     /// Cached Keycloak JWK set used by auth middleware.
-    pub jwks: Vec<JwkKey>,
+    pub jwks: Arc<RwLock<Vec<JwkKey>>>,
     /// Core analysis/coaching engine.
     pub engine: Arc<Engine>,
     /// Effective LLM provider in use.
@@ -116,7 +117,7 @@ async fn main() {
         db: database.clone(),
         config: config.clone(),
         http,
-        jwks: jwks.keys,
+        jwks: Arc::new(RwLock::new(jwks.keys)),
         engine: Arc::new(Engine::new(
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
@@ -131,7 +132,7 @@ async fn main() {
     let protected = Router::new()
         .merge(routes::user::router())
         .merge(routes::sessions::router())
-        .merge(routes::analysis::router())
+        .merge(routes::analysis::router(config.analyze_max_body_bytes))
         .route_layer(axum_middleware::from_fn_with_state(
             state.clone(),
             appwrite_middleware,
