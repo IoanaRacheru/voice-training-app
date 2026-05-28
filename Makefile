@@ -1,7 +1,7 @@
 .PHONY: all bootstrap setup setup-env install up down start stop build-api-image rebuild-api-image logs logs-api logs-keycloak logs-db \
         ps status health restart clean clean-data clean-all prune docker-check \
         pull-images \
-        dev dev-frontend dev-stack \
+        dev dev-fast dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
         check-vosk test-vosk-runtime build-api-image-vosk \
@@ -100,6 +100,14 @@ prune: docker-check
 
 dev: up
 	$(MAKE) -C web-demo dev
+
+dev-fast: docker-check
+	@echo "Starting MVP backend stack (fast path)..."
+	@$(DOCKER_COMPOSE) up -d mongodb postgres keycloak vosk api
+	@$(MAKE) wait-keycloak
+	@$(MAKE) wait-api
+	@$(MAKE) -s keycloak-setup || true
+	@echo "dev-fast ready: API=http://localhost:3000 Keycloak=http://localhost:8080 Vosk=ws://localhost:2700"
 
 dev-frontend:
 	$(MAKE) run-frontend
@@ -304,6 +312,7 @@ help:
 	@echo "Bootstrap & Dev"
 	@echo "  all / bootstrap   setup + containers + Keycloak setup"
 	@echo "  dev               start stack then run frontend dev server"
+	@echo "  dev-fast          start only MVP backend stack quickly (no heavy verify/build)"
 	@echo "  dev-stack         start stack + wait + Keycloak setup (no frontend)"
 	@echo "  verify-stack      verify API + Keycloak are configured and reachable"
 	@echo "  dev-frontend      run only frontend dev server"
