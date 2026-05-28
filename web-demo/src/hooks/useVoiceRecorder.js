@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { useCallback, useEffect, useState } from "react";
 import { analysisService } from "@/services/analysisService";
 import { recordingService } from "@/services/recordingService";
@@ -33,6 +31,14 @@ export function useVoiceRecorder() {
     }
   }, []);
 
+  const pauseRecording = useCallback(() => {
+    return recordingService.pause();
+  }, []);
+
+  const resumeRecording = useCallback(() => {
+    return recordingService.resume();
+  }, []);
+
   const reset = useCallback(() => {
     recordingService.reset();
   }, []);
@@ -49,6 +55,8 @@ export function useVoiceRecorder() {
     ...recorderState,
     startRecording,
     stopRecording,
+    pauseRecording,
+    resumeRecording,
     reset,
     getSessionStats,
     getAudioData: recordingService.getAudioData.bind(recordingService),

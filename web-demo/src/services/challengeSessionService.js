@@ -1,34 +1,22 @@
-// @ts-nocheck
-
 import { analysisService } from "./analysisService.js";
 import { challengeGeneratorService } from "./challengeGeneratorService.js";
 import { challengeStreakService } from "./challengeStreakService.js";
 import { MIN_SESSION_DURATION_SECONDS } from "./sessionService.js";
+import { resolveTargetRange } from "./targetRangeUtils.js";
+import { createLocalJsonStore } from "./core/localJsonStore.js";
+import { emitAppEvent } from "./core/appEventBus.js";
 
 const STORAGE_KEY = "voiceDailyChallenge";
+const challengeStore = createLocalJsonStore(STORAGE_KEY, () => null);
 
 function readChallenge() {
-  if (typeof localStorage === "undefined") {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch (_error) {
-    return null;
-  }
+  const parsed = challengeStore.read();
+  return parsed && typeof parsed === "object" ? parsed : null;
 }
 
 function writeChallenge(challenge) {
-  if (typeof localStorage === "undefined") {
-    return challenge;
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(challenge));
-  window.dispatchEvent(
-    new CustomEvent("voiceDailyChallenge:changed", { detail: challenge })
-  );
+  challengeStore.write(challenge);
+  emitAppEvent("voiceDailyChallenge:changed", challenge);
   return challenge;
 }
 
@@ -41,30 +29,17 @@ function clampScore(value) {
 }
 
 function getTargetRange(user, snapshot) {
-  const targetRange = user?.target_pitch_range || snapshot?.targetPitchRange;
-  if (
-    Array.isArray(targetRange) &&
-    targetRange.length === 2 &&
-    Number.isFinite(Number(targetRange[0])) &&
-    Number.isFinite(Number(targetRange[1])) &&
-    Number(targetRange[1]) > Number(targetRange[0])
-  ) {
-    return [Number(targetRange[0]), Number(targetRange[1])];
-  }
-
-  if (snapshot?.goal === "feminization") {
-    return [180, 240];
-  }
-
-  if (snapshot?.goal === "masculinization") {
-    return [100, 150];
-  }
-
-  return [120, 220];
+  return resolveTargetRange(user, snapshot);
 }
 
 function getPitchHitRate(pitches, targetRange) {
-  if (!pitches?.length) {
+  if (
+    !pitches?.length ||
+    !Array.isArray(targetRange) ||
+    targetRange.length !== 2 ||
+    !Number.isFinite(Number(targetRange[0])) ||
+    !Number.isFinite(Number(targetRange[1]))
+  ) {
     return null;
   }
 

@@ -1,12 +1,22 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import * as authApi from "@/api/authClient";
 import keycloak from "@/lib/keycloak";
+import { savePreferenceOverrides } from "@/lib/profilePreferences";
+import { getAuthRedirectUri } from "@/lib/authRedirect";
+import { mapApiUserToAppUser } from "@/lib/auth/userMapper";
+import {
+  pickPreferenceOverrides,
+  shouldSyncPreferenceOverrides,
+} from "@/lib/auth/profilePreferenceSync";
 
 /**
  * @typedef {{
  *   id: string;
  *   username: string;
  *   email: string;
+ *   first_name?: string;
+ *   last_name?: string;
+ *   full_name?: string;
  *   voice_goal?: "feminize" | "masculinize" | "feminine" | "masculine" | "androgynous" | "custom";
  *   experience_level?: "beginner" | "intermediate" | "advanced";
  *   target_pitch_range?: number[];
@@ -22,28 +32,11 @@ import keycloak from "@/lib/keycloak";
  *     source?: "recording" | "upload";
  *     saved_at?: string;
  *   };
+ *   pitch_target_enabled?: boolean;
  * }} User
  */
 
 const AuthContext = createContext(/** @type {any} */ (null));
-
-/** @returns {User} */
-function buildUser(/** @type {any} */ data) {
-  return {
-    id: data.user_id,
-    username: data.email?.split("@")[0] ?? data.user_id,
-    email: data.email,
-    voice_goal: data.voice_goal,
-    experience_level: data.experience_level,
-    target_pitch_range: data.target_pitch_range ?? [180, 240],
-    training_focus: data.training_focus ?? ["pitch"],
-    identity_background: data.identity_background,
-    personalization_goals: data.personalization_goals,
-    age: data.age,
-    puberty_background: data.puberty_background,
-    initial_voice_sample: data.initial_voice_sample,
-  };
-}
 
 export function AuthProvider(/** @type {{ children: import("react").ReactNode }} */ { children }) {
   const [user, setUser] = useState(/** @type {User | null} */ (null));
@@ -51,28 +44,40 @@ export function AuthProvider(/** @type {{ children: import("react").ReactNode }}
 
   useEffect(() => {
     keycloak
-      .init({ onLoad: "login-required", pkceMethod: "S256" })
+      .init({
+        onLoad: "login-required",
+        pkceMethod: "S256",
+        redirectUri: getAuthRedirectUri("/profile"),
+      })
       .then((authenticated) => {
         if (authenticated) {
-          return authApi.getMe().then((data) => setUser(buildUser(data)));
+          return authApi.getMe().then((data) => setUser(mapApiUserToAppUser(data)));
         }
       })
       .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = () => keycloak.login();
+  const login = () => keycloak.login({ redirectUri: getAuthRedirectUri("/profile") });
 
   const register = () => keycloak.register();
 
   const logout = () => {
     setUser(null);
-    keycloak.logout();
+    keycloak.logout({ redirectUri: getAuthRedirectUri("/profile") });
   };
 
   const updateUser = async (/** @type {Partial<User>} */ updates) => {
     if (!user) return;
-    await authApi.patchMe(updates);
+    if (shouldSyncPreferenceOverrides(updates)) {
+      savePreferenceOverrides(pickPreferenceOverrides(updates));
+    }
+
+    try {
+      await authApi.patchMe(updates);
+    } catch (_error) {
+      // Keep local profile settings usable even when backend profile patch fails.
+    }
     setUser({ ...user, ...updates });
   };
 

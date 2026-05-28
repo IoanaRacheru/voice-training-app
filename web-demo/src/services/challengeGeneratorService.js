@@ -1,9 +1,9 @@
-// @ts-nocheck
-
 import { challengeExercisePool } from "@/data/challengeExercisePool";
+import { createLocalJsonStore } from "./core/localJsonStore.js";
 
 const HISTORY_KEY = "voiceChallengeGenerationHistory";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const historyStore = createLocalJsonStore(HISTORY_KEY, () => []);
 
 function getToday() {
   const date = new Date();
@@ -45,28 +45,16 @@ function normalizeGoal(goal) {
 }
 
 function getStoredHistory() {
-  if (typeof localStorage === "undefined") {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (_error) {
-    return [];
-  }
+  const parsed = historyStore.read();
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function saveGeneration(date, exerciseIds) {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-
   const nextHistory = [
     ...getStoredHistory().filter((entry) => entry?.date !== date),
     { date, exerciseIds },
   ].slice(-14);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+  historyStore.write(nextHistory);
 }
 
 function getRecentExerciseIds(history, today = getToday()) {

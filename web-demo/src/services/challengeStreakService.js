@@ -1,6 +1,8 @@
-// @ts-nocheck
+import { emitAppEvent } from "./core/appEventBus.js";
+import { createLocalJsonStore } from "./core/localJsonStore.js";
 
 const STORAGE_KEY = "voiceChallengeStreak";
+const streakStore = createLocalJsonStore(STORAGE_KEY, () => null);
 
 function getToday() {
   const date = new Date();
@@ -28,31 +30,19 @@ const defaultState = {
 };
 
 function readState() {
-  if (typeof localStorage === "undefined") {
-    return defaultState;
-  }
-
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    return {
-      ...defaultState,
-      ...(parsed && typeof parsed === "object" ? parsed : {}),
-      completedChallengeDates: Array.isArray(parsed?.completedChallengeDates)
-        ? parsed.completedChallengeDates
-        : [],
-    };
-  } catch (_error) {
-    return defaultState;
-  }
+  const parsed = streakStore.read();
+  return {
+    ...defaultState,
+    ...(parsed && typeof parsed === "object" ? parsed : {}),
+    completedChallengeDates: Array.isArray(parsed?.completedChallengeDates)
+      ? parsed.completedChallengeDates
+      : [],
+  };
 }
 
 function writeState(state) {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  window.dispatchEvent(new CustomEvent("voiceChallengeStreak:changed", { detail: state }));
+  streakStore.write(state);
+  emitAppEvent("voiceChallengeStreak:changed", state);
 }
 
 function normalizeForToday(state, today = getToday()) {

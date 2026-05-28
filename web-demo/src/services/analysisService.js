@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 export const PITCH_LIMITS = {
   minHz: 50,
   maxHz: 600,

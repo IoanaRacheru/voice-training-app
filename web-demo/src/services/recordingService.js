@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { analysisService } from "./analysisService.js";
 
 const BAR_COUNT = 56;
@@ -27,6 +25,7 @@ class RecordingService extends EventTarget {
     this.state = {
       status: "idle",
       isRecording: false,
+      isPaused: false,
       duration: 0,
       currentPitch: null,
       currentVolume: 0,
@@ -46,6 +45,7 @@ class RecordingService extends EventTarget {
     this.animationFrame = null;
     this.timer = null;
     this.startTime = null;
+    this.elapsedBeforePauseMs = 0;
     this.lastPitchTime = 0;
     this.pitches = [];
     this.stopPromise = null;
@@ -113,6 +113,7 @@ class RecordingService extends EventTarget {
     this.emitState({
       status: "starting",
       isRecording: false,
+      isPaused: false,
       duration: 0,
       currentPitch: null,
       currentVolume: 0,
@@ -143,8 +144,9 @@ class RecordingService extends EventTarget {
       }
 
       this.startTime = Date.now();
+      this.elapsedBeforePauseMs = 0;
       this.mediaRecorder?.start?.(250);
-      this.emitState({ status: "recording", isRecording: true, error: null });
+      this.emitState({ status: "recording", isRecording: true, isPaused: false, error: null });
       this.startTimer();
       this.startAnalysisLoop();
 
@@ -169,7 +171,7 @@ class RecordingService extends EventTarget {
       return this.getAudioData();
     }
 
-    if (!this.state.isRecording && this.state.status !== "starting") {
+    if (!this.state.isRecording && !this.state.isPaused && this.state.status !== "starting") {
       this.cleanup();
       this.emitState({ status: "idle", isRecording: false });
       return this.getAudioData();
@@ -186,15 +188,15 @@ class RecordingService extends EventTarget {
     this.emitState({
       status: "stopping",
       isRecording: false,
+      isPaused: false,
       error: errorMessage || this.state.error,
     });
 
     this.stopTimer();
     this.stopAnalysisLoop();
 
-    const durationSeconds = this.startTime
-      ? (Date.now() - this.startTime) / 1000
-      : this.state.duration;
+    const runningElapsedMs = this.startTime ? Date.now() - this.startTime : 0;
+    const durationSeconds = (this.elapsedBeforePauseMs + runningElapsedMs) / 1000;
 
     const blob = await this.stopMediaRecorder();
     const audioData = {
@@ -210,6 +212,7 @@ class RecordingService extends EventTarget {
     this.emitState({
       status: errorMessage ? "error" : "idle",
       isRecording: false,
+      isPaused: false,
       duration: Math.floor(durationSeconds),
       currentVolume: 0,
       waveformData: EMPTY_WAVEFORM,
@@ -223,6 +226,49 @@ class RecordingService extends EventTarget {
     return this.audioData;
   }
 
+  pause() {
+    if (!this.state.isRecording || this.state.isPaused) {
+      return this.getState();
+    }
+
+    if (this.mediaRecorder?.state === "recording" && this.mediaRecorder.pause) {
+      this.mediaRecorder.pause();
+    }
+
+    this.elapsedBeforePauseMs += this.startTime ? Date.now() - this.startTime : 0;
+    this.startTime = null;
+    this.stopTimer();
+    this.stopAnalysisLoop();
+    this.emitState({
+      status: "paused",
+      isRecording: false,
+      isPaused: true,
+      duration: Math.floor(this.elapsedBeforePauseMs / 1000),
+    });
+    return this.getState();
+  }
+
+  resume() {
+    if (!this.state.isPaused) {
+      return this.getState();
+    }
+
+    if (this.mediaRecorder?.state === "paused" && this.mediaRecorder.resume) {
+      this.mediaRecorder.resume();
+    }
+
+    this.startTime = Date.now();
+    this.emitState({
+      status: "recording",
+      isRecording: true,
+      isPaused: false,
+      error: null,
+    });
+    this.startTimer();
+    this.startAnalysisLoop();
+    return this.getState();
+  }
+
   reset() {
     this.cleanup();
     this.audioData = null;
@@ -232,6 +278,7 @@ class RecordingService extends EventTarget {
     this.emitState({
       status: "idle",
       isRecording: false,
+      isPaused: false,
       duration: 0,
       currentPitch: null,
       currentVolume: 0,
@@ -301,7 +348,7 @@ class RecordingService extends EventTarget {
       }
 
       this.emitState({
-        duration: Math.floor((Date.now() - this.startTime) / 1000),
+      duration: Math.floor((this.elapsedBeforePauseMs + (Date.now() - this.startTime)) / 1000),
       });
     }, 250);
   }
@@ -472,6 +519,7 @@ class RecordingService extends EventTarget {
     this.stream = null;
     this.mediaRecorder = null;
     this.startTime = null;
+    this.elapsedBeforePauseMs = 0;
     this.trackEndHandlers.clear();
   }
 }

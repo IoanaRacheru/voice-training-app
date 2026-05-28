@@ -117,7 +117,7 @@ status: ps
 health: docker-check
 	@echo "API health:" && curl -sf http://localhost:3000/health || true
 	@echo ""
-	@echo "Keycloak realm endpoint:" && curl -sf http://localhost:8080/realms/master > /dev/null && echo "ok" || echo "unreachable"
+	@echo "Keycloak realm endpoint:" && curl -sf http://localhost:8081/realms/master > /dev/null && echo "ok" || echo "unreachable"
 
 restart: docker-check
 	$(DOCKER_COMPOSE) restart
@@ -258,7 +258,7 @@ fmt:
 
 wait-keycloak:
 	@echo "Waiting for Keycloak to be ready..."
-	@until curl -sf http://localhost:8080/realms/master > /dev/null 2>&1; do \
+	@until curl -sf http://localhost:8081/realms/master > /dev/null 2>&1; do \
 	  printf '.'; \
 	  sleep 3; \
 	done
