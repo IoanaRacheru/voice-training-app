@@ -74,6 +74,7 @@ pub struct Engine {
     asr: Box<dyn SpeechRecognizer>,
     pronunciation: Box<dyn PronunciationEvaluator>,
     vad_detector: Box<dyn VadDetector>,
+    strict_provider_errors: bool,
 }
 
 impl Engine {
@@ -86,6 +87,27 @@ impl Engine {
         pronunciation: Box<dyn PronunciationEvaluator>,
         vad_detector: Box<dyn VadDetector>,
     ) -> Self {
+        Self::new_with_policy(
+            prosody_tool,
+            voice_tool,
+            llm_coach,
+            asr,
+            pronunciation,
+            vad_detector,
+            false,
+        )
+    }
+
+    /// Construct the engine with configurable strict provider error handling.
+    pub fn new_with_policy(
+        prosody_tool: Box<dyn ProsodyTool>,
+        voice_tool: Box<dyn VoicePresentationTool>,
+        llm_coach: Box<dyn LlmCoach>,
+        asr: Box<dyn SpeechRecognizer>,
+        pronunciation: Box<dyn PronunciationEvaluator>,
+        vad_detector: Box<dyn VadDetector>,
+        strict_provider_errors: bool,
+    ) -> Self {
         Self {
             prosody_tool,
             voice_tool,
@@ -93,6 +115,7 @@ impl Engine {
             asr,
             pronunciation,
             vad_detector,
+            strict_provider_errors,
         }
     }
 
@@ -168,7 +191,13 @@ impl Engine {
         let asr = if let (Some(samples), Some(sample_rate)) =
             (input.audio_samples.as_deref(), input.sample_rate)
         {
-            self.asr.recognize(samples, sample_rate).ok()
+            match self.asr.recognize(samples, sample_rate) {
+                Ok(result) => Some(result),
+                Err(err) if self.strict_provider_errors => {
+                    return Err(CoreError::Tool(format!("ASR provider failed: {err}")));
+                }
+                Err(_) => None,
+            }
         } else {
             None
         };

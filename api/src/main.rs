@@ -12,10 +12,12 @@ use std::sync::Arc;
 use app_core::{
     Engine,
     asr::{SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
-    dsp::{EnergyVadDetector, SileroVadDetector, VadDetector},
+    dsp::{EnergyVadDetector, VadDetector},
     llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
     tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
 };
+#[cfg(feature = "vad_silero")]
+use app_core::dsp::SileroVadDetector;
 use axum::{Router, middleware as axum_middleware};
 use mongodb::Database;
 use repositories::{
@@ -95,22 +97,32 @@ fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
 }
 
 /// Build an ASR backend from runtime configuration.
-fn build_asr(config: &Config) -> Box<dyn SpeechRecognizer> {
+fn build_asr(config: &Config) -> Result<Box<dyn SpeechRecognizer>, String> {
     if config.asr_provider == "vosk_remote" {
         if let Some(server_url) = &config.vosk_server_url {
-            return Box::new(app_core::asr::VoskAsr {
+            return Ok(Box::new(app_core::asr::VoskAsr {
                 server_url: server_url.clone(),
-            });
+            }));
         }
+        return Err("ASR_PROVIDER=vosk_remote requires VOSK_SERVER_URL".into());
     }
-    Box::new(VoskAsrStub)
+    Ok(Box::new(VoskAsrStub))
 }
 
 /// Build a VAD backend from runtime configuration.
-fn build_vad(config: &Config) -> Box<dyn VadDetector> {
+fn build_vad(config: &Config) -> Result<Box<dyn VadDetector>, String> {
     match config.vad_provider.as_str() {
-        "silero" => Box::new(SileroVadDetector),
-        _ => Box::new(EnergyVadDetector),
+        "silero" => {
+            #[cfg(feature = "vad_silero")]
+            {
+                Ok(Box::new(SileroVadDetector))
+            }
+            #[cfg(not(feature = "vad_silero"))]
+            {
+                Err("VAD_PROVIDER=silero requires api feature `vad_silero`".into())
+            }
+        }
+        _ => Ok(Box::new(EnergyVadDetector)),
     }
 }
 
@@ -142,18 +154,36 @@ async fn main() {
         .await
         .expect("Failed to parse JWKS response");
 
+    let asr = match build_asr(&config) {
+        Ok(asr) => asr,
+        Err(err) if config.provider_strict => panic!("{err}"),
+        Err(err) => {
+            tracing::warn!("{err}; falling back to stub ASR");
+            Box::new(VoskAsrStub)
+        }
+    };
+    let vad = match build_vad(&config) {
+        Ok(vad) => vad,
+        Err(err) if config.provider_strict => panic!("{err}"),
+        Err(err) => {
+            tracing::warn!("{err}; falling back to energy VAD");
+            Box::new(EnergyVadDetector)
+        }
+    };
+
     let state = Arc::new(AppState {
         db: database.clone(),
         config: config.clone(),
         http,
         jwks: Arc::new(RwLock::new(jwks.keys)),
-        engine: Arc::new(Engine::new(
+        engine: Arc::new(Engine::new_with_policy(
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
             build_llm_coach(&config),
-            build_asr(&config),
+            asr,
             Box::new(SimplePronunciationEvaluator),
-            build_vad(&config),
+            vad,
+            config.provider_strict,
         )),
         llm_provider: config.llm_provider.clone(),
         analysis_repo: Arc::new(MongoAnalysisRepository::new(database.clone())),

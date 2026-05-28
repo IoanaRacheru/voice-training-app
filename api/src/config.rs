@@ -34,6 +34,8 @@ pub struct Config {
     pub asr_provider: String,
     /// Optional Vosk server URL for `asr_provider=vosk_remote`.
     pub vosk_server_url: Option<String>,
+    /// If true, configured providers must be available or startup/requests fail.
+    pub provider_strict: bool,
 }
 
 impl Config {
@@ -80,6 +82,10 @@ impl Config {
             vad_provider: std::env::var("VAD_PROVIDER").unwrap_or_else(|_| "energy".to_string()),
             asr_provider: std::env::var("ASR_PROVIDER").unwrap_or_else(|_| "stub".to_string()),
             vosk_server_url: std::env::var("VOSK_SERVER_URL").ok(),
+            provider_strict: std::env::var("PROVIDER_STRICT")
+                .unwrap_or_else(|_| "true".to_string())
+                .parse()
+                .expect("PROVIDER_STRICT must be true or false"),
         }
     }
 }

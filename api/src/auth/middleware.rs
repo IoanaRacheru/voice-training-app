@@ -213,6 +213,7 @@ xDcBwamKcKejhkO6y4v4yfFcp7clWuANXQ3TGMRdin2qDmObIr52U3QjWE9C9E+U
                 vad_provider: "energy".into(),
                 asr_provider: "stub".into(),
                 vosk_server_url: None,
+                provider_strict: false,
             }),
             http: reqwest::Client::new(),
             jwks: Arc::new(RwLock::new(vec![JwkKey {
