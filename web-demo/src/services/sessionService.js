@@ -1,32 +1,13 @@
-// @ts-nocheck
-
 import { analysisService, isValidPitch } from "./analysisService.js";
+import { emitAppEvent } from "./core/appEventBus.js";
+import { createLocalJsonStore } from "./core/localJsonStore.js";
 
 export const MIN_SESSION_DURATION_SECONDS = 3;
+const sessionStore = createLocalJsonStore("voiceSessions", () => []);
 
 function getStoredSessions() {
-  if (typeof localStorage === "undefined") {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(localStorage.getItem("voiceSessions") || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (_error) {
-    return [];
-  }
-}
-
-function notifySessionsChanged(sessions) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.dispatchEvent(
-    new CustomEvent("voiceSessions:changed", {
-      detail: { sessions, count: sessions.length },
-    })
-  );
+  const parsed = sessionStore.read();
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 export function computeSessionScore(pitch, targetRange) {
@@ -116,11 +97,11 @@ export const sessionService = {
 
     const existingSessions = getStoredSessions();
     const nextSessions = [...existingSessions, session];
-    localStorage.setItem(
-      "voiceSessions",
-      JSON.stringify(nextSessions)
-    );
-    notifySessionsChanged(nextSessions);
+    sessionStore.write(nextSessions);
+    emitAppEvent("voiceSessions:changed", {
+      sessions: nextSessions,
+      count: nextSessions.length,
+    });
 
     return { ok: true, error: null, session };
   },

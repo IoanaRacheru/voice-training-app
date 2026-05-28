@@ -2,7 +2,7 @@
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
-KEYCLOAK_URL    ?= http://localhost:8080
+KEYCLOAK_URL    ?= http://localhost:8081
 ADMIN_USER      ?= admin
 REALM           ?= voice-training
 CLIENT_ID       ?= voice-training-app

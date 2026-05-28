@@ -80,6 +80,6 @@ test("sessionService saves valid sessions", () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.session.id, "test-session-id");
-  assert.equal(JSON.parse(storage.get("voiceSessions")).length, 1);
+  assert.equal(JSON.parse(globalThis.localStorage.getItem("voiceSessions")).length, 1);
   assert.equal(sessionService.getSessionCount(), 1);
 });
