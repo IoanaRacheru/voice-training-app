@@ -30,3 +30,14 @@
 - In non-strict mode (`PROVIDER_STRICT=false`), provider initialization failures fall back:
   - ASR falls back to stub ASR.
   - VAD falls back to energy VAD.
+
+## Data Retention Warning
+- `analysis_artifacts` entries are automatically deleted by MongoDB TTL after 90 days.
+- This is destructive retention, not soft-delete, and deleted artifacts are not recoverable from application APIs.
+
+## Retention Window Changes
+- If you need to change the 90-day window, update the TTL index definition in API DB init and re-apply indexes.
+- Operationally safe approach:
+  - pause traffic-sensitive maintenance windows if required by deployment policy;
+  - apply updated index settings;
+  - verify index value with `db.analysis_artifacts.getIndexes()` before reopening normal traffic.

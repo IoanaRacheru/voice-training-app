@@ -77,11 +77,6 @@ pub fn swagger_ui() -> SwaggerUi {
     SwaggerUi::new("/docs").url("/api/openapi.json", ApiDoc::openapi())
 }
 
-/// Serve generated OpenAPI JSON.
-pub async fn openapi_json() -> axum::Json<utoipa::openapi::OpenApi> {
-    axum::Json(ApiDoc::openapi())
-}
-
 #[cfg(test)]
 mod tests {
     use super::ApiDoc;

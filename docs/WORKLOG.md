@@ -7,12 +7,18 @@
 - Added Dockerized Vosk + Silero runtime verification path:
   - `make build-api-image-vosk-silero`
   - `make verify-vosk-silero-api`
+  - verified green on 2026-05-29 after compose/make fixes
 - Added authenticated analysis artifact history APIs:
   - `GET /api/analysis-artifacts`
   - `GET /api/analysis-artifacts/:id`
 - Expanded analysis repository abstraction with user-scoped list/detail methods.
 - Added MongoDB TTL retention index for `analysis_artifacts` (90-day default).
+- Added explicit TTL operational warning and retention-window adjustment guidance in runtime docs.
 - Renamed analysis tool implementations from `Heuristic*` to deterministic DSP names across `app_core` and `api`.
+- Fixed runtime verification wiring issues:
+  - `verify-vosk-api` now targets rebuilt `api_vosk` on port `3001`;
+  - `verify-vosk-silero-api` now rebuilds `api_vosk_silero` with valid cargo feature args (`asr_vosk,vad_silero`);
+  - removed duplicate `/api/openapi.json` route registration that caused `api_vosk` startup panic.
 - Calibrated deterministic DSP v2 scoring in `app_core` prosody/voice tools while preserving API output ranges and labels.
 - Added pronunciation v3 improvements with sequence-alignment scoring and timing-aware feedback cues.
 - Added strict provider fail-fast test coverage:
