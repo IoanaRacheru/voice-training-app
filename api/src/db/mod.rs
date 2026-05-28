@@ -4,6 +4,8 @@ use mongodb::{
     options::{ClientOptions, IndexOptions},
 };
 
+const ARTIFACT_RETENTION_DAYS: u64 = 90;
+
 pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> {
     let options = ClientOptions::parse(mongodb_uri).await?;
     let client = Client::with_options(options)?;
@@ -38,6 +40,20 @@ pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> 
         .create_index(
             IndexModel::builder()
                 .keys(doc! { "user_id": 1, "created_at": -1 })
+                .build(),
+        )
+        .await?;
+    artifacts
+        .create_index(
+            IndexModel::builder()
+                .keys(doc! { "created_at": 1 })
+                .options(
+                    IndexOptions::builder()
+                        .expire_after(std::time::Duration::from_secs(
+                            ARTIFACT_RETENTION_DAYS * 24 * 60 * 60,
+                        ))
+                        .build(),
+                )
                 .build(),
         )
         .await?;

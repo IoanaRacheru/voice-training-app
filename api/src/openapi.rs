@@ -34,6 +34,8 @@ impl Modify for SecurityAddon {
         crate::routes::health::health,
         crate::routes::llm::health,
         crate::routes::analysis::analyze,
+        crate::routes::artifacts::list_artifacts,
+        crate::routes::artifacts::get_artifact,
         crate::routes::user::me,
         crate::routes::user::patch_me,
         crate::routes::sessions::create,
@@ -43,6 +45,9 @@ impl Modify for SecurityAddon {
         schemas(
             crate::routes::analysis::AnalyzeRequest,
             crate::routes::analysis::AnalyzeResponse,
+            crate::routes::artifacts::ListArtifactsQuery,
+            crate::routes::artifacts::ArtifactItem,
+            crate::routes::artifacts::ArtifactListResponse,
             crate::routes::health::HealthResponse,
             crate::routes::llm::LlmHealthResponse,
             crate::routes::user::MeResponse,
@@ -89,6 +94,8 @@ mod tests {
         assert!(paths.contains_key("/health"));
         assert!(paths.contains_key("/api/llm/health"));
         assert!(paths.contains_key("/api/analyze"));
+        assert!(paths.contains_key("/api/analysis-artifacts"));
+        assert!(paths.contains_key("/api/analysis-artifacts/{id}"));
         assert!(paths.contains_key("/api/me"));
         assert!(paths.contains_key("/api/sessions"));
     }
