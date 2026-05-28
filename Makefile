@@ -214,6 +214,13 @@ verify-stack: docker-check wait-keycloak wait-api
 	@echo "2) Keycloak realm availability:" && curl -sf http://localhost:8080/realms/voice-training > /dev/null && echo "ok"
 	@echo "3) Keycloak client/realm settings status:"
 	@$(MAKE) -s -C keycloak status
+	@echo "4) Protected route auth smoke (/api/me with real Keycloak token):"
+	@token=$$(curl -s -X POST http://localhost:8080/realms/voice-training/protocol/openid-connect/token \
+	  -H "Content-Type: application/x-www-form-urlencoded" \
+	  -d "grant_type=password&client_id=voice-training-app&username=devuser&password=devpass123" \
+	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4); \
+	test -n "$$token" || (echo "failed to fetch user token" && exit 1); \
+	curl -sf http://localhost:3000/api/me -H "Authorization: Bearer $$token" > /dev/null && echo "ok"
 	@echo ""
 	@echo "Stack verification complete."
 

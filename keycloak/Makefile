@@ -1,4 +1,4 @@
-.PHONY: all realm client settings theme status clean help
+.PHONY: all realm client settings theme dev-user status clean help
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
@@ -7,6 +7,8 @@ ADMIN_USER      ?= admin
 REALM           ?= voice-training
 CLIENT_ID       ?= voice-training-app
 FRONTEND_ORIGIN ?= http://localhost:5173
+DEV_USER        ?= devuser
+DEV_PASS        ?= devpass123
 
 # Pull admin password from root .env, fall back to Keycloak default
 ADMIN_PASS := $(shell grep -m1 '^KEYCLOAK_ADMIN_PASSWORD=' ../.env 2>/dev/null | cut -d= -f2- | tr -d '"')
@@ -38,7 +40,7 @@ endef
 # ── Targets ───────────────────────────────────────────────────────────────────
 
 ## all: full setup — realm → client → settings → theme
-all: realm client settings theme
+all: realm client settings theme dev-user
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "  Keycloak configured successfully."
@@ -78,7 +80,7 @@ client:
 	    "enabled":true, \
 	    "publicClient":true, \
 	    "standardFlowEnabled":true, \
-	    "directAccessGrantsEnabled":false, \
+	    "directAccessGrantsEnabled":true, \
 	    "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
 	    "webOrigins":["$(FRONTEND_ORIGIN)"], \
 	    "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN)"} \
@@ -86,11 +88,60 @@ client:
 	if [ "$$status" = "201" ]; then \
 	  echo "      client created."; \
 	elif [ "$$status" = "409" ]; then \
-	  echo "      client already exists, skipping."; \
+	  echo "      client already exists, updating settings."; \
+	  cid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients?clientId=$(CLIENT_ID)" \
+	    -H "Authorization: Bearer $$(cat .token)" \
+	    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
+	  test -n "$$cid" || (echo "ERROR: could not resolve client id for $(CLIENT_ID)" && exit 1); \
+	  status2=$$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients/$$cid" \
+	    -H "Authorization: Bearer $$(cat .token)" \
+	    -H "Content-Type: application/json" \
+	    -d '{ \
+	      "clientId":"$(CLIENT_ID)", \
+	      "enabled":true, \
+	      "publicClient":true, \
+	      "standardFlowEnabled":true, \
+	      "directAccessGrantsEnabled":true, \
+	      "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
+	      "webOrigins":["$(FRONTEND_ORIGIN)"], \
+	      "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN)"} \
+	    }'); \
+	  [ "$$status2" = "204" ] || (echo "ERROR: client update failed (HTTP $$status2)" && exit 1); \
+	  echo "      client updated."; \
 	else \
 	  echo "ERROR: client creation failed (HTTP $$status)"; \
 	  exit 1; \
 	fi
+
+## dev-user: ensure a local development user exists for API smoke checks
+dev-user:
+	@echo "[5/5] Ensuring dev user '$(DEV_USER)' exists..."
+	$(fetch_token)
+	@uid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users?username=$(DEV_USER)" \
+	  -H "Authorization: Bearer $$(cat .token)" \
+	  | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
+	if [ -z "$$uid" ]; then \
+	  status=$$(curl -s -o /dev/null -w "%{http_code}" -X POST "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users" \
+	    -H "Authorization: Bearer $$(cat .token)" \
+	    -H "Content-Type: application/json" \
+	    -d '{ \
+	      "username":"$(DEV_USER)", \
+	      "email":"$(DEV_USER)@local.dev", \
+	      "enabled":true, \
+	      "emailVerified":true \
+	    }'); \
+	  [ "$$status" = "201" ] || (echo "ERROR: dev user create failed (HTTP $$status)" && exit 1); \
+	  uid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users?username=$(DEV_USER)" \
+	    -H "Authorization: Bearer $$(cat .token)" \
+	    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
+	fi; \
+	test -n "$$uid" || (echo "ERROR: could not resolve dev user id" && exit 1); \
+	status2=$$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users/$$uid/reset-password" \
+	  -H "Authorization: Bearer $$(cat .token)" \
+	  -H "Content-Type: application/json" \
+	  -d '{"type":"password","value":"$(DEV_PASS)","temporary":false}'); \
+	[ "$$status2" = "204" ] || (echo "ERROR: dev user password reset failed (HTTP $$status2)" && exit 1); \
+	echo "      dev user ready."
 
 ## settings: enable registration, forgot-password, email-as-username
 settings:
@@ -155,11 +206,12 @@ help:
 	@echo ""
 	@echo "Usage: make -C keycloak <target>"
 	@echo ""
-	@echo "  all       Full setup: realm → client → settings → theme"
+	@echo "  all       Full setup: realm → client → settings → theme → dev-user"
 	@echo "  realm     Create the '$(REALM)' realm"
 	@echo "  client    Create the '$(CLIENT_ID)' OIDC client"
 	@echo "  settings  Enable registration / forgot-password / email-as-username"
 	@echo "  theme     Apply the voice-training login theme"
+	@echo "  dev-user  Ensure local dev user exists and set password"
 	@echo "  status    Print current realm configuration from the API"
 	@echo "  clean     Delete the cached admin token (.token)"
 	@echo ""
