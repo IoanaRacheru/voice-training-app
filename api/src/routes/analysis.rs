@@ -74,6 +74,9 @@ pub struct AnalyzeResponse {
     post,
     path = "/api/analyze",
     tag = "Analysis",
+    security(
+        ("bearer_auth" = [])
+    ),
     request_body = AnalyzeRequest,
     responses(
         (status = 200, description = "Analysis results", body = AnalyzeResponse),
