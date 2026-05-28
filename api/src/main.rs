@@ -271,10 +271,6 @@ async fn main() {
         .merge(routes::health::router())
         .merge(routes::llm::router())
         .merge(openapi::swagger_ui())
-        .route(
-            "/api/openapi.json",
-            axum::routing::get(openapi::openapi_json),
-        )
         .merge(protected)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

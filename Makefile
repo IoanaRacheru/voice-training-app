@@ -257,9 +257,9 @@ verify-stack: docker-check wait-keycloak wait-api
 
 verify-vosk-api: docker-check
 	@echo "Starting stack with Dockerized Vosk..."
-	@$(DOCKER_COMPOSE) up -d vosk mongodb postgres keycloak api
-	@echo "Waiting for API (http://localhost:3000/health)..."
-	@until curl -sf http://localhost:3000/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
+	@$(DOCKER_COMPOSE) up -d --build vosk mongodb postgres keycloak api_vosk
+	@echo "Waiting for API (http://localhost:3001/health)..."
+	@until curl -sf http://localhost:3001/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
 	@echo "Requesting service-account token from Keycloak..."
 	@token=$$(curl -s -X POST http://localhost:8080/realms/voice-training/protocol/openid-connect/token \
 	  -H "Content-Type: application/x-www-form-urlencoded" \
@@ -267,7 +267,7 @@ verify-vosk-api: docker-check
 	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4); \
 	test -n "$$token" || (echo "failed to fetch service-account token" && exit 1); \
 	audio=$$(awk 'BEGIN{for(i=0;i<4096;i++){v=(i%64<32?0.2:-0.2); printf("%s%.3f",(i==0?"":","),v)}}'); \
-	resp=$$(curl -sf -X POST http://localhost:3000/api/analyze \
+	resp=$$(curl -sf -X POST http://localhost:3001/api/analyze \
 	  -H "Authorization: Bearer $$token" \
 	  -H "Content-Type: application/json" \
 	  --data "{\"median_pitch_hz\":180.0,\"pitch_stability\":0.7,\"pause_ratio\":0.2,\"spectral_brightness\":0.6,\"sample_rate\":16000,\"audio_samples\":[$$audio]}"); \
@@ -276,7 +276,7 @@ verify-vosk-api: docker-check
 
 verify-vosk-silero-api: docker-check
 	@echo "Starting stack with Dockerized Vosk + Silero-enabled API..."
-	@$(DOCKER_COMPOSE) up -d vosk mongodb postgres keycloak api_vosk_silero
+	@$(DOCKER_COMPOSE) up -d --build vosk mongodb postgres keycloak api_vosk_silero
 	@echo "Waiting for API (http://localhost:3002/health)..."
 	@until curl -sf http://localhost:3002/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
 	@echo "Requesting service-account token from Keycloak..."
