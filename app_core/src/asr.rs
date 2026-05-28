@@ -12,6 +12,21 @@ pub struct AsrResult {
     pub transcript: String,
     /// Confidence estimate in `[0, 1]`.
     pub confidence: f64,
+    /// Optional recognized words with timing/confidence metadata when provided by backend.
+    pub words: Option<Vec<AsrWord>>,
+}
+
+/// Word-level recognition output when available from ASR backend.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AsrWord {
+    /// Recognized token.
+    pub word: String,
+    /// Token start time in seconds.
+    pub start_seconds: f64,
+    /// Token end time in seconds.
+    pub end_seconds: f64,
+    /// Token confidence estimate in `[0, 1]`.
+    pub confidence: f64,
 }
 
 /// Pronunciation feedback result for phrase-level coaching.
@@ -23,6 +38,10 @@ pub struct PronunciationFeedback {
     pub recognized_text: String,
     /// Token-level overlap ratio in `[0, 1]`.
     pub token_match_ratio: f64,
+    /// Relative token order match ratio in `[0, 1]`.
+    pub word_order_ratio: f64,
+    /// Timing smoothness proxy in `[0, 1]` when ASR word timestamps are available.
+    pub timing_alignment_ratio: Option<f64>,
     /// Human-readable coaching note.
     pub feedback: String,
 }
@@ -65,6 +84,7 @@ impl SpeechRecognizer for VoskAsrStub {
         Ok(AsrResult {
             transcript: "asr_stub_transcript".into(),
             confidence,
+            words: None,
         })
     }
 }
@@ -112,6 +132,7 @@ impl SpeechRecognizer for VoskAsr {
             .map_err(|e| CoreError::Tool(format!("failed to finalize vosk stream: {e}")))?;
 
         let mut transcript = String::new();
+        let mut words: Vec<AsrWord> = Vec::new();
         while let Ok(msg) = socket.read() {
             let text = match msg {
                 Message::Text(t) => t,
@@ -120,12 +141,7 @@ impl SpeechRecognizer for VoskAsr {
             let parsed: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|e| CoreError::Tool(format!("invalid vosk response: {e}")))?;
             if let Some(result) = parsed.get("result").and_then(|v| v.as_array()) {
-                if let Some(first) = result.first() {
-                    if let Some(word) = first.get("word").and_then(|w| w.as_str()) {
-                        transcript.push_str(word);
-                        transcript.push(' ');
-                    }
-                }
+                words = parse_vosk_words(result);
             }
             if let Some(final_text) = parsed.get("text").and_then(|v| v.as_str()) {
                 transcript = final_text.trim().to_string();
@@ -133,10 +149,18 @@ impl SpeechRecognizer for VoskAsr {
             }
         }
 
+        if transcript.is_empty() && !words.is_empty() {
+            transcript = words
+                .iter()
+                .map(|w| w.word.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
+        }
         let confidence = if transcript.is_empty() { 0.2 } else { 0.75 };
         Ok(AsrResult {
             transcript,
             confidence,
+            words: if words.is_empty() { None } else { Some(words) },
         })
     }
 }
@@ -147,15 +171,8 @@ pub struct SimplePronunciationEvaluator;
 
 impl PronunciationEvaluator for SimplePronunciationEvaluator {
     fn evaluate(&self, expected_text: &str, asr: &AsrResult) -> PronunciationFeedback {
-        let expected_tokens: Vec<String> = expected_text
-            .split_whitespace()
-            .map(|t| t.to_lowercase())
-            .collect();
-        let recognized_tokens: Vec<String> = asr
-            .transcript
-            .split_whitespace()
-            .map(|t| t.to_lowercase())
-            .collect();
+        let expected_tokens = tokenize(expected_text);
+        let recognized_tokens = tokenize(&asr.transcript);
         let matched = expected_tokens
             .iter()
             .filter(|t| recognized_tokens.contains(t))
@@ -165,11 +182,14 @@ impl PronunciationEvaluator for SimplePronunciationEvaluator {
         } else {
             matched as f64 / expected_tokens.len() as f64
         };
+        let order_ratio = token_order_ratio(&expected_tokens, &recognized_tokens);
+        let timing_ratio = asr.words.as_ref().map(|words| timing_alignment_ratio(words));
 
-        let feedback = if ratio > 0.8 {
+        let aggregate = ratio * 0.55 + order_ratio * 0.45;
+        let feedback = if aggregate > 0.85 {
             "Pronunciation is close to target; keep pacing steady."
-        } else if ratio > 0.4 {
-            "Pronunciation partially matches; slow down and articulate consonants."
+        } else if aggregate > 0.55 {
+            "Pronunciation partially matches; slow down and keep syllable order steady."
         } else {
             "Pronunciation differs from target; repeat slowly and focus on syllable clarity."
         };
@@ -178,9 +198,74 @@ impl PronunciationEvaluator for SimplePronunciationEvaluator {
             expected_text: expected_text.to_string(),
             recognized_text: asr.transcript.clone(),
             token_match_ratio: ratio,
+            word_order_ratio: order_ratio,
+            timing_alignment_ratio: timing_ratio,
             feedback: feedback.into(),
         }
     }
+}
+
+fn tokenize(text: &str) -> Vec<String> {
+    text.split_whitespace().map(|t| t.to_lowercase()).collect()
+}
+
+fn token_order_ratio(expected: &[String], recognized: &[String]) -> f64 {
+    if expected.is_empty() || recognized.is_empty() {
+        return 0.0;
+    }
+
+    let mut i = 0usize;
+    let mut matched = 0usize;
+    for token in expected {
+        while i < recognized.len() {
+            if recognized[i] == *token {
+                matched += 1;
+                i += 1;
+                break;
+            }
+            i += 1;
+        }
+    }
+    matched as f64 / expected.len() as f64
+}
+
+fn timing_alignment_ratio(words: &[AsrWord]) -> f64 {
+    if words.len() < 2 {
+        return 1.0;
+    }
+
+    let durations: Vec<f64> = words
+        .iter()
+        .map(|w| (w.end_seconds - w.start_seconds).max(0.0))
+        .collect();
+    let mean = durations.iter().sum::<f64>() / durations.len() as f64;
+    if mean <= f64::EPSILON {
+        return 0.0;
+    }
+    let variance = durations
+        .iter()
+        .map(|d| {
+            let delta = *d - mean;
+            delta * delta
+        })
+        .sum::<f64>()
+        / durations.len() as f64;
+    let std_dev = variance.sqrt();
+    (1.0 - (std_dev / mean).min(1.0)).clamp(0.0, 1.0)
+}
+
+fn parse_vosk_words(values: &[serde_json::Value]) -> Vec<AsrWord> {
+    values
+        .iter()
+        .filter_map(|v| {
+            Some(AsrWord {
+                word: v.get("word")?.as_str()?.to_string(),
+                start_seconds: v.get("start")?.as_f64()?,
+                end_seconds: v.get("end")?.as_f64()?,
+                confidence: v.get("conf").and_then(|c| c.as_f64()).unwrap_or(0.0),
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -193,9 +278,11 @@ mod tests {
         let asr = AsrResult {
             transcript: "hello voice training".into(),
             confidence: 0.7,
+            words: None,
         };
         let fb = eval.evaluate("hello training", &asr);
         assert!(fb.token_match_ratio >= 0.5);
+        assert!(fb.word_order_ratio >= 0.5);
     }
 
     #[test]
