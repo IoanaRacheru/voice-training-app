@@ -2,7 +2,7 @@
         ps status health restart clean clean-data clean-all prune docker-check \
         dev dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
-        check-backend build-backend test-backend test-api test-core test-fast test-openapi \
+        check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak \
@@ -144,6 +144,10 @@ test-fast:
 test-openapi:
 	cargo test -p api openapi -- --nocapture
 
+test-dsp-bench:
+	cargo test -p app_core dsp::tests::extract_features_from_sine_wave -- --nocapture
+	cargo test -p app_core dsp::tests::bursty_signal_confidence_degrades -- --nocapture
+
 dep-tree:
 	cargo tree --workspace
 
@@ -261,6 +265,7 @@ help:
 	@echo "  test-core         cargo test -p app_core"
 	@echo "  test-fast         cargo test -p app_core -p api"
 	@echo "  test-openapi      run OpenAPI-focused tests in api crate"
+	@echo "  test-dsp-bench    run DSP threshold/robustness benchmark-style tests"
 	@echo "  dep-tree          print cargo dependency tree"
 	@echo "  dep-outdated      list outdated Rust dependencies"
 	@echo "  dep-audit         run security advisory checks (cargo-audit)"

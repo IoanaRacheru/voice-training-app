@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     dsp::extract_signal_features,
@@ -37,6 +38,25 @@ pub struct AnalysisOutput {
     pub practice_next: Vec<String>,
     /// Human-readable coach response.
     pub llm_coach_feedback: String,
+    /// Signal extraction confidence in `[0, 1]` when audio is provided.
+    pub signal_confidence: Option<f64>,
+    /// Signal-quality diagnostic flags.
+    pub signal_quality: Option<SignalQuality>,
+    /// VAD implementation used in extraction.
+    pub vad_used: Option<String>,
+}
+
+/// Signal quality diagnostics exposed to API consumers.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SignalQuality {
+    /// True if RMS energy is very low.
+    pub low_energy: bool,
+    /// True if voiced frame ratio is low.
+    pub low_voiced_ratio: bool,
+    /// True if too few reliable pitch estimates were extracted.
+    pub insufficient_pitch_frames: bool,
+    /// True if pitch variability indicates unstable voicing.
+    pub unstable_pitch: bool,
 }
 
 /// Orchestrator that coordinates tools and coach generation.
@@ -62,7 +82,7 @@ impl Engine {
 
     /// Execute the end-to-end analysis and coaching pipeline.
     pub async fn analyze(&self, input: AnalysisInput) -> Result<AnalysisOutput, CoreError> {
-        let (median_pitch_hz, pitch_stability, pause_ratio, spectral_brightness) =
+        let (median_pitch_hz, pitch_stability, pause_ratio, spectral_brightness, signal_confidence, signal_quality, vad_used) =
             if let (Some(samples), Some(sample_rate)) =
                 (input.audio_samples.as_deref(), input.sample_rate)
             {
@@ -72,12 +92,23 @@ impl Engine {
                         f.pitch_stability,
                         f.pause_ratio,
                         f.spectral_brightness,
+                        Some(f.confidence),
+                        Some(SignalQuality {
+                            low_energy: f.quality_flags.low_energy,
+                            low_voiced_ratio: f.quality_flags.low_voiced_ratio,
+                            insufficient_pitch_frames: f.quality_flags.insufficient_pitch_frames,
+                            unstable_pitch: f.quality_flags.unstable_pitch,
+                        }),
+                        Some(f.vad_name.to_string()),
                     ),
                     None => (
                         input.median_pitch_hz,
                         input.pitch_stability,
                         input.pause_ratio,
                         input.spectral_brightness,
+                        None,
+                        None,
+                        None,
                     ),
                 }
             } else {
@@ -86,6 +117,9 @@ impl Engine {
                     input.pitch_stability,
                     input.pause_ratio,
                     input.spectral_brightness,
+                    None,
+                    None,
+                    None,
                 )
             };
 
@@ -115,6 +149,9 @@ impl Engine {
             summary,
             practice_next,
             llm_coach_feedback,
+            signal_confidence,
+            signal_quality,
+            vad_used,
         })
     }
 }
@@ -174,6 +211,7 @@ mod tests {
             .voice_presentation
             .uncertainty_note
             .contains("not a definitive label"));
+        assert!(result.signal_confidence.is_none());
     }
 
     #[tokio::test]
@@ -202,5 +240,7 @@ mod tests {
             .await
             .expect("analysis should succeed");
         assert!(result.summary.contains("Pitch median"));
+        assert!(result.signal_confidence.is_some());
+        assert_eq!(result.vad_used.as_deref(), Some("energy_vad"));
     }
 }
