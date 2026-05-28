@@ -86,6 +86,13 @@ pub async fn analyze(
     Extension(user): Extension<AppwriteUser>,
     Json(body): Json<AnalyzeRequest>,
 ) -> Result<Json<AnalyzeResponse>, AppError> {
+    tracing::info!(
+        user_id = %user.id,
+        has_audio = body.audio_samples.as_ref().map(|s| !s.is_empty()).unwrap_or(false),
+        sample_rate = ?body.sample_rate,
+        has_expected_text = body.expected_text.as_ref().map(|s| !s.is_empty()).unwrap_or(false),
+        "Analyze request received"
+    );
     let output = state
         .engine
         .analyze(AnalysisInput {
@@ -99,6 +106,13 @@ pub async fn analyze(
         })
         .await
         .map_err(|e| AppError::Validation(e.to_string()))?;
+    tracing::info!(
+        user_id = %user.id,
+        vad_used = ?output.vad_used,
+        has_asr = output.asr.is_some(),
+        has_pronunciation = output.pronunciation.is_some(),
+        "Analyze pipeline finished"
+    );
 
     let artifact = AnalysisArtifact {
         id: None,
@@ -109,6 +123,7 @@ pub async fn analyze(
         voice_presentation_confidence: output.voice_presentation.confidence,
     };
     state.analysis_repo.insert_analysis(&artifact).await?;
+    tracing::info!(user_id = %artifact.user_id, "Analyze artifact persisted");
 
     Ok(Json(AnalyzeResponse {
         summary: output.summary,
@@ -502,5 +517,84 @@ mod tests {
         .expect_err("strict mode should surface ASR failure");
 
         assert!(err.to_string().contains("ASR provider failed"));
+    }
+
+    #[tokio::test]
+    async fn analyze_route_non_strict_mode_falls_back_when_asr_fails() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_server_url: None,
+                provider_strict: false,
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new_with_policy(
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(FailingAsr),
+                Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
+                false,
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::new(Mutex::new(Vec::new())),
+            }),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+        });
+
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let samples = vec![0.2_f32; 4096];
+
+        let response = analyze(
+            State(state),
+            Extension(user),
+            Json(AnalyzeRequest {
+                median_pitch_hz: 180.0,
+                pitch_stability: 0.7,
+                pause_ratio: 0.2,
+                spectral_brightness: 0.6,
+                audio_samples: Some(samples),
+                sample_rate: Some(16_000),
+                expected_text: Some("hello world".into()),
+            }),
+        )
+        .await
+        .expect("non-strict mode should degrade gracefully");
+
+        assert!(response.0.asr.is_none());
+        assert!(response.0.pronunciation.is_none());
     }
 }
