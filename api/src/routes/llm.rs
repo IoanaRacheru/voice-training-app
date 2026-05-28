@@ -58,6 +58,7 @@ mod tests {
     use crate::config::Config;
     use app_core::{
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
         Engine,
@@ -92,6 +93,9 @@ use mongodb::Client;
                 openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
                 groq_api_key: None,
                 groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_model_path: None,
             }),
             http: reqwest::Client::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -101,6 +105,7 @@ use mongodb::Client;
                 Box::new(RuleBasedCoach),
                 Box::new(VoskAsrStub),
                 Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
             )),
             llm_provider: "openrouter".into(),
             analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),

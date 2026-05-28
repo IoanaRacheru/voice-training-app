@@ -11,7 +11,8 @@ use std::sync::Arc;
 
 use axum::{middleware as axum_middleware, Router};
 use app_core::{
-    asr::{SimplePronunciationEvaluator, VoskAsrStub},
+    asr::{SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
+    dsp::{EnergyVadDetector, SileroVadDetector, VadDetector},
     llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
     tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
     Engine,
@@ -93,6 +94,27 @@ fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
     }
 }
 
+/// Build an ASR backend from runtime configuration.
+fn build_asr(_config: &Config) -> Box<dyn SpeechRecognizer> {
+    #[cfg(feature = "asr_vosk")]
+    if _config.asr_provider == "vosk" {
+        if let Some(model_path) = &_config.vosk_model_path {
+            return Box::new(app_core::asr::VoskAsr {
+                model_path: model_path.clone(),
+            });
+        }
+    }
+    Box::new(VoskAsrStub)
+}
+
+/// Build a VAD backend from runtime configuration.
+fn build_vad(config: &Config) -> Box<dyn VadDetector> {
+    match config.vad_provider.as_str() {
+        "silero" => Box::new(SileroVadDetector),
+        _ => Box::new(EnergyVadDetector),
+    }
+}
+
 /// Start the API service with a Tokio multi-thread runtime.
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
@@ -131,8 +153,9 @@ async fn main() {
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
             build_llm_coach(&config),
-            Box::new(VoskAsrStub),
+            build_asr(&config),
             Box::new(SimplePronunciationEvaluator),
+            build_vad(&config),
         )),
         llm_provider: config.llm_provider.clone(),
         analysis_repo: Arc::new(MongoAnalysisRepository::new(database.clone())),

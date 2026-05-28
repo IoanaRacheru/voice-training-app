@@ -28,6 +28,12 @@ pub struct Config {
     pub groq_api_key: Option<String>,
     /// Groq model ID.
     pub groq_model: String,
+    /// VAD provider (`energy` | `silero`).
+    pub vad_provider: String,
+    /// ASR provider (`stub` | `vosk`).
+    pub asr_provider: String,
+    /// Optional Vosk model path for `asr_provider=vosk`.
+    pub vosk_model_path: Option<String>,
 }
 
 impl Config {
@@ -71,6 +77,9 @@ impl Config {
             groq_api_key: std::env::var("GROQ_API_KEY").ok(),
             groq_model: std::env::var("GROQ_MODEL")
                 .unwrap_or_else(|_| "llama-3.3-70b-versatile".to_string()),
+            vad_provider: std::env::var("VAD_PROVIDER").unwrap_or_else(|_| "energy".to_string()),
+            asr_provider: std::env::var("ASR_PROVIDER").unwrap_or_else(|_| "stub".to_string()),
+            vosk_model_path: std::env::var("VOSK_MODEL_PATH").ok(),
         }
     }
 }

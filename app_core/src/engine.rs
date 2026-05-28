@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 use crate::{
     asr::{AsrResult, PronunciationEvaluator, PronunciationFeedback, SpeechRecognizer},
-    dsp::extract_signal_features,
+    dsp::{extract_signal_features_with_vad, VadDetector},
     errors::CoreError,
     llm::{LlmCoach, LlmContext},
     tools::{ProsodyOutput, ProsodyTool, VoicePresentationOutput, VoicePresentationTool},
@@ -73,6 +73,7 @@ pub struct Engine {
     llm_coach: Box<dyn LlmCoach>,
     asr: Box<dyn SpeechRecognizer>,
     pronunciation: Box<dyn PronunciationEvaluator>,
+    vad_detector: Box<dyn VadDetector>,
 }
 
 impl Engine {
@@ -83,6 +84,7 @@ impl Engine {
         llm_coach: Box<dyn LlmCoach>,
         asr: Box<dyn SpeechRecognizer>,
         pronunciation: Box<dyn PronunciationEvaluator>,
+        vad_detector: Box<dyn VadDetector>,
     ) -> Self {
         Self {
             prosody_tool,
@@ -90,6 +92,7 @@ impl Engine {
             llm_coach,
             asr,
             pronunciation,
+            vad_detector,
         }
     }
 
@@ -99,7 +102,11 @@ impl Engine {
             if let (Some(samples), Some(sample_rate)) =
                 (input.audio_samples.as_deref(), input.sample_rate)
             {
-                match extract_signal_features(samples, sample_rate) {
+                match extract_signal_features_with_vad(
+                    samples,
+                    sample_rate,
+                    self.vad_detector.as_ref(),
+                ) {
                     Some(f) => (
                         f.median_pitch_hz,
                         f.pitch_stability,
@@ -213,6 +220,7 @@ mod tests {
     use super::*;
     use crate::{
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
     };
@@ -225,6 +233,7 @@ mod tests {
             Box::new(RuleBasedCoach),
             Box::new(VoskAsrStub),
             Box::new(SimplePronunciationEvaluator),
+            Box::new(EnergyVadDetector),
         );
         let result = engine
             .analyze(AnalysisInput {
@@ -257,6 +266,7 @@ mod tests {
             Box::new(RuleBasedCoach),
             Box::new(VoskAsrStub),
             Box::new(SimplePronunciationEvaluator),
+            Box::new(EnergyVadDetector),
         );
         let sr = 16_000u32;
         let samples: Vec<f32> = (0..sr as usize)

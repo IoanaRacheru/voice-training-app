@@ -143,6 +143,7 @@ mod tests {
     };
     use app_core::{
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
         Engine,
@@ -231,6 +232,9 @@ mod tests {
                 openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
                 groq_api_key: None,
                 groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_model_path: None,
             }),
             http: HttpClient::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -240,6 +244,7 @@ mod tests {
                 Box::new(RuleBasedCoach),
                 Box::new(VoskAsrStub),
                 Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
             )),
             llm_provider: "rule".into(),
             analysis_repo: Arc::new(MemoryAnalysisRepository {
@@ -308,6 +313,9 @@ mod tests {
                 openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
                 groq_api_key: None,
                 groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_model_path: None,
             }),
             http: HttpClient::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -317,6 +325,7 @@ mod tests {
                 Box::new(RuleBasedCoach),
                 Box::new(VoskAsrStub),
                 Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
             )),
             llm_provider: "rule".into(),
             analysis_repo: Arc::new(MemoryAnalysisRepository {
