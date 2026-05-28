@@ -24,10 +24,11 @@
   - Spectral metrics (brightness/tilt).
 - Keep `Engine` orchestration unchanged while swapping implementations.
 
-## Milestone M4: Data Split Formalization
-- Keep MongoDB for analytics artifacts.
-- Introduce PostgreSQL-backed repositories for canonical entities.
-- Add migration scripts and integration tests per repository boundary.
+## Milestone M4: Mongo Repository Hardening
+- Keep MongoDB as the application DBMS for canonical entities and analytics artifacts.
+- Tighten repository contracts and validation at boundaries.
+- Expand index strategy and query-path tests for profile/session/artifact flows.
+- Add retention/archival policy notes for analysis artifacts.
 
 ## Milestone M5: ASR + Pronunciation
 - Add Vosk-backed ASR adapter.

@@ -1,5 +1,18 @@
 # Worklog
 
+## 2026-05-29
+
+### Completed
+- Added real Silero-backed VAD implementation path in `app_core` behind `vad_silero` feature, with energy fallback compatibility path when feature is not enabled.
+- Improved Vosk ASR parsing to preserve word-level timing/confidence metadata.
+- Upgraded pronunciation scoring from token-overlap-only to combined token + order scoring with optional timing smoothness signal.
+- Added strict provider runtime policy wiring:
+  - `PROVIDER_STRICT=true|false` (default `true`)
+  - strict mode fails fast for configured unavailable providers
+  - non-strict mode keeps explicit fallbacks.
+- Updated backend roadmap to MongoDB-first application data strategy and replaced app-level PostgreSQL split milestone.
+- Updated runtime/env docs for strict provider behavior.
+
 ## 2026-05-28
 
 ### Completed
@@ -94,6 +107,9 @@
 - Add integration tests around `/api/analyze` behavior.
 
 ### Branches
+- `feat-vad-silero-real`: real Silero-backed VAD feature path in `app_core`.
+- `feat-asr-pronunciation-v2`: richer Vosk parsing + pronunciation scoring v2 + strict provider runtime policy.
+- `chore-mongo-roadmap-realign`: roadmap/runtime docs realigned to MongoDB-first app data strategy.
 - `feat/roadmap-agent-docs`: roadmap and agent tracking docs.
 - `feat/llm-provider-adapters`: provider-backed LLM coach wiring and health endpoint.
 - `feat/analyze-integration-tests-make-docs`: analysis repository abstraction, integration tests, Make targets, docstrings.
