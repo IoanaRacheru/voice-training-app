@@ -183,16 +183,11 @@ impl PronunciationEvaluator for SimplePronunciationEvaluator {
             matched as f64 / expected_tokens.len() as f64
         };
         let order_ratio = token_order_ratio(&expected_tokens, &recognized_tokens);
+        let sequence_ratio = sequence_alignment_ratio(&expected_tokens, &recognized_tokens);
         let timing_ratio = asr.words.as_ref().map(|words| timing_alignment_ratio(words));
 
-        let aggregate = ratio * 0.55 + order_ratio * 0.45;
-        let feedback = if aggregate > 0.85 {
-            "Pronunciation is close to target; keep pacing steady."
-        } else if aggregate > 0.55 {
-            "Pronunciation partially matches; slow down and keep syllable order steady."
-        } else {
-            "Pronunciation differs from target; repeat slowly and focus on syllable clarity."
-        };
+        let aggregate = ratio * 0.45 + order_ratio * 0.25 + sequence_ratio * 0.30;
+        let feedback = build_feedback(aggregate, timing_ratio);
 
         PronunciationFeedback {
             expected_text: expected_text.to_string(),
@@ -229,6 +224,31 @@ fn token_order_ratio(expected: &[String], recognized: &[String]) -> f64 {
     matched as f64 / expected.len() as f64
 }
 
+fn sequence_alignment_ratio(expected: &[String], recognized: &[String]) -> f64 {
+    if expected.is_empty() {
+        return 0.0;
+    }
+    let lcs = longest_common_subsequence_len(expected, recognized);
+    (lcs as f64 / expected.len() as f64).clamp(0.0, 1.0)
+}
+
+fn longest_common_subsequence_len(expected: &[String], recognized: &[String]) -> usize {
+    if expected.is_empty() || recognized.is_empty() {
+        return 0;
+    }
+    let mut dp = vec![vec![0usize; recognized.len() + 1]; expected.len() + 1];
+    for i in 1..=expected.len() {
+        for j in 1..=recognized.len() {
+            if expected[i - 1] == recognized[j - 1] {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = dp[i - 1][j].max(dp[i][j - 1]);
+            }
+        }
+    }
+    dp[expected.len()][recognized.len()]
+}
+
 fn timing_alignment_ratio(words: &[AsrWord]) -> f64 {
     if words.len() < 2 {
         return 1.0;
@@ -252,6 +272,27 @@ fn timing_alignment_ratio(words: &[AsrWord]) -> f64 {
         / durations.len() as f64;
     let std_dev = variance.sqrt();
     (1.0 - (std_dev / mean).min(1.0)).clamp(0.0, 1.0)
+}
+
+fn build_feedback(aggregate: f64, timing_ratio: Option<f64>) -> String {
+    let mut feedback = if aggregate > 0.85 {
+        "Pronunciation is close to target; keep pacing steady."
+    } else if aggregate > 0.55 {
+        "Pronunciation partially matches; slow down and keep syllable order steady."
+    } else {
+        "Pronunciation differs from target; repeat slowly and focus on syllable clarity."
+    }
+    .to_string();
+
+    if let Some(timing) = timing_ratio {
+        if timing < 0.45 {
+            feedback.push_str(" Timing varies a lot; aim for more even syllable duration.");
+        } else if timing > 0.8 {
+            feedback.push_str(" Timing is consistent; maintain this pace.");
+        }
+    }
+
+    feedback
 }
 
 fn parse_vosk_words(values: &[serde_json::Value]) -> Vec<AsrWord> {
@@ -283,6 +324,41 @@ mod tests {
         let fb = eval.evaluate("hello training", &asr);
         assert!(fb.token_match_ratio >= 0.5);
         assert!(fb.word_order_ratio >= 0.5);
+    }
+
+    #[test]
+    fn sequence_alignment_penalizes_reordered_phrases() {
+        let expected = tokenize("hello voice training app");
+        let recognized = tokenize("training hello app voice");
+        let ratio = sequence_alignment_ratio(&expected, &recognized);
+        assert!(ratio < 0.75);
+    }
+
+    #[test]
+    fn feedback_includes_timing_hint_when_unstable() {
+        let eval = SimplePronunciationEvaluator;
+        let asr = AsrResult {
+            transcript: "hello training".into(),
+            confidence: 0.8,
+            words: Some(vec![
+                AsrWord {
+                    word: "hello".into(),
+                    start_seconds: 0.0,
+                    end_seconds: 0.1,
+                    confidence: 0.9,
+                },
+                AsrWord {
+                    word: "training".into(),
+                    start_seconds: 0.1,
+                    end_seconds: 1.2,
+                    confidence: 0.9,
+                },
+            ]),
+        };
+        let fb = eval.evaluate("hello training", &asr);
+        assert!(fb
+            .feedback
+            .contains("Timing varies a lot; aim for more even syllable duration."));
     }
 
     #[test]
