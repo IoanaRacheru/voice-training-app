@@ -79,7 +79,13 @@ impl Config {
             groq_api_key: std::env::var("GROQ_API_KEY").ok(),
             groq_model: std::env::var("GROQ_MODEL")
                 .unwrap_or_else(|_| "llama-3.3-70b-versatile".to_string()),
-            vad_provider: std::env::var("VAD_PROVIDER").unwrap_or_else(|_| "energy".to_string()),
+            vad_provider: std::env::var("VAD_PROVIDER").unwrap_or_else(|_| {
+                if cfg!(feature = "vad_silero") {
+                    "silero".to_string()
+                } else {
+                    "energy".to_string()
+                }
+            }),
             asr_provider: std::env::var("ASR_PROVIDER").unwrap_or_else(|_| "stub".to_string()),
             vosk_server_url: std::env::var("VOSK_SERVER_URL").ok(),
             provider_strict: std::env::var("PROVIDER_STRICT")

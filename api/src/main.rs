@@ -98,15 +98,20 @@ fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
 
 /// Build an ASR backend from runtime configuration.
 fn build_asr(config: &Config) -> Result<Box<dyn SpeechRecognizer>, String> {
-    if config.asr_provider == "vosk_remote" {
-        if let Some(server_url) = &config.vosk_server_url {
-            return Ok(Box::new(app_core::asr::VoskAsr {
-                server_url: server_url.clone(),
-            }));
+    match config.asr_provider.as_str() {
+        "stub" => Ok(Box::new(VoskAsrStub)),
+        "vosk_remote" => {
+            if let Some(server_url) = &config.vosk_server_url {
+                return Ok(Box::new(app_core::asr::VoskAsr {
+                    server_url: server_url.clone(),
+                }));
+            }
+            Err("ASR_PROVIDER=vosk_remote requires VOSK_SERVER_URL".into())
         }
-        return Err("ASR_PROVIDER=vosk_remote requires VOSK_SERVER_URL".into());
+        other => Err(format!(
+            "Unsupported ASR_PROVIDER='{other}', expected one of: stub|vosk_remote"
+        )),
     }
-    Ok(Box::new(VoskAsrStub))
 }
 
 /// Build a VAD backend from runtime configuration.
@@ -122,7 +127,10 @@ fn build_vad(config: &Config) -> Result<Box<dyn VadDetector>, String> {
                 Err("VAD_PROVIDER=silero requires api feature `vad_silero`".into())
             }
         }
-        _ => Ok(Box::new(EnergyVadDetector)),
+        "energy" => Ok(Box::new(EnergyVadDetector)),
+        other => Err(format!(
+            "Unsupported VAD_PROVIDER='{other}', expected one of: energy|silero"
+        )),
     }
 }
 
@@ -167,6 +175,16 @@ mod tests {
     }
 
     #[test]
+    fn build_asr_rejects_unknown_provider() {
+        let mut cfg = base_config();
+        cfg.asr_provider = "unknown".into();
+        match build_asr(&cfg) {
+            Ok(_) => panic!("must fail for unknown asr provider"),
+            Err(err) => assert!(err.contains("Unsupported ASR_PROVIDER")),
+        }
+    }
+
+    #[test]
     fn build_asr_accepts_vosk_with_url() {
         let mut cfg = base_config();
         cfg.asr_provider = "vosk_remote".into();
@@ -188,6 +206,16 @@ mod tests {
         #[cfg(feature = "vad_silero")]
         {
             build_vad(&cfg).expect("silero should build when feature enabled");
+        }
+    }
+
+    #[test]
+    fn build_vad_rejects_unknown_provider() {
+        let mut cfg = base_config();
+        cfg.vad_provider = "unknown".into();
+        match build_vad(&cfg) {
+            Ok(_) => panic!("must fail for unknown vad provider"),
+            Err(err) => assert!(err.contains("Unsupported VAD_PROVIDER")),
         }
     }
 }
@@ -224,7 +252,7 @@ async fn main() {
         Ok(asr) => asr,
         Err(err) if config.provider_strict => panic!("{err}"),
         Err(err) => {
-            tracing::warn!("{err}; falling back to stub ASR");
+            tracing::warn!(error = %err, configured_provider = %config.asr_provider, fallback_provider = "stub", "ASR provider unavailable, using fallback");
             Box::new(VoskAsrStub)
         }
     };
@@ -232,10 +260,16 @@ async fn main() {
         Ok(vad) => vad,
         Err(err) if config.provider_strict => panic!("{err}"),
         Err(err) => {
-            tracing::warn!("{err}; falling back to energy VAD");
+            tracing::warn!(error = %err, configured_provider = %config.vad_provider, fallback_provider = "energy", "VAD provider unavailable, using fallback");
             Box::new(EnergyVadDetector)
         }
     };
+    tracing::info!(
+        asr_provider = %config.asr_provider,
+        vad_provider = %config.vad_provider,
+        provider_strict = config.provider_strict,
+        "Runtime providers configured"
+    );
 
     let state = Arc::new(AppState {
         db: database.clone(),

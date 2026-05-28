@@ -59,6 +59,8 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+      args:
+        API_FEATURES: "--features asr_vosk,vad_silero"
     environment:
       MONGODB_URI: ${MONGODB_URI}
       SERVER_PORT: ${SERVER_PORT:-3000}
@@ -68,6 +70,8 @@ services:
       ANALYZE_MAX_BODY_BYTES: ${ANALYZE_MAX_BODY_BYTES:-1048576}
       RUST_LOG: debug
       ASR_PROVIDER: vosk_remote
+      VAD_PROVIDER: silero
+      PROVIDER_STRICT: "true"
       VOSK_SERVER_URL: ws://vosk:2700
     ports:
       - "3000:3000"
@@ -95,7 +99,7 @@ services:
       ANALYZE_MAX_BODY_BYTES: ${ANALYZE_MAX_BODY_BYTES:-1048576}
       RUST_LOG: debug
       ASR_PROVIDER: vosk_remote
-      VAD_PROVIDER: energy
+      VAD_PROVIDER: silero
       PROVIDER_STRICT: "true"
       VOSK_SERVER_URL: ws://vosk:2700
     ports:

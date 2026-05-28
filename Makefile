@@ -60,7 +60,7 @@ build-api-image-vosk: docker-check
 	$(DOCKER_COMPOSE) build --build-arg API_FEATURES="--features asr_vosk" api
 
 build-api-image-vosk-silero: docker-check
-	$(DOCKER_COMPOSE) build --build-arg API_FEATURES="--features asr_vosk vad_silero" api
+	$(DOCKER_COMPOSE) build --build-arg API_FEATURES="--features asr_vosk,vad_silero" api
 
 rebuild-api-image: clean build-api-image
 
@@ -272,6 +272,7 @@ verify-vosk-api: docker-check
 	  -H "Content-Type: application/json" \
 	  --data "{\"median_pitch_hz\":180.0,\"pitch_stability\":0.7,\"pause_ratio\":0.2,\"spectral_brightness\":0.6,\"sample_rate\":16000,\"audio_samples\":[$$audio]}"); \
 	echo "$$resp" | grep -q '"asr":{' || { echo "ASR output missing in analyze response"; echo "$$resp"; exit 1; }; \
+	echo "$$resp" | grep -q '"vad_used":"silero_vad"' || { echo "Silero VAD not used in analyze response"; echo "$$resp"; exit 1; }; \
 	echo "Vosk API verification passed."
 
 verify-vosk-silero-api: docker-check
