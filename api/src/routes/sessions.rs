@@ -5,7 +5,8 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     auth::AppwriteUser,
@@ -92,6 +93,7 @@ where
 }
 
 #[derive(Deserialize)]
+#[derive(ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CreateRequest {
     #[serde(deserialize_with = "deserialize_duration_seconds")]
@@ -140,11 +142,23 @@ fn validate_create(body: &CreateRequest) -> Result<(), AppError> {
     Ok(())
 }
 
-async fn create(
+/// Create a training session for the authenticated user.
+#[utoipa::path(
+    post,
+    path = "/api/sessions",
+    tag = "Sessions",
+    request_body = CreateRequest,
+    responses(
+        (status = 200, description = "Session persisted", body = CreateResponse),
+        (status = 400, description = "Invalid request"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub async fn create(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
     Json(body): Json<CreateRequest>,
-) -> Result<Json<serde_json::Value>, AppError> {
+) -> Result<Json<CreateResponse>, AppError> {
     validate_create(&body)?;
     let id = state
         .session_repo
@@ -158,30 +172,71 @@ async fn create(
         })
         .await?;
 
-    Ok(Json(serde_json::json!({ "id": id, "message": "Session saved" })))
+    Ok(Json(CreateResponse {
+        id,
+        message: "Session saved".into(),
+    }))
 }
 
-async fn list(
+/// List sessions for the authenticated user, most recent first.
+#[utoipa::path(
+    get,
+    path = "/api/sessions",
+    tag = "Sessions",
+    responses(
+        (status = 200, description = "Session list", body = [SessionItem]),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub async fn list(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
-) -> Result<Json<Vec<serde_json::Value>>, AppError> {
+) -> Result<Json<Vec<SessionItem>>, AppError> {
     let sessions = state.session_repo.list_by_user_id(&user.id).await?;
 
-    let body = sessions
+    let body: Vec<SessionItem> = sessions
         .iter()
         .map(|s| {
             let dt = chrono::DateTime::<chrono::Utc>::from(s.date.to_system_time());
-            serde_json::json!({
-                "id": s.id.map(|id| id.to_hex()),
-                "date": dt.to_rfc3339(),
-                "duration_seconds": s.duration_seconds,
-                "average_pitch": s.average_pitch,
-                "score": s.score,
-                "exercise_type": s.exercise_type,
-                "goal": s.goal,
-            })
+            SessionItem {
+                id: s.id.map(|id| id.to_hex()),
+                date: dt.to_rfc3339(),
+                duration_seconds: s.duration_seconds,
+                average_pitch: s.average_pitch,
+                score: s.score,
+                exercise_type: s.exercise_type.clone(),
+                goal: s.goal.clone(),
+            }
         })
         .collect();
 
     Ok(Json(body))
+}
+
+/// Response payload for `POST /api/sessions`.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CreateResponse {
+    /// Inserted session identifier in hex format.
+    pub id: Option<String>,
+    /// Human-readable operation status.
+    pub message: String,
+}
+
+/// Session payload returned by `GET /api/sessions`.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SessionItem {
+    /// Session identifier in hex format.
+    pub id: Option<String>,
+    /// UTC session timestamp in RFC 3339 format.
+    pub date: String,
+    /// Session duration in seconds.
+    pub duration_seconds: u32,
+    /// Average pitch estimate in Hz.
+    pub average_pitch: f64,
+    /// Session score in `[0, 100]`.
+    pub score: u32,
+    /// Exercise type tag.
+    pub exercise_type: String,
+    /// Goal tag.
+    pub goal: String,
 }
