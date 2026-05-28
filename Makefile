@@ -3,6 +3,7 @@
         dev dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi \
+        dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak \
         doctor debug-env debug-keycloak debug-api help
@@ -143,6 +144,29 @@ test-fast:
 test-openapi:
 	cargo test -p api openapi -- --nocapture
 
+dep-tree:
+	cargo tree --workspace
+
+dep-outdated:
+	@cargo outdated --workspace || { \
+	  echo "cargo-outdated is not installed. Install with: cargo install cargo-outdated"; \
+	  exit 1; \
+	}
+
+dep-audit:
+	@cargo audit || { \
+	  echo "cargo-audit is not installed. Install with: cargo install cargo-audit"; \
+	  exit 1; \
+	}
+
+dep-deny:
+	@cargo deny check || { \
+	  echo "cargo-deny is not installed. Install with: cargo install cargo-deny"; \
+	  exit 1; \
+	}
+
+dep-check: dep-tree dep-audit dep-deny
+
 # ── Automation (CI-like local) ───────────────────────────────────────────────
 
 check: check-backend check-frontend
@@ -237,6 +261,11 @@ help:
 	@echo "  test-core         cargo test -p app_core"
 	@echo "  test-fast         cargo test -p app_core -p api"
 	@echo "  test-openapi      run OpenAPI-focused tests in api crate"
+	@echo "  dep-tree          print cargo dependency tree"
+	@echo "  dep-outdated      list outdated Rust dependencies"
+	@echo "  dep-audit         run security advisory checks (cargo-audit)"
+	@echo "  dep-deny          run deny policy checks (cargo-deny)"
+	@echo "  dep-check         run dep-tree + dep-audit + dep-deny"
 	@echo "  fmt               cargo fmt --all"
 	@echo ""
 	@echo "Debug / Agenting"

@@ -31,6 +31,11 @@
 - New endpoint behavior requires request-contract tests.
 - Avoid merging branches with failing tests.
 
+## Dependency Policy
+- Run `make dep-check` before merging dependency-related changes.
+- Keep `deny.toml` policy updates explicit and documented.
+- Prefer Cargo-native tooling (`cargo tree`, `cargo audit`, `cargo deny`, `cargo outdated`) over ad-hoc scripts.
+
 ## Active Backlog
 - [x] Provider-backed LLM coach adapters.
 - [x] `/api/analyze` integration tests.
