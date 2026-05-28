@@ -230,10 +230,10 @@ verify-stack: docker-check wait-keycloak wait-api
 	@echo "2) Keycloak realm availability:" && curl -sf http://localhost:8080/realms/voice-training > /dev/null && echo "ok"
 	@echo "3) Keycloak client/realm settings status:"
 	@$(MAKE) -s -C keycloak status
-	@echo "4) Protected route auth smoke (/api/me with real Keycloak token):"
+	@echo "4) Protected route auth smoke (/api/me with service-account token):"
 	@token=$$(curl -s -X POST http://localhost:8080/realms/voice-training/protocol/openid-connect/token \
 	  -H "Content-Type: application/x-www-form-urlencoded" \
-	  -d "grant_type=password&client_id=voice-training-app&username=devuser&password=devpass123" \
+	  -d "grant_type=client_credentials&client_id=voice-training-smoke&client_secret=smoke-secret" \
 	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4); \
 	test -n "$$token" || (echo "failed to fetch user token" && exit 1); \
 	curl -sf http://localhost:3000/api/me -H "Authorization: Bearer $$token" > /dev/null && echo "ok"
@@ -250,12 +250,12 @@ verify-vosk-api: docker-check
 	@VOSK_MODEL_PATH="$$VOSK_MODEL_PATH" $(DOCKER_COMPOSE) up -d mongodb postgres keycloak api_vosk
 	@echo "Waiting for Vosk API (http://localhost:3001/health)..."
 	@until curl -sf http://localhost:3001/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
-	@echo "Requesting user token from Keycloak..."
+	@echo "Requesting service-account token from Keycloak..."
 	@token=$$(curl -s -X POST http://localhost:8080/realms/voice-training/protocol/openid-connect/token \
 	  -H "Content-Type: application/x-www-form-urlencoded" \
-	  -d "grant_type=password&client_id=voice-training-app&username=devuser&password=devpass123" \
+	  -d "grant_type=client_credentials&client_id=voice-training-smoke&client_secret=smoke-secret" \
 	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4); \
-	test -n "$$token" || (echo "failed to fetch user token" && exit 1); \
+	test -n "$$token" || (echo "failed to fetch service-account token" && exit 1); \
 	audio=$$(awk 'BEGIN{for(i=0;i<4096;i++){v=(i%64<32?0.2:-0.2); printf("%s%.3f",(i==0?"":","),v)}}'); \
 	resp=$$(curl -sf -X POST http://localhost:3001/api/analyze \
 	  -H "Authorization: Bearer $$token" \

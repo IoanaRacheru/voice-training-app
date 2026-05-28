@@ -1,4 +1,4 @@
-.PHONY: all realm client settings theme dev-user status clean help
+.PHONY: all realm client settings theme dev-user smoke-client status clean help
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
@@ -6,6 +6,8 @@ KEYCLOAK_URL    ?= http://localhost:8080
 ADMIN_USER      ?= admin
 REALM           ?= voice-training
 CLIENT_ID       ?= voice-training-app
+SMOKE_CLIENT_ID ?= voice-training-smoke
+SMOKE_SECRET    ?= smoke-secret
 FRONTEND_ORIGIN ?= http://localhost:5173
 DEV_USER        ?= devuser
 DEV_PASS        ?= devpass123
@@ -40,7 +42,7 @@ endef
 # ── Targets ───────────────────────────────────────────────────────────────────
 
 ## all: full setup — realm → client → settings → theme
-all: realm client settings theme dev-user
+all: realm client settings theme dev-user smoke-client
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "  Keycloak configured successfully."
@@ -120,21 +122,25 @@ dev-user:
 	@uid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users?username=$(DEV_USER)" \
 	  -H "Authorization: Bearer $$(cat .token)" \
 	  | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
-	if [ -z "$$uid" ]; then \
-	  status=$$(curl -s -o /dev/null -w "%{http_code}" -X POST "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users" \
-	    -H "Authorization: Bearer $$(cat .token)" \
-	    -H "Content-Type: application/json" \
-	    -d '{ \
-	      "username":"$(DEV_USER)", \
-	      "email":"$(DEV_USER)@local.dev", \
-	      "enabled":true, \
-	      "emailVerified":true \
-	    }'); \
-	  [ "$$status" = "201" ] || (echo "ERROR: dev user create failed (HTTP $$status)" && exit 1); \
-	  uid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users?username=$(DEV_USER)" \
-	    -H "Authorization: Bearer $$(cat .token)" \
-	    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
+	if [ -n "$$uid" ]; then \
+	  status_del=$$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users/$$uid" \
+	    -H "Authorization: Bearer $$(cat .token)"); \
+	  [ "$$status_del" = "204" ] || (echo "ERROR: dev user delete failed (HTTP $$status_del)" && exit 1); \
 	fi; \
+	status=$$(curl -s -o /dev/null -w "%{http_code}" -X POST "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users" \
+	  -H "Authorization: Bearer $$(cat .token)" \
+	  -H "Content-Type: application/json" \
+	  -d '{ \
+	    "username":"$(DEV_USER)", \
+	    "email":"$(DEV_USER)@local.dev", \
+	    "enabled":true, \
+	    "emailVerified":true, \
+	    "requiredActions": [] \
+	  }'); \
+	[ "$$status" = "201" ] || (echo "ERROR: dev user create failed (HTTP $$status)" && exit 1); \
+	uid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users?username=$(DEV_USER)" \
+	  -H "Authorization: Bearer $$(cat .token)" \
+	  | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
 	test -n "$$uid" || (echo "ERROR: could not resolve dev user id" && exit 1); \
 	status2=$$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)/users/$$uid/reset-password" \
 	  -H "Authorization: Bearer $$(cat .token)" \
@@ -142,6 +148,44 @@ dev-user:
 	  -d '{"type":"password","value":"$(DEV_PASS)","temporary":false}'); \
 	[ "$$status2" = "204" ] || (echo "ERROR: dev user password reset failed (HTTP $$status2)" && exit 1); \
 	echo "      dev user ready."
+
+## smoke-client: ensure service-account client for auth smoke checks
+smoke-client:
+	@echo "[6/6] Ensuring smoke client '$(SMOKE_CLIENT_ID)' exists..."
+	$(fetch_token)
+	@cid=$$(curl -sf "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients?clientId=$(SMOKE_CLIENT_ID)" \
+	  -H "Authorization: Bearer $$(cat .token)" \
+	  | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4); \
+	if [ -z "$$cid" ]; then \
+	  status=$$(curl -s -o /dev/null -w "%{http_code}" -X POST "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients" \
+	    -H "Authorization: Bearer $$(cat .token)" \
+	    -H "Content-Type: application/json" \
+	    -d '{ \
+	      "clientId":"$(SMOKE_CLIENT_ID)", \
+	      "enabled":true, \
+	      "publicClient":false, \
+	      "serviceAccountsEnabled":true, \
+	      "standardFlowEnabled":false, \
+	      "directAccessGrantsEnabled":false, \
+	      "secret":"$(SMOKE_SECRET)" \
+	    }'); \
+	  [ "$$status" = "201" ] || (echo "ERROR: smoke client create failed (HTTP $$status)" && exit 1); \
+	else \
+	  status2=$$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$(KEYCLOAK_URL)/admin/realms/$(REALM)/clients/$$cid" \
+	    -H "Authorization: Bearer $$(cat .token)" \
+	    -H "Content-Type: application/json" \
+	    -d '{ \
+	      "clientId":"$(SMOKE_CLIENT_ID)", \
+	      "enabled":true, \
+	      "publicClient":false, \
+	      "serviceAccountsEnabled":true, \
+	      "standardFlowEnabled":false, \
+	      "directAccessGrantsEnabled":false, \
+	      "secret":"$(SMOKE_SECRET)" \
+	    }'); \
+	  [ "$$status2" = "204" ] || (echo "ERROR: smoke client update failed (HTTP $$status2)" && exit 1); \
+	fi; \
+	echo "      smoke client ready."
 
 ## settings: enable registration, forgot-password, email-as-username
 settings:
@@ -206,12 +250,13 @@ help:
 	@echo ""
 	@echo "Usage: make -C keycloak <target>"
 	@echo ""
-	@echo "  all       Full setup: realm → client → settings → theme → dev-user"
+	@echo "  all       Full setup: realm → client → settings → theme → dev-user → smoke-client"
 	@echo "  realm     Create the '$(REALM)' realm"
 	@echo "  client    Create the '$(CLIENT_ID)' OIDC client"
 	@echo "  settings  Enable registration / forgot-password / email-as-username"
 	@echo "  theme     Apply the voice-training login theme"
 	@echo "  dev-user  Ensure local dev user exists and set password"
+	@echo "  smoke-client  Ensure service-account client for API auth smoke checks"
 	@echo "  status    Print current realm configuration from the API"
 	@echo "  clean     Delete the cached admin token (.token)"
 	@echo ""
