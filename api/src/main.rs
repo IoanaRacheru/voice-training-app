@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use axum::{middleware as axum_middleware, Router};
 use app_core::{
+    asr::{SimplePronunciationEvaluator, VoskAsrStub},
     llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
     tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
     Engine,
@@ -120,6 +121,8 @@ async fn main() {
             Box::new(HeuristicProsodyTool),
             Box::new(HeuristicVoicePresentationTool),
             build_llm_coach(&config),
+            Box::new(VoskAsrStub),
+            Box::new(SimplePronunciationEvaluator),
         )),
         llm_provider: config.llm_provider.clone(),
         analysis_repo: Arc::new(MongoAnalysisRepository::new(database)),

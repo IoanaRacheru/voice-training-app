@@ -20,7 +20,9 @@ use utoipa_swagger_ui::SwaggerUi;
             crate::routes::analysis::AnalyzeResponse,
             crate::routes::health::HealthResponse,
             crate::routes::llm::LlmHealthResponse,
-            app_core::engine::SignalQuality
+            app_core::engine::SignalQuality,
+            app_core::asr::AsrResult,
+            app_core::asr::PronunciationFeedback
         )
     ),
     tags(

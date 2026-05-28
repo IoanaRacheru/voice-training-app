@@ -41,6 +41,15 @@
   - `wait-api` target
   - `verify-stack` target (API + Keycloak reachability and config status)
   - `bootstrap` now runs `verify-stack` after Keycloak setup
+- Added ASR/pronunciation v1 scaffold in `app_core`:
+  - `SpeechRecognizer` trait
+  - `PronunciationEvaluator` trait
+  - `VoskAsrStub` adapter (contract-preserving placeholder)
+  - `SimplePronunciationEvaluator`
+- Extended analysis engine and `/api/analyze` response with:
+  - `asr` transcript/confidence
+  - `pronunciation` feedback against optional `expected_text`
+- Extended request contract with optional `expected_text`.
 
 ### Next In Queue
 - Implement provider-backed LLM adapters (OpenAI-compatible, Groq, OpenRouter).
@@ -56,3 +65,4 @@
 - `feat/dsp-tools-v1`: DSP feature extraction and audio-aware analysis pipeline.
 - `feat/dsp-robustness-v2`: confidence/quality diagnostics and pluggable VAD contracts.
 - `feat/infra-dev-stability`: minimal stack verification/reliability hardening for MVP development.
+- `feat/asr-pronunciation-v1`: ASR/pronunciation scaffolding and API integration.
