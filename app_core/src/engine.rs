@@ -6,23 +6,35 @@ use crate::{
     tools::{ProsodyOutput, ProsodyTool, VoicePresentationOutput, VoicePresentationTool},
 };
 
+/// Input contract for a single analysis pass.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AnalysisInput {
+    /// Median pitch estimate in Hz.
     pub median_pitch_hz: f64,
+    /// Pitch stability score in `[0, 1]`.
     pub pitch_stability: f64,
+    /// Pause ratio in `[0, 1]`.
     pub pause_ratio: f64,
+    /// Spectral brightness score in `[0, 1]`.
     pub spectral_brightness: f64,
 }
 
+/// Output contract for analysis and coaching results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisOutput {
+    /// Prosodic metrics bundle.
     pub prosody: ProsodyOutput,
+    /// Voice presentation estimate with confidence metadata.
     pub voice_presentation: VoicePresentationOutput,
+    /// Machine-generated concise session summary.
     pub summary: String,
+    /// Suggested next practice points.
     pub practice_next: Vec<String>,
+    /// Human-readable coach response.
     pub llm_coach_feedback: String,
 }
 
+/// Orchestrator that coordinates tools and coach generation.
 pub struct Engine {
     prosody_tool: Box<dyn ProsodyTool>,
     voice_tool: Box<dyn VoicePresentationTool>,
@@ -30,6 +42,7 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Construct the engine with concrete tool/coach implementations.
     pub fn new(
         prosody_tool: Box<dyn ProsodyTool>,
         voice_tool: Box<dyn VoicePresentationTool>,
@@ -42,6 +55,7 @@ impl Engine {
         }
     }
 
+    /// Execute the end-to-end analysis and coaching pipeline.
     pub async fn analyze(&self, input: AnalysisInput) -> Result<AnalysisOutput, CoreError> {
         let prosody = self
             .prosody_tool

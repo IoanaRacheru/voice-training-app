@@ -1,18 +1,31 @@
+/// Runtime configuration loaded from environment variables.
 pub struct Config {
+    /// MongoDB connection string.
     pub mongodb_uri: String,
+    /// Keycloak JWKS endpoint URL.
     pub keycloak_realm_url: String,
+    /// API bind port.
     pub server_port: u16,
+    /// LLM routing mode (`rule`, `openai`, `openrouter`, `groq`).
     pub llm_provider: String,
+    /// API key for generic OpenAI-compatible endpoint.
     pub llm_api_key: Option<String>,
+    /// Model ID for generic OpenAI-compatible endpoint.
     pub llm_model: String,
+    /// Optional custom OpenAI-compatible base URL.
     pub llm_base_url: Option<String>,
+    /// OpenRouter API key.
     pub openrouter_api_key: Option<String>,
+    /// OpenRouter model ID.
     pub openrouter_model: String,
+    /// Groq API key.
     pub groq_api_key: Option<String>,
+    /// Groq model ID.
     pub groq_model: String,
 }
 
 impl Config {
+    /// Build configuration by reading process environment variables.
     pub fn from_env() -> Self {
         Self {
             mongodb_uri: std::env::var("MONGODB_URI").expect("MONGODB_URI must be set"),
