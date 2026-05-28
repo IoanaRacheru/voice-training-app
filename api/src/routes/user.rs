@@ -1,19 +1,10 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::State,
-    routing::get,
-    Extension, Json, Router,
-};
+use axum::{Extension, Json, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{
-    auth::AppwriteUser,
-    errors::AppError,
-    repositories::profile::ProfilePatch,
-    AppState,
-};
+use crate::{AppState, auth::AppwriteUser, errors::AppError, repositories::profile::ProfilePatch};
 
 /// Register profile routes.
 pub fn router() -> Router<Arc<AppState>> {
@@ -40,7 +31,12 @@ pub async fn me(
     let profile = state.profile_repo.find_by_user_id(&user.id).await?;
 
     let (voice_goal, experience_level, target_pitch_range, training_focus) = match profile {
-        Some(p) => (p.voice_goal, p.experience_level, p.target_pitch_range, p.training_focus),
+        Some(p) => (
+            p.voice_goal,
+            p.experience_level,
+            p.target_pitch_range,
+            p.training_focus,
+        ),
         None => (None, None, None, None),
     };
 
@@ -72,8 +68,7 @@ pub struct MeResponse {
 }
 
 /// Request payload for `PATCH /api/me`.
-#[derive(Deserialize)]
-#[derive(ToSchema)]
+#[derive(Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PatchMeRequest {
     /// Optional voice goal.
@@ -137,19 +132,20 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use app_core::{
+        Engine,
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
-        Engine,
     };
     use async_trait::async_trait;
-    use axum::{extract::State, Extension, Json};
+    use axum::{Extension, Json, extract::State};
     use mongodb::Client;
     use tokio::sync::RwLock;
 
-    use super::{me, patch_me, PatchMeRequest};
+    use super::{PatchMeRequest, me, patch_me};
     use crate::{
+        AppState,
         auth::AppwriteUser,
         config::Config,
         models::profile::Profile,
@@ -158,7 +154,6 @@ mod tests {
             profile::{ProfilePatch, ProfileRepository},
             session::MongoSessionRepository,
         },
-        AppState,
     };
 
     struct MemoryProfileRepository {
@@ -231,7 +226,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
                 vad_provider: "energy".into(),
                 asr_provider: "stub".into(),
-                vosk_model_path: None,
+                vosk_server_url: None,
             }),
             http: reqwest::Client::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -244,11 +239,15 @@ mod tests {
                 Box::new(EnergyVadDetector),
             )),
             llm_provider: "rule".into(),
-            analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
+            analysis_repo: Arc::new(MongoAnalysisRepository::new(
+                client.database("voice_training"),
+            )),
             profile_repo: Arc::new(MemoryProfileRepository {
                 profile: Arc::new(Mutex::new(profile)),
             }),
-            session_repo: Arc::new(MongoSessionRepository::new(client.database("voice_training"))),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                client.database("voice_training"),
+            )),
         })
     }
 

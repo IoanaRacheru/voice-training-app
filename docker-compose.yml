@@ -1,4 +1,10 @@
 services:
+  vosk:
+    image: alphacep/kaldi-en:latest
+    ports:
+      - "2700:2700"
+    restart: unless-stopped
+
   mongodb:
     image: mongo:7
     environment:
@@ -61,12 +67,16 @@ services:
       KEYCLOAK_EXPECTED_AUDIENCES: ${KEYCLOAK_EXPECTED_AUDIENCES}
       ANALYZE_MAX_BODY_BYTES: ${ANALYZE_MAX_BODY_BYTES:-1048576}
       RUST_LOG: debug
+      ASR_PROVIDER: vosk_remote
+      VOSK_SERVER_URL: ws://vosk:2700
     ports:
       - "3000:3000"
     depends_on:
       mongodb:
         condition: service_healthy
       keycloak:
+        condition: service_started
+      vosk:
         condition: service_started
     restart: unless-stopped
 
@@ -84,17 +94,17 @@ services:
       KEYCLOAK_EXPECTED_AUDIENCES: ${KEYCLOAK_EXPECTED_AUDIENCES}
       ANALYZE_MAX_BODY_BYTES: ${ANALYZE_MAX_BODY_BYTES:-1048576}
       RUST_LOG: debug
-      ASR_PROVIDER: vosk
+      ASR_PROVIDER: vosk_remote
       VAD_PROVIDER: energy
-      VOSK_MODEL_PATH: /models/vosk
-    volumes:
-      - ${VOSK_MODEL_PATH}:/models/vosk:ro
+      VOSK_SERVER_URL: ws://vosk:2700
     ports:
       - "3001:3000"
     depends_on:
       mongodb:
         condition: service_healthy
       keycloak:
+        condition: service_started
+      vosk:
         condition: service_started
     restart: unless-stopped
 

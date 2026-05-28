@@ -75,8 +75,8 @@
   - `verify-stack` now includes protected-route token smoke.
 - Replaced VAD stub path with real Silero-backed adapter wiring (with safe fallback to energy VAD on runtime/model failures).
 - Added feature-gated Vosk ASR adapter (`asr_vosk`) with runtime selection hooks:
-  - `ASR_PROVIDER` (`stub|vosk`)
-  - `VOSK_MODEL_PATH`
+  - `ASR_PROVIDER` (`stub|vosk_remote`)
+  - `VOSK_SERVER_URL`
   - `VAD_PROVIDER` (`energy|silero`)
 - Added Vosk build/packaging validation paths:
   - `make check-vosk`
@@ -84,9 +84,9 @@
 - Added repository-layer unit tests for profile/session persistence mapping helpers.
 - Added ASR/VAD runtime guide: `docs/ASR_VAD_RUNTIME.md`.
 - Added Vosk runtime smoke test target:
-  - `make test-vosk-runtime` (requires `VOSK_MODEL_PATH`)
+  - `make test-vosk-runtime` (requires `VOSK_SERVER_URL`)
 - Added API-level Vosk container E2E verification target:
-  - `make verify-vosk-api` (requires `VOSK_MODEL_PATH`)
+  - `make verify-vosk-api` (uses Dockerized Vosk service)
   - runs authenticated `/api/analyze` against `api_vosk` service and asserts `asr` payload presence.
 
 ### Next In Queue

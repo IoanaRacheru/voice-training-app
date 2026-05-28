@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use mongodb::bson::{doc, Document};
+use mongodb::bson::{Document, doc};
 
 use crate::models::profile::Profile;
 
@@ -65,12 +65,9 @@ impl ProfileRepository for MongoProfileRepository {
         let col = self.db.collection::<Document>("profiles");
         let set = build_profile_set_doc(email, patch);
 
-        col.update_one(
-            doc! { "appwrite_user_id": user_id },
-            doc! { "$set": set },
-        )
-        .upsert(true)
-        .await?;
+        col.update_one(doc! { "appwrite_user_id": user_id }, doc! { "$set": set })
+            .upsert(true)
+            .await?;
         Ok(())
     }
 }
@@ -94,7 +91,7 @@ fn build_profile_set_doc(email: &str, patch: ProfilePatch) -> Document {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_profile_set_doc, ProfilePatch};
+    use super::{ProfilePatch, build_profile_set_doc};
 
     #[test]
     fn profile_set_doc_includes_only_present_fields() {

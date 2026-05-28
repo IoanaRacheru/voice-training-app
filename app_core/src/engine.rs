@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 use crate::{
     asr::{AsrResult, PronunciationEvaluator, PronunciationFeedback, SpeechRecognizer},
-    dsp::{extract_signal_features_with_vad, VadDetector},
+    dsp::{VadDetector, extract_signal_features_with_vad},
     errors::CoreError,
     llm::{LlmCoach, LlmContext},
     tools::{ProsodyOutput, ProsodyTool, VoicePresentationOutput, VoicePresentationTool},
@@ -98,41 +98,34 @@ impl Engine {
 
     /// Execute the end-to-end analysis and coaching pipeline.
     pub async fn analyze(&self, input: AnalysisInput) -> Result<AnalysisOutput, CoreError> {
-        let (median_pitch_hz, pitch_stability, pause_ratio, spectral_brightness, signal_confidence, signal_quality, vad_used) =
-            if let (Some(samples), Some(sample_rate)) =
-                (input.audio_samples.as_deref(), input.sample_rate)
+        let (
+            median_pitch_hz,
+            pitch_stability,
+            pause_ratio,
+            spectral_brightness,
+            signal_confidence,
+            signal_quality,
+            vad_used,
+        ) = if let (Some(samples), Some(sample_rate)) =
+            (input.audio_samples.as_deref(), input.sample_rate)
+        {
+            match extract_signal_features_with_vad(samples, sample_rate, self.vad_detector.as_ref())
             {
-                match extract_signal_features_with_vad(
-                    samples,
-                    sample_rate,
-                    self.vad_detector.as_ref(),
-                ) {
-                    Some(f) => (
-                        f.median_pitch_hz,
-                        f.pitch_stability,
-                        f.pause_ratio,
-                        f.spectral_brightness,
-                        Some(f.confidence),
-                        Some(SignalQuality {
-                            low_energy: f.quality_flags.low_energy,
-                            low_voiced_ratio: f.quality_flags.low_voiced_ratio,
-                            insufficient_pitch_frames: f.quality_flags.insufficient_pitch_frames,
-                            unstable_pitch: f.quality_flags.unstable_pitch,
-                        }),
-                        Some(f.vad_name.to_string()),
-                    ),
-                    None => (
-                        input.median_pitch_hz,
-                        input.pitch_stability,
-                        input.pause_ratio,
-                        input.spectral_brightness,
-                        None,
-                        None,
-                        None,
-                    ),
-                }
-            } else {
-                (
+                Some(f) => (
+                    f.median_pitch_hz,
+                    f.pitch_stability,
+                    f.pause_ratio,
+                    f.spectral_brightness,
+                    Some(f.confidence),
+                    Some(SignalQuality {
+                        low_energy: f.quality_flags.low_energy,
+                        low_voiced_ratio: f.quality_flags.low_voiced_ratio,
+                        insufficient_pitch_frames: f.quality_flags.insufficient_pitch_frames,
+                        unstable_pitch: f.quality_flags.unstable_pitch,
+                    }),
+                    Some(f.vad_name.to_string()),
+                ),
+                None => (
                     input.median_pitch_hz,
                     input.pitch_stability,
                     input.pause_ratio,
@@ -140,12 +133,21 @@ impl Engine {
                     None,
                     None,
                     None,
-                )
-            };
+                ),
+            }
+        } else {
+            (
+                input.median_pitch_hz,
+                input.pitch_stability,
+                input.pause_ratio,
+                input.spectral_brightness,
+                None,
+                None,
+                None,
+            )
+        };
 
-        let prosody = self
-            .prosody_tool
-            .analyze(pitch_stability, pause_ratio)?;
+        let prosody = self.prosody_tool.analyze(pitch_stability, pause_ratio)?;
         let voice_presentation =
             self.voice_tool
                 .estimate(median_pitch_hz, spectral_brightness, &prosody)?;
@@ -250,10 +252,12 @@ mod tests {
 
         assert!((0.0..=100.0).contains(&result.voice_presentation.score));
         assert!((0.0..=1.0).contains(&result.voice_presentation.confidence));
-        assert!(result
-            .voice_presentation
-            .uncertainty_note
-            .contains("not a definitive label"));
+        assert!(
+            result
+                .voice_presentation
+                .uncertainty_note
+                .contains("not a definitive label")
+        );
         assert!(result.signal_confidence.is_none());
         assert!(result.asr.is_none());
     }

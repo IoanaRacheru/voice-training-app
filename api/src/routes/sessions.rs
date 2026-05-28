@@ -1,18 +1,15 @@
 use std::sync::Arc;
 
 use axum::{
+    Extension, Json, Router,
     extract::State,
     routing::{get, post},
-    Extension, Json, Router,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    auth::AppwriteUser,
-    errors::AppError,
-    repositories::session::CreateSessionInput,
-    AppState,
+    AppState, auth::AppwriteUser, errors::AppError, repositories::session::CreateSessionInput,
 };
 
 const MAX_DURATION_SECONDS: u32 = 86_400;
@@ -80,10 +77,7 @@ where
         )));
     }
 
-    if trimmed
-        .chars()
-        .all(|c| c.is_ascii_lowercase() || c == '_')
-    {
+    if trimmed.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
         Ok(trimmed.to_string())
     } else {
         Err(serde::de::Error::custom(
@@ -92,8 +86,7 @@ where
     }
 }
 
-#[derive(Deserialize)]
-#[derive(ToSchema)]
+#[derive(Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CreateRequest {
     #[serde(deserialize_with = "deserialize_duration_seconds")]
@@ -110,7 +103,12 @@ pub struct CreateRequest {
 
 const VALID_EXERCISE_TYPES: &[&str] = &["pitch", "resonance", "intonation", "breath_control"];
 const VALID_GOALS: &[&str] = &[
-    "feminize", "masculinize", "feminine", "masculine", "androgynous", "custom",
+    "feminize",
+    "masculinize",
+    "feminine",
+    "masculine",
+    "androgynous",
+    "custom",
 ];
 
 fn validate_create(body: &CreateRequest) -> Result<(), AppError> {
@@ -125,7 +123,9 @@ fn validate_create(body: &CreateRequest) -> Result<(), AppError> {
         ));
     }
     if body.score > 100 {
-        return Err(AppError::Validation("score must be between 0 and 100".into()));
+        return Err(AppError::Validation(
+            "score must be between 0 and 100".into(),
+        ));
     }
     if !VALID_EXERCISE_TYPES.contains(&body.exercise_type.as_str()) {
         return Err(AppError::Validation(format!(
@@ -252,19 +252,20 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use app_core::{
+        Engine,
         asr::{SimplePronunciationEvaluator, VoskAsrStub},
         dsp::EnergyVadDetector,
         llm::RuleBasedCoach,
         tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
-        Engine,
     };
     use async_trait::async_trait;
-    use axum::{extract::State, Extension, Json};
-    use mongodb::{bson::DateTime, Client};
+    use axum::{Extension, Json, extract::State};
+    use mongodb::{Client, bson::DateTime};
     use tokio::sync::RwLock;
 
-    use super::{create, list, CreateRequest};
+    use super::{CreateRequest, create, list};
     use crate::{
+        AppState,
         auth::AppwriteUser,
         config::Config,
         models::session::Session,
@@ -273,7 +274,6 @@ mod tests {
             profile::MongoProfileRepository,
             session::{CreateSessionInput, SessionRepository},
         },
-        AppState,
     };
 
     struct MemorySessionRepository {
@@ -340,7 +340,7 @@ mod tests {
                 groq_model: "llama-3.3-70b-versatile".into(),
                 vad_provider: "energy".into(),
                 asr_provider: "stub".into(),
-                vosk_model_path: None,
+                vosk_server_url: None,
             }),
             http: reqwest::Client::new(),
             jwks: Arc::new(RwLock::new(Vec::new())),
@@ -353,8 +353,12 @@ mod tests {
                 Box::new(EnergyVadDetector),
             )),
             llm_provider: "rule".into(),
-            analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
-            profile_repo: Arc::new(MongoProfileRepository::new(client.database("voice_training"))),
+            analysis_repo: Arc::new(MongoAnalysisRepository::new(
+                client.database("voice_training"),
+            )),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                client.database("voice_training"),
+            )),
             session_repo: Arc::new(MemorySessionRepository {
                 sessions: Arc::new(Mutex::new(Vec::new())),
             }),

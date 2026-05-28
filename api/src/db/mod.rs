@@ -1,7 +1,7 @@
 use mongodb::{
+    Client, Database, IndexModel,
     bson::doc,
     options::{ClientOptions, IndexOptions},
-    Client, Database, IndexModel,
 };
 
 pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> {

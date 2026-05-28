@@ -165,12 +165,12 @@ check-vosk:
 	cargo check -p api --features asr_vosk
 
 test-vosk-runtime:
-	@test -n "$$VOSK_MODEL_PATH" || { \
-	  echo "VOSK_MODEL_PATH is required. Example:"; \
-	  echo "  VOSK_MODEL_PATH=/abs/path/to/vosk-model make test-vosk-runtime"; \
+	@test -n "$$VOSK_SERVER_URL" || { \
+	  echo "VOSK_SERVER_URL is required. Example:"; \
+	  echo "  VOSK_SERVER_URL=ws://localhost:2700 make test-vosk-runtime"; \
 	  exit 1; \
 	}
-	VOSK_MODEL_PATH="$$VOSK_MODEL_PATH" cargo test -p app_core --features asr_vosk vosk_runtime_smoke -- --nocapture
+	VOSK_SERVER_URL="$$VOSK_SERVER_URL" cargo test -p app_core --features asr_vosk vosk_runtime_smoke -- --nocapture
 
 dep-tree:
 	cargo tree --workspace
@@ -241,13 +241,8 @@ verify-stack: docker-check wait-keycloak wait-api
 	@echo "Stack verification complete."
 
 verify-vosk-api: docker-check
-	@test -n "$$VOSK_MODEL_PATH" || { \
-	  echo "VOSK_MODEL_PATH is required. Example:"; \
-	  echo "  VOSK_MODEL_PATH=/abs/path/to/vosk-model make verify-vosk-api"; \
-	  exit 1; \
-	}
-	@echo "Starting api_vosk with ASR_PROVIDER=vosk..."
-	@VOSK_MODEL_PATH="$$VOSK_MODEL_PATH" $(DOCKER_COMPOSE) up -d mongodb postgres keycloak api_vosk
+	@echo "Starting api_vosk with ASR_PROVIDER=vosk_remote..."
+	@$(DOCKER_COMPOSE) up -d vosk mongodb postgres keycloak api_vosk
 	@echo "Waiting for Vosk API (http://localhost:3001/health)..."
 	@until curl -sf http://localhost:3001/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
 	@echo "Requesting service-account token from Keycloak..."
