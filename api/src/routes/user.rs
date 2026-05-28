@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::State,
-    routing::{get, patch},
+    routing::get,
     Extension, Json, Router,
 };
 use mongodb::bson::doc;

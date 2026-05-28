@@ -3,11 +3,17 @@ mod config;
 mod db;
 mod errors;
 mod models;
+mod repositories;
 mod routes;
 
 use std::sync::Arc;
 
 use axum::{middleware as axum_middleware, Router};
+use app_core::{
+    llm::RuleBasedCoach,
+    tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+    Engine,
+};
 use mongodb::Database;
 use reqwest::Client;
 use tower_http::cors::CorsLayer;
@@ -22,6 +28,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub http: Client,
     pub jwks: Vec<JwkKey>,
+    pub engine: Arc<Engine>,
 }
 
 #[tokio::main]
@@ -57,11 +64,17 @@ async fn main() {
         config: config.clone(),
         http,
         jwks: jwks.keys,
+        engine: Arc::new(Engine::new(
+            Box::new(HeuristicProsodyTool),
+            Box::new(HeuristicVoicePresentationTool),
+            Box::new(RuleBasedCoach),
+        )),
     });
 
     let protected = Router::new()
         .merge(routes::user::router())
         .merge(routes::sessions::router())
+        .merge(routes::analysis::router())
         .route_layer(axum_middleware::from_fn_with_state(
             state.clone(),
             appwrite_middleware,

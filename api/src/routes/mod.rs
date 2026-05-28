@@ -1,3 +1,4 @@
+pub mod analysis;
 pub mod health;
 pub mod sessions;
 pub mod user;

@@ -33,5 +33,14 @@ pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> 
         )
         .await?;
 
+    let artifacts = db.collection::<mongodb::bson::Document>("analysis_artifacts");
+    artifacts
+        .create_index(
+            IndexModel::builder()
+                .keys(doc! { "user_id": 1, "created_at": -1 })
+                .build(),
+        )
+        .await?;
+
     Ok(db)
 }
