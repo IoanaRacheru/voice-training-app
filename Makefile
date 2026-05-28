@@ -5,7 +5,7 @@
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
-        keycloak-setup keycloak-status wait-keycloak \
+        keycloak-setup keycloak-status wait-keycloak wait-api verify-stack \
         doctor debug-env debug-keycloak debug-api help
 
 SHELL := /bin/sh
@@ -15,7 +15,7 @@ DOCKER_COMPOSE ?= docker compose
 
 all: bootstrap dev
 
-bootstrap: setup up wait-keycloak keycloak-setup
+bootstrap: setup up wait-keycloak keycloak-setup verify-stack
 
 # ── Onboarding ──────────────────────────────────────────────────────────────
 
@@ -97,6 +97,14 @@ dev-frontend:
 	$(MAKE) run-frontend
 
 dev-stack: up wait-keycloak keycloak-setup
+
+wait-api:
+	@echo "Waiting for API to be ready..."
+	@until curl -sf http://localhost:3000/health > /dev/null 2>&1; do \
+	  printf '.'; \
+	  sleep 2; \
+	done
+	@echo " ready."
 
 # ── Frontend (delegated) ─────────────────────────────────────────────────────
 
@@ -198,6 +206,17 @@ keycloak-setup:
 keycloak-status:
 	$(MAKE) -C keycloak status
 
+verify-stack: docker-check wait-keycloak wait-api
+	@echo ""
+	@echo "Running stack verification..."
+	@echo "1) API health:" && curl -sf http://localhost:3000/health
+	@echo ""
+	@echo "2) Keycloak realm availability:" && curl -sf http://localhost:8080/realms/voice-training > /dev/null && echo "ok"
+	@echo "3) Keycloak client/realm settings status:"
+	@$(MAKE) -s -C keycloak status
+	@echo ""
+	@echo "Stack verification complete."
+
 # ── Diagnostics / Debug ─────────────────────────────────────────────────────
 
 doctor:
@@ -240,6 +259,7 @@ help:
 	@echo "  all / bootstrap   setup + containers + Keycloak setup"
 	@echo "  dev               start stack then run frontend dev server"
 	@echo "  dev-stack         start stack + wait + Keycloak setup (no frontend)"
+	@echo "  verify-stack      verify API + Keycloak are configured and reachable"
 	@echo "  dev-frontend      run only frontend dev server"
 	@echo ""
 	@echo "Docker"

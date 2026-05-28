@@ -37,6 +37,10 @@
   - VAD implementation identifier in analysis output
 - Added pluggable VAD interface with `EnergyVadDetector` and `SileroVadDetector` stub adapter hook.
 - Added `make test-dsp-bench` and extra DSP regression threshold tests.
+- Added lightweight infra reliability improvements for dev bootstrap:
+  - `wait-api` target
+  - `verify-stack` target (API + Keycloak reachability and config status)
+  - `bootstrap` now runs `verify-stack` after Keycloak setup
 
 ### Next In Queue
 - Implement provider-backed LLM adapters (OpenAI-compatible, Groq, OpenRouter).
@@ -51,3 +55,4 @@
 - `feat/ci-dependency-gates`: CI enforcement for dependency security and workspace Rust checks.
 - `feat/dsp-tools-v1`: DSP feature extraction and audio-aware analysis pipeline.
 - `feat/dsp-robustness-v2`: confidence/quality diagnostics and pluggable VAD contracts.
+- `feat/infra-dev-stability`: minimal stack verification/reliability hardening for MVP development.
