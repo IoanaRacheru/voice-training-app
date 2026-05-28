@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 app_core = { path = "../app_core" }
+async-trait = "0.1"
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }
 mongodb = "3"

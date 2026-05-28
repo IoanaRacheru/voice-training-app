@@ -2,26 +2,39 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::CoreError;
 
+/// Prosodic metrics derived from pitch and pause behavior.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProsodyOutput {
+    /// Pitch stability score in `[0, 1]`.
     pub stability: f64,
+    /// Pause ratio in `[0, 1]`.
     pub pause_ratio: f64,
+    /// Rhythm quality proxy in `[0, 1]`.
     pub rhythm_score: f64,
 }
 
+/// Voice presentation estimate with confidence metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VoicePresentationOutput {
+    /// Estimated score in `[0, 100]`.
     pub score: f64,
+    /// Confidence estimate in `[0, 1]`.
     pub confidence: f64,
+    /// Leaning label for the estimate.
     pub label: String,
+    /// Explicit uncertainty disclaimer.
     pub uncertainty_note: String,
 }
 
+/// Prosody analysis tool contract.
 pub trait ProsodyTool: Send + Sync {
+    /// Analyze prosody from precomputed stability and pause metrics.
     fn analyze(&self, pitch_stability: f64, pause_ratio: f64) -> Result<ProsodyOutput, CoreError>;
 }
 
+/// Voice presentation estimation tool contract.
 pub trait VoicePresentationTool: Send + Sync {
+    /// Estimate voice presentation from acoustic/prosodic features.
     fn estimate(
         &self,
         median_pitch_hz: f64,
@@ -30,6 +43,7 @@ pub trait VoicePresentationTool: Send + Sync {
     ) -> Result<VoicePresentationOutput, CoreError>;
 }
 
+/// Baseline deterministic prosody tool used for MVP/testing.
 #[derive(Default)]
 pub struct HeuristicProsodyTool;
 
@@ -55,6 +69,7 @@ impl ProsodyTool for HeuristicProsodyTool {
     }
 }
 
+/// Baseline deterministic voice presentation estimator used for MVP/testing.
 #[derive(Default)]
 pub struct HeuristicVoicePresentationTool;
 

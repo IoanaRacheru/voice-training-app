@@ -31,6 +31,7 @@ mod tests {
         Engine,
     };
     use mongodb::Client;
+    use crate::repositories::analysis::MongoAnalysisRepository;
 
     #[tokio::test]
     async fn llm_health_reports_provider_configuration() {
@@ -60,6 +61,7 @@ mod tests {
                 Box::new(RuleBasedCoach),
             )),
             llm_provider: "openrouter".into(),
+            analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
         });
 
         let Json(payload) = health(State(state)).await;

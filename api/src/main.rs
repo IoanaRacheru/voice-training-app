@@ -15,6 +15,7 @@ use app_core::{
     Engine,
 };
 use mongodb::Database;
+use repositories::analysis::{AnalysisRepository, MongoAnalysisRepository};
 use reqwest::Client;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
@@ -23,15 +24,25 @@ use auth::middleware::appwrite_middleware;
 use auth::{JwkKey, Jwks};
 use config::Config;
 
+/// Shared HTTP application state.
 pub struct AppState {
+    /// Database handle used by persistence adapters.
     pub db: Database,
+    /// Runtime configuration.
     pub config: Arc<Config>,
+    /// Shared HTTP client for upstream calls.
     pub http: Client,
+    /// Cached Keycloak JWK set used by auth middleware.
     pub jwks: Vec<JwkKey>,
+    /// Core analysis/coaching engine.
     pub engine: Arc<Engine>,
+    /// Effective LLM provider in use.
     pub llm_provider: String,
+    /// Analysis artifact repository abstraction.
+    pub analysis_repo: Arc<dyn AnalysisRepository>,
 }
 
+/// Build a coach implementation from runtime configuration.
 fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
     match config.llm_provider.as_str() {
         "openrouter" => match &config.openrouter_api_key {
@@ -100,7 +111,7 @@ async fn main() {
         .expect("Failed to parse JWKS response");
 
     let state = Arc::new(AppState {
-        db: database,
+        db: database.clone(),
         config: config.clone(),
         http,
         jwks: jwks.keys,
@@ -110,6 +121,7 @@ async fn main() {
             build_llm_coach(&config),
         )),
         llm_provider: config.llm_provider.clone(),
+        analysis_repo: Arc::new(MongoAnalysisRepository::new(database)),
     });
 
     let protected = Router::new()
