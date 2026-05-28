@@ -240,3 +240,162 @@ pub struct SessionItem {
     /// Goal tag.
     pub goal: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use app_core::{
+        asr::{SimplePronunciationEvaluator, VoskAsrStub},
+        llm::RuleBasedCoach,
+        tools::{HeuristicProsodyTool, HeuristicVoicePresentationTool},
+        Engine,
+    };
+    use async_trait::async_trait;
+    use axum::{extract::State, Extension, Json};
+    use mongodb::{bson::DateTime, Client};
+    use tokio::sync::RwLock;
+
+    use super::{create, list, CreateRequest};
+    use crate::{
+        auth::AppwriteUser,
+        config::Config,
+        models::session::Session,
+        repositories::{
+            analysis::MongoAnalysisRepository,
+            profile::MongoProfileRepository,
+            session::{CreateSessionInput, SessionRepository},
+        },
+        AppState,
+    };
+
+    struct MemorySessionRepository {
+        sessions: Arc<Mutex<Vec<Session>>>,
+    }
+
+    #[async_trait]
+    impl SessionRepository for MemorySessionRepository {
+        async fn insert_session(
+            &self,
+            input: CreateSessionInput,
+        ) -> Result<Option<String>, mongodb::error::Error> {
+            self.sessions.lock().expect("lock").push(Session {
+                id: None,
+                user_id: input.user_id,
+                date: DateTime::now(),
+                duration_seconds: input.duration_seconds,
+                average_pitch: input.average_pitch,
+                score: input.score,
+                exercise_type: input.exercise_type,
+                goal: input.goal,
+            });
+            Ok(Some("fake-id".into()))
+        }
+
+        async fn list_by_user_id(
+            &self,
+            user_id: &str,
+        ) -> Result<Vec<Session>, mongodb::error::Error> {
+            let out = self
+                .sessions
+                .lock()
+                .expect("lock")
+                .iter()
+                .filter(|s| s.user_id == user_id)
+                .cloned()
+                .collect();
+            Ok(out)
+        }
+    }
+
+    async fn build_state() -> Arc<AppState> {
+        let client = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+        Arc::new(AppState {
+            db: client.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+            }),
+            http: reqwest::Client::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new(
+                Box::new(HeuristicProsodyTool),
+                Box::new(HeuristicVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
+            profile_repo: Arc::new(MongoProfileRepository::new(client.database("voice_training"))),
+            session_repo: Arc::new(MemorySessionRepository {
+                sessions: Arc::new(Mutex::new(Vec::new())),
+            }),
+        })
+    }
+
+    #[tokio::test]
+    async fn create_and_list_session_work() {
+        let state = build_state().await;
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let create_resp = create(
+            State(state.clone()),
+            Extension(user.clone()),
+            Json(CreateRequest {
+                duration_seconds: 120,
+                average_pitch: 180.0,
+                score: 88,
+                exercise_type: "pitch".into(),
+                goal: "feminine".into(),
+            }),
+        )
+        .await
+        .expect("create should succeed");
+        assert_eq!(create_resp.0.id.as_deref(), Some("fake-id"));
+        let list_resp = list(State(state), Extension(user)).await.expect("list ok");
+        assert_eq!(list_resp.0.len(), 1);
+        assert_eq!(list_resp.0[0].exercise_type, "pitch");
+    }
+
+    #[tokio::test]
+    async fn create_rejects_invalid_pitch() {
+        let state = build_state().await;
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let err = create(
+            State(state),
+            Extension(user),
+            Json(CreateRequest {
+                duration_seconds: 120,
+                average_pitch: 40.0,
+                score: 88,
+                exercise_type: "pitch".into(),
+                goal: "feminine".into(),
+            }),
+        )
+        .await
+        .expect_err("should fail");
+        assert!(err.to_string().contains("average_pitch"));
+    }
+}
