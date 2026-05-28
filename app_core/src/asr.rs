@@ -69,6 +69,51 @@ impl SpeechRecognizer for VoskAsrStub {
     }
 }
 
+/// Vosk-based ASR adapter (feature-gated).
+///
+/// Enable with Cargo feature `asr_vosk` and provide a local Vosk model path.
+#[cfg(feature = "asr_vosk")]
+pub struct VoskAsr {
+    /// Filesystem path to the unpacked Vosk model directory.
+    pub model_path: String,
+}
+
+#[cfg(feature = "asr_vosk")]
+impl SpeechRecognizer for VoskAsr {
+    fn recognize(&self, audio_samples: &[f32], sample_rate: u32) -> Result<AsrResult, CoreError> {
+        use vosk::{CompleteResult, Model, Recognizer};
+
+        if sample_rate < 8_000 || audio_samples.len() < 800 {
+            return Err(CoreError::Validation(
+                "audio too short or sample rate too low for ASR".into(),
+            ));
+        }
+        let model = Model::new(self.model_path.clone())
+            .ok_or_else(|| CoreError::Tool("failed to load Vosk model".into()))?;
+        let mut recognizer = Recognizer::new(&model, sample_rate as f32)
+            .ok_or_else(|| CoreError::Tool("failed to construct Vosk recognizer".into()))?;
+        let pcm: Vec<i16> = audio_samples
+            .iter()
+            .map(|s| ((*s).clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
+            .collect();
+        let _ = recognizer.accept_waveform(&pcm);
+        let result = recognizer.final_result();
+        let transcript = match result {
+            CompleteResult::Single(single) => single.text.to_string(),
+            CompleteResult::Multiple(multi) => multi
+                .alternatives
+                .first()
+                .map(|a| a.text.to_string())
+                .unwrap_or_default(),
+        };
+        let confidence = if transcript.is_empty() { 0.2 } else { 0.75 };
+        Ok(AsrResult {
+            transcript,
+            confidence,
+        })
+    }
+}
+
 /// Simple token-overlap pronunciation evaluator.
 #[derive(Default)]
 pub struct SimplePronunciationEvaluator;

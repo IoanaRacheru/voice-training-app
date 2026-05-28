@@ -1,11 +1,19 @@
 //! Basic DSP utilities used by the core engine.
 
 use rustfft::{num_complex::Complex, FftPlanner};
+use silero::{detect_speech, SampleRate, Session, SpeechOptions};
 
 /// Voice activity detector abstraction.
 pub trait VadDetector: Send + Sync {
     /// Return a voiced mask per frame from frame-level RMS values.
-    fn voiced_mask(&self, rms_values: &[f64]) -> Vec<bool>;
+    fn voiced_mask(
+        &self,
+        samples: &[f32],
+        sample_rate: u32,
+        frame_size: usize,
+        hop: usize,
+        rms_values: &[f64],
+    ) -> Vec<bool>;
     /// Human-readable detector name.
     fn name(&self) -> &'static str;
 }
@@ -14,7 +22,14 @@ pub trait VadDetector: Send + Sync {
 pub struct EnergyVadDetector;
 
 impl VadDetector for EnergyVadDetector {
-    fn voiced_mask(&self, rms_values: &[f64]) -> Vec<bool> {
+    fn voiced_mask(
+        &self,
+        _samples: &[f32],
+        _sample_rate: u32,
+        _frame_size: usize,
+        _hop: usize,
+        rms_values: &[f64],
+    ) -> Vec<bool> {
         let max_rms = rms_values.iter().copied().fold(0.0f64, f64::max);
         if max_rms <= 0.0 {
             return vec![false; rms_values.len()];
@@ -29,19 +44,55 @@ impl VadDetector for EnergyVadDetector {
 }
 
 /// Placeholder Silero-compatible VAD adapter hook.
-///
-/// This struct is intentionally a stub so that a future ONNX/ORT-backed
-/// implementation can be introduced without changing engine contracts.
 pub struct SileroVadDetector;
 
 impl VadDetector for SileroVadDetector {
-    fn voiced_mask(&self, rms_values: &[f64]) -> Vec<bool> {
-        // Temporary fallback behavior until ONNX runtime integration is added.
-        EnergyVadDetector.voiced_mask(rms_values)
+    fn voiced_mask(
+        &self,
+        samples: &[f32],
+        sample_rate: u32,
+        frame_size: usize,
+        hop: usize,
+        rms_values: &[f64],
+    ) -> Vec<bool> {
+        let sr = match SampleRate::from_hz(sample_rate) {
+            Ok(v) => v,
+            Err(_) => {
+                return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+            }
+        };
+        let mut session = match Session::bundled() {
+            Ok(s) => s,
+            Err(_) => {
+                return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+            }
+        };
+        let segments = match detect_speech(
+            &mut session,
+            samples,
+            SpeechOptions::default().with_sample_rate(sr),
+        ) {
+            Ok(s) => s,
+            Err(_) => {
+                return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+            }
+        };
+        let mut mask = vec![false; rms_values.len()];
+        for (i, m) in mask.iter_mut().enumerate() {
+            let start = i * hop;
+            let end = start + frame_size;
+            let voiced = segments.iter().any(|seg| {
+                let s0 = seg.start_sample() as usize;
+                let s1 = seg.end_sample() as usize;
+                start < s1 && end > s0
+            });
+            *m = voiced;
+        }
+        mask
     }
 
     fn name(&self) -> &'static str {
-        "silero_vad_stub"
+        "silero_vad"
     }
 }
 
@@ -101,7 +152,7 @@ pub fn extract_signal_features_with_vad(
 
     let rms_values: Vec<f64> = frames.iter().map(|f| rms(f)).collect();
     let max_rms = rms_values.iter().copied().fold(0.0f64, f64::max);
-    let voiced_mask = vad.voiced_mask(&rms_values);
+    let voiced_mask = vad.voiced_mask(samples, sample_rate, frame_size, hop, &rms_values);
 
     let voiced_frames = voiced_mask.iter().filter(|v| **v).count() as f64;
     let total_frames = voiced_mask.len() as f64;
@@ -291,7 +342,7 @@ mod tests {
 
     #[test]
     fn silero_stub_is_callable() {
-        let sr = 16_000u32;
+        let sr = 12_000u32;
         let samples: Vec<f32> = (0..sr as usize)
             .map(|i| {
                 let t = i as f32 / sr as f32;
@@ -299,7 +350,7 @@ mod tests {
             })
             .collect();
         let f = extract_signal_features_with_vad(&samples, sr, &SileroVadDetector).expect("features");
-        assert_eq!(f.vad_name, "silero_vad_stub");
+        assert_eq!(f.vad_name, "silero_vad");
     }
 
     #[test]

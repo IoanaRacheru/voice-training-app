@@ -3,6 +3,10 @@ name = "api"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+asr_vosk = ["app_core/asr_vosk"]
+
 [dependencies]
 app_core = { path = "../app_core" }
 async-trait = "0.1"
