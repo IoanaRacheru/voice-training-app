@@ -5,24 +5,26 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
-use mongodb::bson::doc;
 use serde::Deserialize;
 
-use crate::{auth::AppwriteUser, errors::AppError, models::profile::Profile, AppState};
+use crate::{
+    auth::AppwriteUser,
+    errors::AppError,
+    repositories::profile::ProfilePatch,
+    AppState,
+};
 
+/// Register profile routes.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/api/me", get(me).patch(patch_me))
 }
 
+/// Return the authenticated user's profile envelope.
 async fn me(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let col = state.db.collection::<Profile>("profiles");
-
-    let profile = col
-        .find_one(doc! { "appwrite_user_id": &user.id })
-        .await?;
+    let profile = state.profile_repo.find_by_user_id(&user.id).await?;
 
     let (voice_goal, experience_level, target_pitch_range, training_focus) = match profile {
         Some(p) => (p.voice_goal, p.experience_level, p.target_pitch_range, p.training_focus),
@@ -40,6 +42,7 @@ async fn me(
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PatchMeRequest {
     pub voice_goal: Option<String>,
     pub experience_level: Option<String>,
@@ -47,39 +50,25 @@ pub struct PatchMeRequest {
     pub training_focus: Option<Vec<String>>,
 }
 
+/// Upsert profile fields for the authenticated user.
 async fn patch_me(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
     Json(body): Json<PatchMeRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let col = state.db.collection::<Profile>("profiles");
-
-    let mut set = doc! { "email": &user.email };
-    if let Some(v) = body.voice_goal {
-        set.insert("voice_goal", v);
-    }
-    if let Some(v) = body.experience_level {
-        set.insert("experience_level", v);
-    }
-    if let Some(v) = &body.target_pitch_range {
-        set.insert(
-            "target_pitch_range",
-            mongodb::bson::to_bson(v).map_err(|e| AppError::Internal(e.to_string()))?,
-        );
-    }
-    if let Some(v) = &body.training_focus {
-        set.insert(
-            "training_focus",
-            mongodb::bson::to_bson(v).map_err(|e| AppError::Internal(e.to_string()))?,
-        );
-    }
-
-    col.update_one(
-        doc! { "appwrite_user_id": &user.id },
-        doc! { "$set": set },
-    )
-    .upsert(true)
-    .await?;
+    state
+        .profile_repo
+        .upsert_by_user_id(
+            &user.id,
+            &user.email,
+            ProfilePatch {
+                voice_goal: body.voice_goal,
+                experience_level: body.experience_level,
+                target_pitch_range: body.target_pitch_range,
+                training_focus: body.training_focus,
+            },
+        )
+        .await?;
 
     Ok(Json(serde_json::json!({ "message": "Profile updated" })))
 }

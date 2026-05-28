@@ -5,17 +5,21 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use futures::TryStreamExt;
-use mongodb::bson::{doc, DateTime};
 use serde::{Deserialize, Deserializer};
 
-use crate::{auth::AppwriteUser, errors::AppError, models::session::Session, AppState};
+use crate::{
+    auth::AppwriteUser,
+    errors::AppError,
+    repositories::session::CreateSessionInput,
+    AppState,
+};
 
 const MAX_DURATION_SECONDS: u32 = 86_400;
 const MIN_AVERAGE_PITCH: f64 = 50.0;
 const MAX_AVERAGE_PITCH: f64 = 2_000.0;
 const MAX_ENUM_LIKE_LEN: usize = 64;
 
+/// Register training-session routes.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/sessions", post(create))
@@ -142,22 +146,17 @@ async fn create(
     Json(body): Json<CreateRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     validate_create(&body)?;
-
-    let col = state.db.collection::<Session>("sessions");
-
-    let session = Session {
-        id: None,
-        user_id: user.id.clone(),
-        date: DateTime::now(),
-        duration_seconds: body.duration_seconds,
-        average_pitch: body.average_pitch,
-        score: body.score,
-        exercise_type: body.exercise_type,
-        goal: body.goal,
-    };
-
-    let result = col.insert_one(session).await?;
-    let id = result.inserted_id.as_object_id().map(|oid| oid.to_hex());
+    let id = state
+        .session_repo
+        .insert_session(CreateSessionInput {
+            user_id: user.id.clone(),
+            duration_seconds: body.duration_seconds,
+            average_pitch: body.average_pitch,
+            score: body.score,
+            exercise_type: body.exercise_type,
+            goal: body.goal,
+        })
+        .await?;
 
     Ok(Json(serde_json::json!({ "id": id, "message": "Session saved" })))
 }
@@ -166,14 +165,7 @@ async fn list(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
 ) -> Result<Json<Vec<serde_json::Value>>, AppError> {
-    let col = state.db.collection::<Session>("sessions");
-
-    let sessions: Vec<Session> = col
-        .find(doc! { "user_id": &user.id })
-        .sort(doc! { "date": -1 })
-        .await?
-        .try_collect()
-        .await?;
+    let sessions = state.session_repo.list_by_user_id(&user.id).await?;
 
     let body = sessions
         .iter()

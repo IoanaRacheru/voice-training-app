@@ -131,7 +131,11 @@ mod tests {
     use crate::{
         auth::AppwriteUser,
         config::Config,
-        repositories::analysis::{AnalysisArtifact, AnalysisRepository},
+        repositories::{
+            analysis::{AnalysisArtifact, AnalysisRepository},
+            profile::MongoProfileRepository,
+            session::MongoSessionRepository,
+        },
         AppState,
     };
     use app_core::{
@@ -238,6 +242,8 @@ mod tests {
             analysis_repo: Arc::new(MemoryAnalysisRepository {
                 saved: Arc::clone(&saved),
             }),
+            profile_repo: Arc::new(MongoProfileRepository::new(mongo.database("voice_training"))),
+            session_repo: Arc::new(MongoSessionRepository::new(mongo.database("voice_training"))),
         });
 
         let user = AppwriteUser {
@@ -313,6 +319,8 @@ mod tests {
             analysis_repo: Arc::new(MemoryAnalysisRepository {
                 saved: Arc::new(Mutex::new(Vec::new())),
             }),
+            profile_repo: Arc::new(MongoProfileRepository::new(mongo.database("voice_training"))),
+            session_repo: Arc::new(MongoSessionRepository::new(mongo.database("voice_training"))),
         });
 
         let app = router(1024)
