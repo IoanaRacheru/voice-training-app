@@ -7,7 +7,8 @@ use axum::{
     Extension, Json, Router,
 };
 use mongodb::bson::DateTime;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     auth::AppwriteUser,
@@ -22,7 +23,7 @@ pub fn router() -> Router<Arc<AppState>> {
 }
 
 /// Request body for on-demand voice analysis.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AnalyzeRequest {
     /// Median pitch estimate in Hz.
@@ -35,11 +36,38 @@ pub struct AnalyzeRequest {
     pub spectral_brightness: f64,
 }
 
-async fn analyze(
+/// Response body for on-demand voice analysis.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AnalyzeResponse {
+    /// Session summary synthesized by the engine.
+    pub summary: String,
+    /// Ordered list of practice suggestions.
+    pub practice_next: Vec<String>,
+    /// Natural language coach feedback.
+    pub llm_coach_feedback: String,
+    /// Prosodic analysis output.
+    pub prosody: app_core::tools::ProsodyOutput,
+    /// Voice presentation estimate and confidence.
+    pub voice_presentation: app_core::tools::VoicePresentationOutput,
+}
+
+/// Perform voice analysis and persist a compact analysis artifact.
+#[utoipa::path(
+    post,
+    path = "/api/analyze",
+    tag = "Analysis",
+    request_body = AnalyzeRequest,
+    responses(
+        (status = 200, description = "Analysis results", body = AnalyzeResponse),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal error")
+    )
+)]
+pub async fn analyze(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AppwriteUser>,
     Json(body): Json<AnalyzeRequest>,
-) -> Result<Json<serde_json::Value>, AppError> {
+) -> Result<Json<AnalyzeResponse>, AppError> {
     let output = state
         .engine
         .analyze(AnalysisInput {
@@ -60,13 +88,13 @@ async fn analyze(
     };
     state.analysis_repo.insert_analysis(&artifact).await?;
 
-    Ok(Json(serde_json::json!({
-        "summary": output.summary,
-        "practice_next": output.practice_next,
-        "llm_coach_feedback": output.llm_coach_feedback,
-        "prosody": output.prosody,
-        "voice_presentation": output.voice_presentation,
-    })))
+    Ok(Json(AnalyzeResponse {
+        summary: output.summary,
+        practice_next: output.practice_next,
+        llm_coach_feedback: output.llm_coach_feedback,
+        prosody: output.prosody,
+        voice_presentation: output.voice_presentation,
+    }))
 }
 
 #[cfg(test)]
@@ -192,8 +220,8 @@ mod tests {
         .expect("analysis route should succeed");
 
         let payload = response.0;
-        assert!(payload["summary"].is_string());
-        assert!(payload["voice_presentation"]["score"].is_number());
+        assert!(!payload.summary.is_empty());
+        assert!((0.0..=100.0).contains(&payload.voice_presentation.score));
 
         let saved_entries = saved.lock().expect("lock");
         assert_eq!(saved_entries.len(), 1);

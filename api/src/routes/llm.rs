@@ -1,24 +1,55 @@
 use std::sync::Arc;
 
 use axum::{extract::State, routing::get, Json, Router};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::AppState;
 
+/// LLM configuration and readiness metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LlmHealthResponse {
+    /// Configured provider from environment.
+    pub configured_provider: String,
+    /// Effective provider selected at runtime.
+    pub effective_provider: String,
+    /// Whether OpenRouter credentials are configured.
+    pub openrouter_configured: bool,
+    /// Whether Groq credentials are configured.
+    pub groq_configured: bool,
+    /// Whether generic OpenAI-compatible credentials are configured.
+    pub openai_configured: bool,
+    /// OpenRouter model identifier.
+    pub openrouter_model: String,
+    /// Groq model identifier.
+    pub groq_model: String,
+    /// OpenAI-compatible model identifier.
+    pub openai_model: String,
+}
+
+/// Register LLM routes.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/api/llm/health", get(health))
 }
 
-async fn health(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "configured_provider": state.config.llm_provider,
-        "effective_provider": state.llm_provider,
-        "openrouter_configured": state.config.openrouter_api_key.is_some(),
-        "groq_configured": state.config.groq_api_key.is_some(),
-        "openai_configured": state.config.llm_api_key.is_some(),
-        "openrouter_model": state.config.openrouter_model,
-        "groq_model": state.config.groq_model,
-        "openai_model": state.config.llm_model,
-    }))
+/// Return runtime LLM health and configuration metadata.
+#[utoipa::path(
+    get,
+    path = "/api/llm/health",
+    tag = "LLM",
+    responses((status = 200, description = "LLM health", body = LlmHealthResponse))
+)]
+pub async fn health(State(state): State<Arc<AppState>>) -> Json<LlmHealthResponse> {
+    Json(LlmHealthResponse {
+        configured_provider: state.config.llm_provider.clone(),
+        effective_provider: state.llm_provider.clone(),
+        openrouter_configured: state.config.openrouter_api_key.is_some(),
+        groq_configured: state.config.groq_api_key.is_some(),
+        openai_configured: state.config.llm_api_key.is_some(),
+        openrouter_model: state.config.openrouter_model.clone(),
+        groq_model: state.config.groq_model.clone(),
+        openai_model: state.config.llm_model.clone(),
+    })
 }
 
 #[cfg(test)]
@@ -65,8 +96,8 @@ mod tests {
         });
 
         let Json(payload) = health(State(state)).await;
-        assert_eq!(payload["effective_provider"], "openrouter");
-        assert_eq!(payload["openrouter_configured"], true);
-        assert_eq!(payload["groq_configured"], false);
+        assert_eq!(payload.effective_provider, "openrouter");
+        assert!(payload.openrouter_configured);
+        assert!(!payload.groq_configured);
     }
 }
