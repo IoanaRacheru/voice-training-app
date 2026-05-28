@@ -3,6 +3,20 @@
 ## 2026-05-29
 
 ### Completed
+- Made Silero VAD the default runtime path when `vad_silero` feature is present:
+  - `api` feature mapping now enables `app_core/vad_silero`;
+  - default `VAD_PROVIDER` resolves to `silero` when compiled with feature.
+- Hardened provider selection:
+  - unknown `ASR_PROVIDER`/`VAD_PROVIDER` now return explicit configuration errors;
+  - strict mode remains fail-fast; non-strict mode logs and falls back.
+- Aligned Docker/Make defaults to Silero-backed verification:
+  - compose `api` and `api_vosk` profiles now run with `VAD_PROVIDER=silero`;
+  - fixed cargo feature argument syntax in build targets;
+  - `verify-vosk-api` now asserts `vad_used=\"silero_vad\"`.
+- Added structured `/api/analyze` pipeline logs:
+  - request receipt, pipeline completion, artifact persistence.
+- Expanded analyze route behavior tests:
+  - non-strict mode degradation test when ASR runtime fails.
 - Added strict `/api/analyze` route coverage for strict-provider ASR runtime failure handling.
 - Added Dockerized Vosk + Silero runtime verification path:
   - `make build-api-image-vosk-silero`
