@@ -93,7 +93,8 @@ fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
     }
 }
 
-#[tokio::main]
+/// Start the API service with a Tokio multi-thread runtime.
+#[tokio::main(flavor = "multi_thread")]
 async fn main() {
     dotenvy::dotenv().ok();
 
