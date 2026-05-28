@@ -63,19 +63,7 @@ impl ProfileRepository for MongoProfileRepository {
         patch: ProfilePatch,
     ) -> Result<(), mongodb::error::Error> {
         let col = self.db.collection::<Document>("profiles");
-        let mut set = doc! { "email": email };
-        if let Some(v) = patch.voice_goal {
-            set.insert("voice_goal", v);
-        }
-        if let Some(v) = patch.experience_level {
-            set.insert("experience_level", v);
-        }
-        if let Some(v) = patch.target_pitch_range {
-            set.insert("target_pitch_range", v);
-        }
-        if let Some(v) = patch.training_focus {
-            set.insert("training_focus", v);
-        }
+        let set = build_profile_set_doc(email, patch);
 
         col.update_one(
             doc! { "appwrite_user_id": user_id },
@@ -84,5 +72,45 @@ impl ProfileRepository for MongoProfileRepository {
         .upsert(true)
         .await?;
         Ok(())
+    }
+}
+
+fn build_profile_set_doc(email: &str, patch: ProfilePatch) -> Document {
+    let mut set = doc! { "email": email };
+    if let Some(v) = patch.voice_goal {
+        set.insert("voice_goal", v);
+    }
+    if let Some(v) = patch.experience_level {
+        set.insert("experience_level", v);
+    }
+    if let Some(v) = patch.target_pitch_range {
+        set.insert("target_pitch_range", v);
+    }
+    if let Some(v) = patch.training_focus {
+        set.insert("training_focus", v);
+    }
+    set
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_profile_set_doc, ProfilePatch};
+
+    #[test]
+    fn profile_set_doc_includes_only_present_fields() {
+        let doc = build_profile_set_doc(
+            "u1@example.com",
+            ProfilePatch {
+                voice_goal: Some("feminine".into()),
+                experience_level: None,
+                target_pitch_range: Some(vec![160.0, 220.0]),
+                training_focus: None,
+            },
+        );
+        assert!(doc.get("email").is_some());
+        assert!(doc.get("voice_goal").is_some());
+        assert!(doc.get("target_pitch_range").is_some());
+        assert!(doc.get("experience_level").is_none());
+        assert!(doc.get("training_focus").is_none());
     }
 }

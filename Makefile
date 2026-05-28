@@ -3,6 +3,7 @@
         dev dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
+        check-vosk build-api-image-vosk \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak wait-api verify-stack \
@@ -50,6 +51,9 @@ stop: down
 
 build-api-image: docker-check
 	$(DOCKER_COMPOSE) up -d --build api
+
+build-api-image-vosk: docker-check
+	$(DOCKER_COMPOSE) build --build-arg API_FEATURES="--features asr_vosk" api
 
 rebuild-api-image: clean build-api-image
 
@@ -155,6 +159,10 @@ test-openapi:
 test-dsp-bench:
 	cargo test -p app_core dsp::tests::extract_features_from_sine_wave -- --nocapture
 	cargo test -p app_core dsp::tests::bursty_signal_confidence_degrades -- --nocapture
+
+check-vosk:
+	cargo check -p app_core --features asr_vosk
+	cargo check -p api --features asr_vosk
 
 dep-tree:
 	cargo tree --workspace
