@@ -70,6 +70,34 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  api_vosk:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      args:
+        API_FEATURES: "--features asr_vosk"
+    environment:
+      MONGODB_URI: ${MONGODB_URI}
+      SERVER_PORT: 3000
+      KEYCLOAK_REALM_URL: ${KEYCLOAK_REALM_URL}
+      KEYCLOAK_EXPECTED_ISSUER: ${KEYCLOAK_EXPECTED_ISSUER}
+      KEYCLOAK_EXPECTED_AUDIENCES: ${KEYCLOAK_EXPECTED_AUDIENCES}
+      ANALYZE_MAX_BODY_BYTES: ${ANALYZE_MAX_BODY_BYTES:-1048576}
+      RUST_LOG: debug
+      ASR_PROVIDER: vosk
+      VAD_PROVIDER: energy
+      VOSK_MODEL_PATH: /models/vosk
+    volumes:
+      - ${VOSK_MODEL_PATH}:/models/vosk:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   mongo_data:
   postgres_data:

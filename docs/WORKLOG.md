@@ -50,6 +50,44 @@
   - `asr` transcript/confidence
   - `pronunciation` feedback against optional `expected_text`
 - Extended request contract with optional `expected_text`.
+- Hardened JWT validation and key handling:
+  - enforced `iss`/`aud` checks
+  - added JWKS refresh on unknown `kid`
+  - added `/api/analyze` body-size guard (`ANALYZE_MAX_BODY_BYTES`)
+- Added auth and payload-limit integration-style tests:
+  - invalid `iss` -> `401`
+  - invalid `aud` -> `401`
+  - valid signed token -> `200`
+  - oversized analyze payload -> `413`
+- Wired auth/body-limit env vars into Docker API service and aligned local issuer default for browser token flow.
+- Introduced repository abstractions for profiles and sessions (`ProfileRepository`, `SessionRepository`) and refactored routes to depend on interfaces.
+- Added OpenAPI coverage for:
+  - `GET /api/me`
+  - `PATCH /api/me`
+  - `POST /api/sessions`
+  - `GET /api/sessions`
+- Added OpenAPI bearer security scheme and protected-route security annotations.
+- Removed dead `AppError` variants and made Tokio runtime explicitly multi-thread (`#[tokio::main(flavor = "multi_thread")]`).
+- Added integration-style tests for `/api/me` and `/api/sessions` with in-memory repository doubles.
+- Extended Keycloak automation and stack verification:
+  - enabled `directAccessGrantsEnabled` for dev client
+  - ensured deterministic `devuser` bootstrap
+  - `verify-stack` now includes protected-route token smoke.
+- Replaced VAD stub path with real Silero-backed adapter wiring (with safe fallback to energy VAD on runtime/model failures).
+- Added feature-gated Vosk ASR adapter (`asr_vosk`) with runtime selection hooks:
+  - `ASR_PROVIDER` (`stub|vosk`)
+  - `VOSK_MODEL_PATH`
+  - `VAD_PROVIDER` (`energy|silero`)
+- Added Vosk build/packaging validation paths:
+  - `make check-vosk`
+  - `make build-api-image-vosk`
+- Added repository-layer unit tests for profile/session persistence mapping helpers.
+- Added ASR/VAD runtime guide: `docs/ASR_VAD_RUNTIME.md`.
+- Added Vosk runtime smoke test target:
+  - `make test-vosk-runtime` (requires `VOSK_MODEL_PATH`)
+- Added API-level Vosk container E2E verification target:
+  - `make verify-vosk-api` (requires `VOSK_MODEL_PATH`)
+  - runs authenticated `/api/analyze` against `api_vosk` service and asserts `asr` payload presence.
 
 ### Next In Queue
 - Implement provider-backed LLM adapters (OpenAI-compatible, Groq, OpenRouter).
@@ -66,3 +104,15 @@
 - `feat/dsp-robustness-v2`: confidence/quality diagnostics and pluggable VAD contracts.
 - `feat/infra-dev-stability`: minimal stack verification/reliability hardening for MVP development.
 - `feat/asr-pronunciation-v1`: ASR/pronunciation scaffolding and API integration.
+- `feat/auth-jwks-payload-hardening`: strict claim validation, JWKS refresh, analyze payload limits + tests.
+- `feat/auth-positive-test`: positive-path middleware auth test.
+- `feat/docker-auth-env-wiring`: docker env propagation for auth/body guard and local issuer alignment.
+- `feat/repositories-profiles-sessions`: profile/session repository abstractions and route refactor.
+- `feat/openapi-me-sessions`: OpenAPI schemas/paths for user and session routes.
+- `feat/async-mt-and-warning-cleanup`: dead warning cleanup and explicit Tokio multi-thread runtime.
+- `feat/integration-tests-me-sessions`: integration-style tests for profile/session flows.
+- `feat/verify-stack-auth-smoke`: dev user bootstrap and protected route smoke in stack verification.
+- `feat/openapi-bearer-auth`: bearer auth scheme and protected-route security docs.
+- `feat/asr-vad-adapters`: Silero-backed VAD path and feature-gated Vosk ASR runtime wiring.
+- `feat/vosk-packaging-and-repo-tests`: Vosk build-path validation and repository-layer mapping tests.
+- `feat/vosk-runtime-smoke`: runtime smoke test target for real Vosk model validation.
