@@ -6,7 +6,7 @@ edition = "2024"
 [features]
 default = []
 asr_vosk = ["app_core/asr_vosk"]
-vad_silero = []
+vad_silero = ["app_core/vad_silero"]
 
 [dependencies]
 app_core = { path = "../app_core" }
