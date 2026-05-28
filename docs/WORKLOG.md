@@ -3,6 +3,11 @@
 ## 2026-05-29
 
 ### Completed
+- Calibrated deterministic DSP v2 scoring in `app_core` prosody/voice tools while preserving API output ranges and labels.
+- Added pronunciation v3 improvements with sequence-alignment scoring and timing-aware feedback cues.
+- Added strict provider fail-fast test coverage:
+  - core engine test for strict ASR runtime failure path
+  - API bootstrap tests for invalid/valid provider configuration handling.
 - Added real Silero-backed VAD implementation path in `app_core` behind `vad_silero` feature, with energy fallback compatibility path when feature is not enabled.
 - Improved Vosk ASR parsing to preserve word-level timing/confidence metadata.
 - Upgraded pronunciation scoring from token-overlap-only to combined token + order scoring with optional timing smoothness signal.
@@ -107,6 +112,9 @@
 - Add integration tests around `/api/analyze` behavior.
 
 ### Branches
+- `feat-dsp-v2-deterministic`: deterministic DSP v2 scoring calibration for prosody and voice presentation.
+- `feat-pronunciation-v3-token-timing`: pronunciation v3 token sequence alignment and timing feedback cues.
+- `feat-strict-runtime-test-hardening`: strict-provider runtime test coverage in `app_core` and `api`.
 - `feat-vad-silero-real`: real Silero-backed VAD feature path in `app_core`.
 - `feat-asr-pronunciation-v2`: richer Vosk parsing + pronunciation scoring v2 + strict provider runtime policy.
 - `chore-mongo-roadmap-realign`: roadmap/runtime docs realigned to MongoDB-first app data strategy.
