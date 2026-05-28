@@ -13,12 +13,16 @@ pub enum AppError {
 
     #[error("Database error")]
     Database(#[from] mongodb::error::Error),
+
+    #[error("{0}")]
+    NotFound(String),
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message): (StatusCode, String) = match self {
             AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             AppError::Database(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".into(),

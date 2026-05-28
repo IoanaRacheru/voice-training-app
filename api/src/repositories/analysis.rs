@@ -1,10 +1,13 @@
 use async_trait::async_trait;
-use mongodb::bson::{DateTime, Document, doc};
+use futures::TryStreamExt;
+use mongodb::bson::{DateTime, Document, doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 
 /// Persisted analytics artifact produced by `/api/analyze`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisArtifact {
+    /// Artifact identifier.
+    pub id: Option<ObjectId>,
     /// Authenticated user ID owning this artifact.
     pub user_id: String,
     /// Creation timestamp (UTC).
@@ -25,6 +28,21 @@ pub trait AnalysisRepository: Send + Sync {
         &self,
         artifact: &AnalysisArtifact,
     ) -> Result<(), mongodb::error::Error>;
+
+    /// Return paginated artifacts for a user ordered by newest first.
+    async fn list_by_user_id(
+        &self,
+        user_id: &str,
+        limit: u32,
+        offset: u64,
+    ) -> Result<Vec<AnalysisArtifact>, mongodb::error::Error>;
+
+    /// Return one artifact by id for the given user.
+    async fn find_by_id_for_user(
+        &self,
+        user_id: &str,
+        id: ObjectId,
+    ) -> Result<Option<AnalysisArtifact>, mongodb::error::Error>;
 }
 
 /// MongoDB-backed implementation of [`AnalysisRepository`].
@@ -55,5 +73,30 @@ impl AnalysisRepository for MongoAnalysisRepository {
         })
         .await?;
         Ok(())
+    }
+
+    async fn list_by_user_id(
+        &self,
+        user_id: &str,
+        limit: u32,
+        offset: u64,
+    ) -> Result<Vec<AnalysisArtifact>, mongodb::error::Error> {
+        let col = self.db.collection::<AnalysisArtifact>("analysis_artifacts");
+        col.find(doc! { "user_id": user_id })
+            .sort(doc! { "created_at": -1 })
+            .skip(offset)
+            .limit(limit as i64)
+            .await?
+            .try_collect()
+            .await
+    }
+
+    async fn find_by_id_for_user(
+        &self,
+        user_id: &str,
+        id: ObjectId,
+    ) -> Result<Option<AnalysisArtifact>, mongodb::error::Error> {
+        let col = self.db.collection::<AnalysisArtifact>("analysis_artifacts");
+        col.find_one(doc! { "_id": id, "user_id": user_id }).await
     }
 }

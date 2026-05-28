@@ -260,6 +260,7 @@ async fn main() {
     let protected = Router::new()
         .merge(routes::user::router())
         .merge(routes::sessions::router())
+        .merge(routes::artifacts::router())
         .merge(routes::analysis::router(config.analyze_max_body_bytes))
         .route_layer(axum_middleware::from_fn_with_state(
             state.clone(),

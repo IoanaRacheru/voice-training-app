@@ -101,6 +101,7 @@ pub async fn analyze(
         .map_err(|e| AppError::Validation(e.to_string()))?;
 
     let artifact = AnalysisArtifact {
+        id: None,
         user_id: user.id,
         created_at: DateTime::now(),
         summary: output.summary.clone(),
@@ -152,7 +153,10 @@ mod tests {
         extract::State,
         http::{Request, StatusCode},
     };
-    use mongodb::{Client, bson::DateTime};
+    use mongodb::{
+        Client,
+        bson::{DateTime, oid::ObjectId},
+    };
     use reqwest::Client as HttpClient;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
@@ -168,6 +172,7 @@ mod tests {
             artifact: &AnalysisArtifact,
         ) -> Result<(), mongodb::error::Error> {
             self.saved.lock().expect("lock").push(AnalysisArtifact {
+                id: None,
                 user_id: artifact.user_id.clone(),
                 created_at: DateTime::now(),
                 summary: artifact.summary.clone(),
@@ -175,6 +180,39 @@ mod tests {
                 voice_presentation_confidence: artifact.voice_presentation_confidence,
             });
             Ok(())
+        }
+
+        async fn list_by_user_id(
+            &self,
+            user_id: &str,
+            limit: u32,
+            offset: u64,
+        ) -> Result<Vec<AnalysisArtifact>, mongodb::error::Error> {
+            let saved = self.saved.lock().expect("lock");
+            let mut filtered: Vec<AnalysisArtifact> = saved
+                .iter()
+                .filter(|a| a.user_id == user_id)
+                .cloned()
+                .collect();
+            filtered.sort_by_key(|a| a.created_at);
+            filtered.reverse();
+            Ok(filtered
+                .into_iter()
+                .skip(offset as usize)
+                .take(limit as usize)
+                .collect())
+        }
+
+        async fn find_by_id_for_user(
+            &self,
+            user_id: &str,
+            id: ObjectId,
+        ) -> Result<Option<AnalysisArtifact>, mongodb::error::Error> {
+            let saved = self.saved.lock().expect("lock");
+            Ok(saved
+                .iter()
+                .find(|a| a.user_id == user_id && a.id == Some(id))
+                .cloned())
         }
     }
 
