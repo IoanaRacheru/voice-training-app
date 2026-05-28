@@ -54,12 +54,76 @@ impl VadDetector for SileroVadDetector {
         hop: usize,
         rms_values: &[f64],
     ) -> Vec<bool> {
-        EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
+        silero_voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
     }
 
     fn name(&self) -> &'static str {
         "silero_vad"
     }
+}
+
+#[cfg(feature = "vad_silero")]
+fn silero_voiced_mask(
+    samples: &[f32],
+    sample_rate: u32,
+    frame_size: usize,
+    hop: usize,
+    rms_values: &[f64],
+) -> Vec<bool> {
+    use silero::{SampleRate, Session, SpeechOptions, detect_speech};
+
+    let sr = match sample_rate {
+        8_000 => SampleRate::Rate8k,
+        16_000 => SampleRate::Rate16k,
+        _ => {
+            return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values);
+        }
+    };
+
+    let mut session = match Session::bundled() {
+        Ok(s) => s,
+        Err(_) => {
+            return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values);
+        }
+    };
+
+    let mut options = SpeechOptions::default();
+    options = options.with_sample_rate(sr);
+    let segments = match detect_speech(&mut session, samples, options) {
+        Ok(s) => s,
+        Err(_) => {
+            return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values);
+        }
+    };
+
+    let mut mask = vec![false; rms_values.len()];
+    if segments.is_empty() {
+        return mask;
+    }
+
+    for (idx, voiced) in mask.iter_mut().enumerate() {
+        let start_s = idx as f64 * hop as f64 / sample_rate as f64;
+        let end_s = (idx * hop + frame_size) as f64 / sample_rate as f64;
+        let frame_voiced = segments.iter().any(|seg| {
+            let seg_start = seg.start_seconds();
+            let seg_end = seg.end_seconds();
+            seg_end > start_s && seg_start < end_s
+        });
+        *voiced = frame_voiced;
+    }
+
+    mask
+}
+
+#[cfg(not(feature = "vad_silero"))]
+fn silero_voiced_mask(
+    samples: &[f32],
+    sample_rate: u32,
+    frame_size: usize,
+    hop: usize,
+    rms_values: &[f64],
+) -> Vec<bool> {
+    EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
 }
 
 /// Signal quality flags for diagnostics and confidence interpretation.
@@ -308,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn silero_stub_is_callable() {
+    fn silero_detector_is_callable() {
         let sr = 12_000u32;
         let samples: Vec<f32> = (0..sr as usize)
             .map(|i| {
@@ -319,6 +383,25 @@ mod tests {
         let f =
             extract_signal_features_with_vad(&samples, sr, &SileroVadDetector).expect("features");
         assert_eq!(f.vad_name, "silero_vad");
+    }
+
+    #[cfg(feature = "vad_silero")]
+    #[test]
+    fn silero_detector_processes_supported_rate() {
+        let sr = 16_000u32;
+        let frame_size = 1024usize;
+        let hop = 512usize;
+        let samples: Vec<f32> = (0..sr as usize)
+            .map(|i| {
+                let t = i as f32 / sr as f32;
+                (2.0 * std::f32::consts::PI * 180.0 * t).sin() * 0.5
+            })
+            .collect();
+
+        let frames = frame_slices(&samples, frame_size, hop);
+        let rms_values: Vec<f64> = frames.iter().map(|f| rms(f)).collect();
+        let mask = SileroVadDetector.voiced_mask(&samples, sr, frame_size, hop, &rms_values);
+        assert_eq!(mask.len(), rms_values.len());
     }
 
     #[test]
