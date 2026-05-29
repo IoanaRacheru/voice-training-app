@@ -7,7 +7,7 @@
         check-vosk test-vosk-runtime build-api-image-vosk build-api-image-vosk-silero build-api-image-prod verify-api-prod \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
-        keycloak-setup keycloak-status wait-keycloak wait-api verify-stack verify-vosk-api verify-vosk-silero-api \
+        keycloak-setup keycloak-status wait-keycloak wait-api verify-stack verify-vosk-api verify-vosk-silero-api verify-challenge-chat-api \
         doctor debug-env debug-keycloak debug-api help
 
 SHELL := /bin/sh
@@ -331,6 +331,25 @@ verify-vosk-silero-api: docker-check
 	echo "$$resp" | grep -q '"asr":{' || { echo "ASR output missing in analyze response"; echo "$$resp"; exit 1; }; \
 	echo "$$resp" | grep -q '"vad_used":"silero_vad"' || { echo "Silero VAD not used in analyze response"; echo "$$resp"; exit 1; }; \
 	echo "Vosk + Silero API verification passed."
+
+verify-challenge-chat-api: docker-check wait-keycloak wait-api
+	@echo "Requesting service-account token from Keycloak..."
+	@token=$$(curl -s -X POST http://localhost:8080/realms/voice-training/protocol/openid-connect/token \
+	  -H "Content-Type: application/x-www-form-urlencoded" \
+	  -d "grant_type=client_credentials&client_id=voice-training-smoke&client_secret=smoke-secret" \
+	  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4); \
+	test -n "$$token" || (echo "failed to fetch service-account token" && exit 1); \
+	today=$$(date +%F); \
+	curl -sf "http://localhost:3000/api/challenge/today?date=$$today" \
+	  -H "Authorization: Bearer $$token" | grep -q '"challenge"'; \
+	curl -sf "http://localhost:3000/api/challenge/streak" \
+	  -H "Authorization: Bearer $$token" | grep -q '"current_challenge_streak"'; \
+	curl -sf -X POST http://localhost:3000/api/chat \
+	  -H "Authorization: Bearer $$token" \
+	  -H "Content-Type: application/json" \
+	  --data '{"message":"demo check","context":"verify challenge and chat endpoints"}' \
+	  | grep -q '"reply"'; \
+	echo "Challenge + Chat API verification passed."
 
 # ── Diagnostics / Debug ─────────────────────────────────────────────────────
 

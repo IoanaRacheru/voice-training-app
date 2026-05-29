@@ -113,7 +113,7 @@ export function useChallengeController(user: UnknownUser) {
         setChallenge(challengeSessionService.reorderExercise(challenge, index, direction));
       },
 
-      startExercise(index: number) {
+      async startExercise(index: number) {
         if (!challenge) return;
         const exercise = challenge.exercises[index];
 
@@ -123,7 +123,7 @@ export function useChallengeController(user: UnknownUser) {
         }
 
         if (challenge.status === "not_started") {
-          const nextChallenge = challengeSessionService.startChallenge(challenge);
+          const nextChallenge = await challengeSessionService.startChallenge(challenge);
           setChallenge(nextChallenge);
         }
 
