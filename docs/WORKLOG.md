@@ -3,6 +3,16 @@
 ## 2026-05-29
 
 ### Completed
+- Added production Docker build profile and smoke target:
+  - `api/Dockerfile.prod`
+  - `make build-api-image-prod`
+  - `make verify-api-prod`
+- Added backend demo runbook:
+  - `docs/BACKEND_DEMO_RUNBOOK.md`
+- Aligned stable Docker verification profile to Vosk + energy VAD:
+  - `verify-vosk-api` now asserts `vad_used="energy_vad"`.
+- Documented Silero Docker runtime blocker:
+  - ORT linker errors with missing `__isoc23_*` symbols can break `vad_silero` image builds on some host/toolchain combinations.
 - Made Silero VAD the default runtime path when `vad_silero` feature is present:
   - `api` feature mapping now enables `app_core/vad_silero`;
   - default `VAD_PROVIDER` resolves to `silero` when compiled with feature.
@@ -138,8 +148,11 @@
   - runs authenticated `/api/analyze` against `api_vosk` service and asserts `asr` payload presence.
 
 ### Next In Queue
-- Implement provider-backed LLM adapters (OpenAI-compatible, Groq, OpenRouter).
-- Add integration tests around `/api/analyze` behavior.
+- Production runtime profile parity hardening:
+  - keep release Docker image verification (`verify-api-prod`) green in CI-like flow;
+  - track startup/runtime differences between debug and release profiles.
+- Expand structured observability:
+  - add request correlation IDs for `/api/analyze` and artifact operations.
 
 ### Branches
 - `feat-analyze-strict-auth-matrix`: strict `/api/analyze` failure-path tests with strict auth config coverage.

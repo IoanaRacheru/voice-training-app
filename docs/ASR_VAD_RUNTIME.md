@@ -1,7 +1,7 @@
 # ASR and VAD Runtime Notes
 
 ## Purpose
-- Keep default development flow production-like with Dockerized Vosk and Silero VAD (`ASR_PROVIDER=vosk_remote`, `VAD_PROVIDER=silero`).
+- Keep default development flow production-like with Dockerized Vosk and stable energy VAD (`ASR_PROVIDER=vosk_remote`, `VAD_PROVIDER=energy`).
 - Allow runtime validation for real adapters without local model installs.
 
 ## Environment Variables
@@ -25,6 +25,7 @@
 ## Notes
 - Vosk runtime uses the Docker Vosk websocket API, not local model files.
 - API `vad_silero` feature maps directly to `app_core/vad_silero`, so Silero runtime is active when enabled in API build features.
+- Current Dockerized default verification profile uses `energy` VAD due ORT linker incompatibility in some glibc/toolchain combinations.
 - In strict mode (`PROVIDER_STRICT=true`), configured providers are fail-fast:
   - `ASR_PROVIDER=vosk_remote` requires `VOSK_SERVER_URL`.
   - `VAD_PROVIDER=silero` requires API build with feature `vad_silero`.
