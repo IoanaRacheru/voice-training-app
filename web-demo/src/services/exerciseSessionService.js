@@ -14,6 +14,11 @@ import {
 import { validateExerciseSessionData } from "./exerciseSessionValidator.js";
 
 const AUDIO_HISTORY_EXERCISE_IDS = new Set(["pronunciation", "diction"]);
+const backendStatus = {
+  sessionsApiAvailable: true,
+  analyzeApiAvailable: true,
+  createSessionApiAvailable: true,
+};
 
 function getAverage(values) {
   const clean = values.filter((value) => Number.isFinite(value));
@@ -90,10 +95,16 @@ export const exerciseSessionService = {
   async getSessions() {
     try {
       const apiSessions = await getSessionsApi();
+      backendStatus.sessionsApiAvailable = true;
       return Array.isArray(apiSessions) ? apiSessions : [];
     } catch (_error) {
+      backendStatus.sessionsApiAvailable = false;
       return exerciseSessionRepository.getAll();
     }
+  },
+
+  getBackendStatus() {
+    return { ...backendStatus };
   },
 
   validateExerciseSessionData(sessionData) {
@@ -162,6 +173,7 @@ export const exerciseSessionService = {
         expected_text: expectedText,
       };
       const analyzeResult = await analyzeVoice(analyzePayload);
+      backendStatus.analyzeApiAvailable = true;
       session.backend_analysis = {
         summary: analyzeResult.summary,
         practice_next: analyzeResult.practice_next,
@@ -173,6 +185,7 @@ export const exerciseSessionService = {
       };
     } catch (_error) {
       // Keep local save resilient when backend analyze is temporarily unavailable.
+      backendStatus.analyzeApiAvailable = false;
       session.backend_analysis = null;
     }
 
@@ -185,8 +198,10 @@ export const exerciseSessionService = {
         exercise_type: normalizeEnumLike(session.exercise_id, "exercise"),
         goal: normalizeEnumLike(session.goal_type || session.goal, "general_training"),
       });
+      backendStatus.createSessionApiAvailable = true;
     } catch (_error) {
       // Local repository remains fallback source if backend persistence fails.
+      backendStatus.createSessionApiAvailable = false;
     }
 
     if (AUDIO_HISTORY_EXERCISE_IDS.has(sessionData.exercise.id)) {

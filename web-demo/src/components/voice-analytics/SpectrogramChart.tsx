@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 
-import { SpectrogramCell, spectrogramData } from "./mockVoiceAnalyticsData";
+import { SpectrogramCell } from "./mockVoiceAnalyticsData";
 import { VoiceChartCard } from "./VoiceChartCard";
 
 type SpectrogramChartProps = {
@@ -21,7 +21,7 @@ function getHeatColor(intensity: number) {
 }
 
 export function SpectrogramChart({
-  data = spectrogramData,
+  data = [],
   title = "Spectrogram",
 }: SpectrogramChartProps) {
   const chartData: SpectrogramCell[] =
@@ -29,7 +29,10 @@ export function SpectrogramChart({
       ? (data as any).spectrogram
       : Array.isArray(data)
         ? data
-        : spectrogramData;
+        : [];
+  if (!chartData.length) {
+    return <VoiceChartCard title={title} description="Time-frequency intensity map for a sample voice recording.">No live data yet.</VoiceChartCard>;
+  }
   const times = getUniqueValues(chartData, "time").slice(-8);
   const frequencies = getUniqueValues(chartData, "frequency");
   const cellsByCoordinate = new Map(

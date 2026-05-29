@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { useChatbotConversation } from "@/hooks/useChatbotConversation";
 
 export default function Chatbot() {
-  const { messages, draft, setDraft, submitDraft } = useChatbotConversation();
+  const { messages, draft, setDraft, submitDraft, isSending, backendAvailable } =
+    useChatbotConversation();
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    submitDraft();
+    await submitDraft();
   };
 
   return (
@@ -21,6 +22,11 @@ export default function Chatbot() {
           A clean text space for coaching notes and session reflection.
         </p>
       </motion.header>
+      {!backendAvailable && (
+        <div className="border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-amber-800">
+          Chat backend is unavailable. Responses may be delayed.
+        </div>
+      )}
 
       <motion.section
         initial={{ opacity: 0, y: 10 }}
@@ -60,13 +66,12 @@ export default function Chatbot() {
             placeholder="Type a training note or coaching question"
             aria-label="Message"
           />
-          <Button type="submit" className="h-full min-h-11">
+          <Button type="submit" className="h-full min-h-11" disabled={isSending}>
             <Send className="h-4 w-4" />
-            Send
+            {isSending ? "Sending..." : "Send"}
           </Button>
         </form>
       </motion.section>
     </div>
   );
 }
-

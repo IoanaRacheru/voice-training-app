@@ -138,10 +138,25 @@ export default function VoiceAnalyticsToolSession({ tool, pitchTargetEnabled }: 
       )}
 
       {result && (
-        <div className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
+        <div className="space-y-3 bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
           <p className="font-mono text-[11px] uppercase text-muted-foreground">Saved session</p>
           <p className="mt-2 text-lg font-black uppercase text-foreground">{result.score}/100</p>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">{result.feedback}</p>
+          {result.backend_analysis ? (
+            <div className="border border-border bg-background p-3">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Backend coach</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {result.backend_analysis.summary || "Analysis completed."}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {result.backend_analysis.practice_next || "Continue with targeted drills."}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Backend coach feedback unavailable for this session.
+            </p>
+          )}
         </div>
       )}
 

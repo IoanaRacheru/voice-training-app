@@ -11,7 +11,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { TimeSeriesPoint, volumeData } from "./mockVoiceAnalyticsData";
+import { TimeSeriesPoint } from "./mockVoiceAnalyticsData";
 import { VoiceChartCard } from "./VoiceChartCard";
 
 type VolumeChartProps = {
@@ -26,12 +26,15 @@ const chartConfig = {
   },
 };
 
-export function VolumeChart({ data = volumeData, title = "Volume" }: VolumeChartProps) {
+export function VolumeChart({ data = [], title = "Volume" }: VolumeChartProps) {
   const chartData = Array.isArray((data as any)?.volume) ? (data as any).volume : data;
+  if (!chartData?.length) {
+    return <VoiceChartCard title={title} description="Live loudness trend from current recording.">No live data yet.</VoiceChartCard>;
+  }
   return (
     <VoiceChartCard
       title={title}
-      description="Mock loudness trend using normalized amplitude values."
+      description="Live loudness trend from current recording."
     >
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
         <LineChart data={chartData} margin={{ left: 4, right: 8, top: 12 }}>

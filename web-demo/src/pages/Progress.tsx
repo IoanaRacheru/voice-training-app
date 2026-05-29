@@ -10,7 +10,16 @@ import { useState } from "react";
 export default function Progress() {
   const [selectedArtifact, setSelectedArtifact] = useState<any>(null);
   const [artifactLoading, setArtifactLoading] = useState(false);
-  const { exerciseSessions, loading, hasSessions, pitchData, scoreData, artifacts } =
+  const {
+    exerciseSessions,
+    loading,
+    hasSessions,
+    pitchData,
+    scoreData,
+    artifacts,
+    backendStatus,
+    artifactsApiAvailable,
+  } =
     useProgressController();
 
   const handleArtifactOpen = async (id: string) => {
@@ -34,6 +43,11 @@ export default function Progress() {
           Recorded sessions, pitch movement, and score history.
         </p>
       </motion.header>
+      {(!backendStatus.sessionsApiAvailable || !artifactsApiAvailable) && (
+        <div className="border border-amber-300 bg-amber-50 p-3 text-xs font-semibold uppercase tracking-wide text-amber-800">
+          Backend is partially unavailable. Showing local fallback data where needed.
+        </div>
+      )}
 
       {loading ? (
         <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">Loading sessions...</div>

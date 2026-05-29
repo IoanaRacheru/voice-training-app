@@ -19,6 +19,7 @@ export default function Challenge() {
     currentProfileGoal,
     wasGeneratedFromDifferentGoal,
     actions,
+    backendAvailable,
   } = useChallengeController(user);
   const practiceSession = usePracticeSession();
 
@@ -46,6 +47,11 @@ export default function Challenge() {
       </motion.header>
 
       <ChallengeStreakCard streak={streak} />
+      {!backendAvailable && (
+        <div className="border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-amber-800">
+          Challenge backend is unavailable. Running in local fallback mode.
+        </div>
+      )}
 
       <HydrationReminder
         open={practiceSession.reminder?.shouldShow}

@@ -6,6 +6,13 @@ import { resolveTargetRange } from "./targetRangeUtils.js";
 import { createLocalJsonStore } from "./core/localJsonStore.js";
 import { emitAppEvent } from "./core/appEventBus.js";
 import { practiceSessionService } from "./practiceSessionService.js";
+import {
+  completeChallengeExercise as completeChallengeExerciseApi,
+  getChallengeStreak as getChallengeStreakApi,
+  getTodayChallenge as getTodayChallengeApi,
+  saveGeneratedChallenge,
+  startChallenge as startChallengeApi,
+} from "@/api/authClient";
 
 const STORAGE_KEY = "voiceDailyChallenge";
 const challengeStore = createLocalJsonStore(STORAGE_KEY, () => null);
@@ -108,26 +115,61 @@ function validateResult({ exercise, audioData, analysis }) {
 }
 
 export const challengeSessionService = {
+  _backendAvailable: true,
+
+  async getBackendStreak() {
+    try {
+      const streak = await getChallengeStreakApi();
+      this._backendAvailable = true;
+      return streak;
+    } catch (_error) {
+      this._backendAvailable = false;
+      return challengeStreakService.getState();
+    }
+  },
+
+  isBackendAvailable() {
+    return this._backendAvailable;
+  },
+
   getTargetRange,
 
-  getTodayChallenge(user) {
+  async getTodayChallenge(user) {
     const today = challengeGeneratorService.getToday();
-    const existing = readChallenge();
-
-    if (existing?.date === today) {
-      return existing;
+    try {
+      const payload = await getTodayChallengeApi(today);
+      this._backendAvailable = true;
+      const existing = payload?.challenge;
+      if (existing?.date === today) {
+        writeChallenge(existing);
+        return existing;
+      }
+    } catch (_error) {
+      this._backendAvailable = false;
+      const existing = readChallenge();
+      if (existing?.date === today) {
+        return existing;
+      }
     }
 
     return null;
   },
 
-  generateChallenge(user, exerciseCount, selectedExerciseIds = []) {
-    return writeChallenge(
+  async generateChallenge(user, exerciseCount, selectedExerciseIds = []) {
+    const challenge = writeChallenge(
       challengeGeneratorService.generateDailyChallenge({ user, exerciseCount, selectedExerciseIds })
     );
+    try {
+      const payload = await saveGeneratedChallenge({ date: challenge.date, challenge });
+      this._backendAvailable = true;
+      return writeChallenge(payload.challenge);
+    } catch (_error) {
+      this._backendAvailable = false;
+    }
+    return challenge;
   },
 
-  startChallenge(challenge) {
+  async startChallenge(challenge) {
     const nextChallenge = {
       ...challenge,
       orderLocked: true,
@@ -144,7 +186,18 @@ export const challengeSessionService = {
       })),
     };
 
-    return writeChallenge(nextChallenge);
+    writeChallenge(nextChallenge);
+    try {
+      const payload = await startChallengeApi({
+        date: nextChallenge.date,
+        challenge: nextChallenge,
+      });
+      this._backendAvailable = true;
+      return writeChallenge(payload.challenge);
+    } catch (_error) {
+      this._backendAvailable = false;
+      return nextChallenge;
+    }
   },
 
   reorderExercise(challenge, fromIndex, direction) {
@@ -170,7 +223,7 @@ export const challengeSessionService = {
     });
   },
 
-  completeExercise({ challenge, exerciseIndex, audioData, user }) {
+  async completeExercise({ challenge, exerciseIndex, audioData, user }) {
     const exercise = challenge.exercises[exerciseIndex];
     const analysis = analysisService.process(audioData);
     const validation = validateResult({ exercise, audioData, analysis });
@@ -234,6 +287,17 @@ export const challengeSessionService = {
 
     practiceSessionService.recordCompletion("challenge", exercise.id);
 
-    return { ok: true, error: null, challenge: writeChallenge(nextChallenge), result };
+    writeChallenge(nextChallenge);
+    try {
+      const payload = await completeChallengeExerciseApi({
+        date: nextChallenge.date,
+        challenge: nextChallenge,
+      });
+      this._backendAvailable = true;
+      return { ok: true, error: null, challenge: writeChallenge(payload.challenge), result };
+    } catch (_error) {
+      this._backendAvailable = false;
+      return { ok: true, error: null, challenge: nextChallenge, result };
+    }
   },
 };

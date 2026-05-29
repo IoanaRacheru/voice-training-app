@@ -9,6 +9,10 @@ import { listAnalysisArtifacts } from "@/api/authClient";
 export function useProgressController() {
   const [exerciseSessions, setExerciseSessions] = useState<any[]>([]);
   const [artifacts, setArtifacts] = useState<any[]>([]);
+  const [artifactsApiAvailable, setArtifactsApiAvailable] = useState(true);
+  const [backendStatus, setBackendStatus] = useState(
+    exerciseSessionService.getBackendStatus()
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,6 +21,7 @@ export function useProgressController() {
       const sessions = await exerciseSessionService.getSessions();
       if (alive) {
         setExerciseSessions(Array.isArray(sessions) ? sessions : []);
+        setBackendStatus(exerciseSessionService.getBackendStatus());
       }
     };
     const loadArtifacts = async () => {
@@ -24,9 +29,13 @@ export function useProgressController() {
         const payload = await listAnalysisArtifacts({ limit: 20, offset: 0 });
         if (alive) {
           setArtifacts(Array.isArray(payload?.items) ? payload.items : []);
+          setArtifactsApiAvailable(true);
         }
       } catch (_error) {
-        if (alive) setArtifacts([]);
+        if (alive) {
+          setArtifacts([]);
+          setArtifactsApiAvailable(false);
+        }
       }
     };
     const load = async () => {
@@ -68,5 +77,7 @@ export function useProgressController() {
     pitchData,
     scoreData,
     artifacts,
+    backendStatus,
+    artifactsApiAvailable,
   };
 }

@@ -11,11 +11,10 @@ type UnknownUser = Record<string, unknown> | null | undefined;
  * Keeps page components focused on rendering.
  */
 export function useChallengeController(user: UnknownUser) {
-  const [challenge, setChallenge] = useState(() =>
-    challengeSessionService.getTodayChallenge(user)
-  );
+  const [challenge, setChallenge] = useState<any>(null);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
   const [streak, setStreak] = useState(() => challengeStreakService.getState());
+  const [backendAvailable, setBackendAvailable] = useState(true);
 
   const profileSnapshot = challenge?.profileGoalSnapshot;
   const currentProfileGoal = challengeGeneratorService.normalizeGoal(
@@ -28,9 +27,17 @@ export function useChallengeController(user: UnknownUser) {
   );
 
   const syncTodayChallenge = useCallback(() => {
-    setChallenge(challengeSessionService.getTodayChallenge(user));
-    setActiveExerciseIndex(null);
-    setStreak(challengeStreakService.getState());
+    const run = async () => {
+      const [today, backendStreak] = await Promise.all([
+        challengeSessionService.getTodayChallenge(user),
+        challengeSessionService.getBackendStreak(),
+      ]);
+      setChallenge(today);
+      setActiveExerciseIndex(null);
+      setStreak(backendStreak || challengeStreakService.getState());
+      setBackendAvailable(challengeSessionService.isBackendAvailable());
+    };
+    run();
   }, [user]);
 
   useEffect(() => {
@@ -85,17 +92,19 @@ export function useChallengeController(user: UnknownUser) {
 
   const actions = useMemo(
     () => ({
-      generate(count: number, selectedExerciseIds: string[] = []) {
-        const nextChallenge = challengeSessionService.generateChallenge(user, count, selectedExerciseIds);
+      async generate(count: number, selectedExerciseIds: string[] = []) {
+        const nextChallenge = await challengeSessionService.generateChallenge(user, count, selectedExerciseIds);
         setChallenge(nextChallenge);
         setActiveExerciseIndex(null);
+        setBackendAvailable(challengeSessionService.isBackendAvailable());
         toast.success("Daily challenge generated.");
       },
 
-      startChallenge() {
+      async startChallenge() {
         if (!challenge) return;
-        const nextChallenge = challengeSessionService.startChallenge(challenge);
+        const nextChallenge = await challengeSessionService.startChallenge(challenge);
         setChallenge(nextChallenge);
+        setBackendAvailable(challengeSessionService.isBackendAvailable());
         setActiveExerciseIndex(nextChallenge.currentExerciseIndex || 0);
       },
 
@@ -121,9 +130,11 @@ export function useChallengeController(user: UnknownUser) {
         setActiveExerciseIndex(index);
       },
 
-      completeExercise(nextChallenge: any) {
+      async completeExercise(nextChallenge: any) {
         setChallenge(nextChallenge);
-        setStreak(challengeStreakService.getState());
+        const backendStreak = await challengeSessionService.getBackendStreak();
+        setStreak(backendStreak || challengeStreakService.getState());
+        setBackendAvailable(challengeSessionService.isBackendAvailable());
 
         if (nextChallenge.status === "completed") {
           setActiveExerciseIndex(null);
@@ -148,5 +159,6 @@ export function useChallengeController(user: UnknownUser) {
     currentProfileGoal,
     wasGeneratedFromDifferentGoal,
     actions,
+    backendAvailable,
   };
 }

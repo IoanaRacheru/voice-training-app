@@ -1,60 +1,18 @@
-import keycloak from "@/lib/keycloak";
+import keycloak from "../lib/keycloak";
+import { createAuthClient } from "./authClientFactory";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-
-async function request(path, options = {}) {
-  await keycloak.updateToken(30);
-  const { headers: optHeaders, ...rest } = options;
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${keycloak.token}`,
-      ...optHeaders,
-    },
-    ...rest,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Request failed");
-  return data;
-}
-
-export function getMe() {
-  return request("/api/me");
-}
-
-export function patchMe(updates) {
-  return request("/api/me", {
-    method: "PATCH",
-    body: JSON.stringify(updates),
-  });
-}
-
-export function createSession(session) {
-  return request("/api/sessions", {
-    method: "POST",
-    body: JSON.stringify(session),
-  });
-}
-
-export function getSessions() {
-  return request("/api/sessions");
-}
-
-export function analyzeVoice(payload) {
-  return request("/api/analyze", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export function listAnalysisArtifacts({ limit = 20, offset = 0 } = {}) {
-  const query = new URLSearchParams({
-    limit: String(limit),
-    offset: String(offset),
-  });
-  return request(`/api/analysis-artifacts?${query.toString()}`);
-}
-
-export function getAnalysisArtifact(id) {
-  return request(`/api/analysis-artifacts/${id}`);
-}
+const client = createAuthClient({ keycloakClient: keycloak, apiUrl: API_URL });
+export const getMe = client.getMe;
+export const patchMe = client.patchMe;
+export const createSession = client.createSession;
+export const getSessions = client.getSessions;
+export const analyzeVoice = client.analyzeVoice;
+export const listAnalysisArtifacts = client.listAnalysisArtifacts;
+export const getAnalysisArtifact = client.getAnalysisArtifact;
+export const getTodayChallenge = client.getTodayChallenge;
+export const saveGeneratedChallenge = client.saveGeneratedChallenge;
+export const startChallenge = client.startChallenge;
+export const completeChallengeExercise = client.completeChallengeExercise;
+export const getChallengeStreak = client.getChallengeStreak;
+export const chat = client.chat;

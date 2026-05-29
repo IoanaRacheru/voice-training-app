@@ -11,7 +11,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { TimeSeriesPoint, vocalWeightData } from "./mockVoiceAnalyticsData";
+import { TimeSeriesPoint } from "./mockVoiceAnalyticsData";
 import { VoiceChartCard } from "./VoiceChartCard";
 
 type VocalWeightChartProps = {
@@ -27,10 +27,13 @@ const chartConfig = {
 };
 
 export function VocalWeightChart({
-  data = vocalWeightData,
+  data = [],
   title = "Vocal Weight",
 }: VocalWeightChartProps) {
   const chartData = Array.isArray((data as any)?.vocalWeight) ? (data as any).vocalWeight : data;
+  if (!chartData?.length) {
+    return <VoiceChartCard title={title} description="Estimated vocal intensity balance over the recording window.">No live data yet.</VoiceChartCard>;
+  }
   return (
     <VoiceChartCard
       title={title}

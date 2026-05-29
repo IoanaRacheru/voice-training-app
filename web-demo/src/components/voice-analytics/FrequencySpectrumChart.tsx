@@ -11,10 +11,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  FrequencyBand,
-  frequencySpectrumData,
-} from "./mockVoiceAnalyticsData";
+import { FrequencyBand } from "./mockVoiceAnalyticsData";
 import { VoiceChartCard } from "./VoiceChartCard";
 
 type FrequencySpectrumChartProps = {
@@ -30,10 +27,13 @@ const chartConfig = {
 };
 
 export function FrequencySpectrumChart({
-  data = frequencySpectrumData,
+  data = [],
   title = "Frequency Spectrum",
 }: FrequencySpectrumChartProps) {
   const chartData = Array.isArray((data as any)?.spectrum) ? (data as any).spectrum : data;
+  if (!chartData?.length) {
+    return <VoiceChartCard title={title} description="Snapshot of amplitude distribution across frequency bands.">No live data yet.</VoiceChartCard>;
+  }
   return (
     <VoiceChartCard
       title={title}

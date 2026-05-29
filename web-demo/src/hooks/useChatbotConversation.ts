@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { chat } from "@/api/authClient";
 
 type ChatRole = "assistant" | "user";
 type ChatMessage = {
@@ -27,21 +28,35 @@ const initialMessages: ChatMessage[] = [
 export function useChatbotConversation() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(true);
 
-  const submitDraft = () => {
+  const submitDraft = async () => {
     const text = draft.trim();
     if (!text) return false;
 
-    setMessages((current) => [
-      ...current,
-      { role: "user", text },
-      {
-        role: "assistant",
-        text: "Noted. Keep the next pass measurable: record, listen back, then adjust one variable only.",
-      },
-    ]);
+    setIsSending(true);
+    setMessages((current) => [...current, { role: "user", text }]);
     setDraft("");
-    return true;
+    try {
+      const recentContext = messages.slice(-4).map((m) => `${m.role}: ${m.text}`).join("\n");
+      const response = await chat({ message: text, context: recentContext });
+      setMessages((current) => [...current, { role: "assistant", text: response.reply }]);
+      setBackendAvailable(true);
+      return true;
+    } catch (_error) {
+      setBackendAvailable(false);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          text: "Backend coach is unavailable right now. Try again shortly.",
+        },
+      ]);
+      return false;
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return {
@@ -49,6 +64,7 @@ export function useChatbotConversation() {
     draft,
     setDraft,
     submitDraft,
+    isSending,
+    backendAvailable,
   };
 }
-

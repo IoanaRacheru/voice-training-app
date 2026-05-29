@@ -168,23 +168,46 @@ export default function ExerciseTrainingSession({
       )}
 
       {result && (
-        <div className="grid gap-4 bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)] sm:grid-cols-4">
-          <div>
-            <p className="font-mono text-[11px] uppercase text-muted-foreground">Result</p>
-            <p className="mt-2 font-display text-4xl leading-none">{result.score}</p>
+        <div className="space-y-4 bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div>
+              <p className="font-mono text-[11px] uppercase text-muted-foreground">Result</p>
+              <p className="mt-2 font-display text-4xl leading-none">{result.score}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[11px] uppercase text-muted-foreground">Duration</p>
+              <p className="mt-2 text-lg font-black uppercase">{formatTime(result.duration_seconds)}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[11px] uppercase text-muted-foreground">Status</p>
+              <p className="mt-2 text-lg font-black uppercase">{result.completed ? "Completed" : "Stopped early"}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[11px] uppercase text-muted-foreground">Feedback</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-muted-foreground">{result.feedback}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase text-muted-foreground">Duration</p>
-            <p className="mt-2 text-lg font-black uppercase">{formatTime(result.duration_seconds)}</p>
-          </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase text-muted-foreground">Status</p>
-            <p className="mt-2 text-lg font-black uppercase">{result.completed ? "Completed" : "Stopped early"}</p>
-          </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase text-muted-foreground">Feedback</p>
-            <p className="mt-2 text-sm font-semibold leading-5 text-muted-foreground">{result.feedback}</p>
-          </div>
+          {result.backend_analysis && (
+            <div className="border border-border bg-background p-3">
+              <p className="font-mono text-[11px] uppercase text-muted-foreground">Backend Coach</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {result.backend_analysis.summary || "Analysis completed."}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {result.backend_analysis.practice_next || "Keep practicing with short daily repetitions."}
+              </p>
+              {result.backend_analysis.pronunciation?.score != null && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pronunciation score: {Math.round(result.backend_analysis.pronunciation.score)}
+                </p>
+              )}
+            </div>
+          )}
+          {!result.backend_analysis && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Backend coach feedback unavailable for this session.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -67,7 +67,12 @@ export default function ChallengeExerciseSession({
     setIsProcessing(true);
     try {
       const audioData = await stopRecording();
-      const result = challengeSessionService.completeExercise({ challenge, exerciseIndex, audioData, user });
+      const result = await challengeSessionService.completeExercise({
+        challenge,
+        exerciseIndex,
+        audioData,
+        user,
+      });
       if (!result.ok) {
         setLastResult(null);
         toast.error(result.error);

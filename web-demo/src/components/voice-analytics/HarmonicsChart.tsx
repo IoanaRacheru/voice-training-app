@@ -11,7 +11,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { HarmonicPoint, harmonicsData } from "./mockVoiceAnalyticsData";
+import { HarmonicPoint } from "./mockVoiceAnalyticsData";
 import { VoiceChartCard } from "./VoiceChartCard";
 
 type HarmonicValue = {
@@ -55,11 +55,6 @@ function normalizeHarmonics(data: HarmonicsChartProps["data"]): HarmonicValue[] 
     values = (data as any).harmonics;
   } else if (Array.isArray(data) && data.length && "value" in (data[0] as any)) {
     values = data as unknown as HarmonicValue[];
-  } else {
-    values = harmonicsData.map((point) => ({
-      label: point.label,
-      value: Math.max(point.fundamental, point.overtone),
-    }));
   }
 
   return Array.from({ length: 5 }, (_, index) => {
