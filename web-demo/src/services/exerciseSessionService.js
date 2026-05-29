@@ -1,6 +1,11 @@
 import { MIN_SESSION_DURATION_SECONDS } from "./sessionService.js";
 import { exerciseSessionRepository } from "./exerciseSessionRepository.js";
 import {
+  analyzeVoice,
+  createSession as createSessionApi,
+  getSessions as getSessionsApi,
+} from "@/api/authClient";
+import {
   getSessionFeedback,
   getSessionStatus,
   getTargetHitRate,
@@ -36,9 +41,59 @@ function readBlobAsDataUrl(blob) {
   });
 }
 
+async function decodeAudioForAnalyze(blob) {
+  if (!blob || typeof window === "undefined") return null;
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) return null;
+
+  const audioContext = new AudioContextCtor();
+  try {
+    const buffer = await blob.arrayBuffer();
+    const decoded = await audioContext.decodeAudioData(buffer.slice(0));
+    if (!decoded || decoded.length <= 0) return null;
+    const firstChannel = decoded.getChannelData(0);
+    const maxSamples = 16000 * 30;
+    const trimmed = firstChannel.length > maxSamples ? firstChannel.slice(0, maxSamples) : firstChannel;
+    return {
+      audio_samples: Array.from(trimmed),
+      sample_rate: decoded.sampleRate,
+    };
+  } catch (_error) {
+    return null;
+  } finally {
+    await audioContext.close().catch(() => {});
+  }
+}
+
+function normalizeEnumLike(value, fallback) {
+  if (!value || typeof value !== "string") return fallback;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalized || fallback;
+}
+
+function estimatePitchStability(pitches = []) {
+  const clean = pitches.filter((value) => Number.isFinite(value));
+  if (clean.length < 2) return 0.5;
+  const mean = clean.reduce((total, value) => total + value, 0) / clean.length;
+  const variance =
+    clean.reduce((total, value) => total + (value - mean) ** 2, 0) / clean.length;
+  const stdDev = Math.sqrt(variance);
+  if (!Number.isFinite(mean) || mean <= 0) return 0.5;
+  return Math.max(0, Math.min(1, 1 - Math.min(1, stdDev / mean)));
+}
+
 export const exerciseSessionService = {
-  getSessions() {
-    return exerciseSessionRepository.getAll();
+  async getSessions() {
+    try {
+      const apiSessions = await getSessionsApi();
+      return Array.isArray(apiSessions) ? apiSessions : [];
+    } catch (_error) {
+      return exerciseSessionRepository.getAll();
+    }
   },
 
   validateExerciseSessionData(sessionData) {
@@ -90,6 +145,49 @@ export const exerciseSessionService = {
       completed,
       stopped_early: !completed,
     };
+
+    // Feed real backend analyze pipeline and attach returned diagnostics.
+    try {
+      const audioAnalyzeData = await decodeAudioForAnalyze(sessionData.audioData.blob);
+      const expectedText = sessionData.exercise?.shortInstruction || sessionData.exercise?.name || null;
+      const analyzePayload = {
+        median_pitch_hz: Number.isFinite(validation.analysis.averagePitch)
+          ? validation.analysis.averagePitch
+          : 150.0,
+        pitch_stability: estimatePitchStability(validation.analysis.pitches),
+        pause_ratio: 0.2,
+        spectral_brightness: 0.6,
+        audio_samples: audioAnalyzeData?.audio_samples || null,
+        sample_rate: audioAnalyzeData?.sample_rate || null,
+        expected_text: expectedText,
+      };
+      const analyzeResult = await analyzeVoice(analyzePayload);
+      session.backend_analysis = {
+        summary: analyzeResult.summary,
+        practice_next: analyzeResult.practice_next,
+        llm_coach_feedback: analyzeResult.llm_coach_feedback,
+        vad_used: analyzeResult.vad_used,
+        voice_presentation: analyzeResult.voice_presentation,
+        asr: analyzeResult.asr,
+        pronunciation: analyzeResult.pronunciation,
+      };
+    } catch (_error) {
+      // Keep local save resilient when backend analyze is temporarily unavailable.
+      session.backend_analysis = null;
+    }
+
+    // Persist canonical session to backend when possible.
+    try {
+      await createSessionApi({
+        duration_seconds: session.duration_seconds,
+        average_pitch: Number.isFinite(session.average_pitch) ? session.average_pitch : 150.0,
+        score: Number.isFinite(session.score) ? session.score : 0,
+        exercise_type: normalizeEnumLike(session.exercise_id, "exercise"),
+        goal: normalizeEnumLike(session.goal_type || session.goal, "general_training"),
+      });
+    } catch (_error) {
+      // Local repository remains fallback source if backend persistence fails.
+    }
 
     if (AUDIO_HISTORY_EXERCISE_IDS.has(sessionData.exercise.id)) {
       session.audio_url = await readBlobAsDataUrl(sessionData.audioData.blob);

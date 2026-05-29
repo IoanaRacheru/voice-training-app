@@ -39,3 +39,22 @@ export function createSession(session) {
 export function getSessions() {
   return request("/api/sessions");
 }
+
+export function analyzeVoice(payload) {
+  return request("/api/analyze", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listAnalysisArtifacts({ limit = 20, offset = 0 } = {}) {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return request(`/api/analysis-artifacts?${query.toString()}`);
+}
+
+export function getAnalysisArtifact(id) {
+  return request(`/api/analysis-artifacts/${id}`);
+}
