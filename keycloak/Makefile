@@ -85,7 +85,7 @@ client:
 	    "directAccessGrantsEnabled":true, \
 	    "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
 	    "webOrigins":["$(FRONTEND_ORIGIN)"], \
-	    "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN)"} \
+	    "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN) $(FRONTEND_ORIGIN)/*"} \
 	  }'); \
 	if [ "$$status" = "201" ]; then \
 	  echo "      client created."; \
@@ -106,7 +106,7 @@ client:
 	      "directAccessGrantsEnabled":true, \
 	      "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
 	      "webOrigins":["$(FRONTEND_ORIGIN)"], \
-	      "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN)"} \
+	      "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN) $(FRONTEND_ORIGIN)/*"} \
 	    }'); \
 	  [ "$$status2" = "204" ] || (echo "ERROR: client update failed (HTTP $$status2)" && exit 1); \
 	  echo "      client updated."; \
