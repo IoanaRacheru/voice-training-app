@@ -3,6 +3,31 @@
 ## 2026-05-29
 
 ### Completed
+- Added authenticated Challenge backend APIs:
+  - `GET /api/challenge/today?date=YYYY-MM-DD`
+  - `POST /api/challenge/generate`
+  - `POST /api/challenge/start`
+  - `POST /api/challenge/complete-exercise`
+  - `GET /api/challenge/streak`
+- Added authenticated Chat API:
+  - `POST /api/chat`
+- Added Mongo-backed challenge persistence:
+  - `challenge_states` collection (unique index on `user_id + date`)
+  - `challenge_streaks` collection (unique index on `user_id`)
+- Enforced strict server-side challenge payload validation for state transitions.
+- Implemented streak policy hardening:
+  - same-day completion deduplication
+  - increment on consecutive-day completion
+  - reset current streak to `1` after missed-day gaps
+- Added backend tests for:
+  - challenge route validation + streak update behavior
+  - chat route success/validation
+  - challenge streak computation edge cases
+- Wired frontend challenge flow to backend-first persistence with local fallback.
+- Wired frontend chatbot to backend `/api/chat` with loading/error states.
+- Removed active-screen mock analytics defaults in voice analytics charts (real data or explicit empty state only).
+- Runtime-verified new endpoints on rebuilt API container:
+  - `/api/challenge/today`, `/api/challenge/streak`, `/api/chat`.
 - Added production Docker build profile and smoke target:
   - `api/Dockerfile.prod`
   - `make build-api-image-prod`
