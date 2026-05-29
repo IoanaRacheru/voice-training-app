@@ -58,5 +58,25 @@ pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> 
         )
         .await?;
 
+    let challenge_states = db.collection::<mongodb::bson::Document>("challenge_states");
+    challenge_states
+        .create_index(
+            IndexModel::builder()
+                .keys(doc! { "user_id": 1, "date": 1 })
+                .options(IndexOptions::builder().unique(true).build())
+                .build(),
+        )
+        .await?;
+
+    let challenge_streaks = db.collection::<mongodb::bson::Document>("challenge_streaks");
+    challenge_streaks
+        .create_index(
+            IndexModel::builder()
+                .keys(doc! { "user_id": 1 })
+                .options(IndexOptions::builder().unique(true).build())
+                .build(),
+        )
+        .await?;
+
     Ok(db)
 }

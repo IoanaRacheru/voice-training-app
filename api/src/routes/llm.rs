@@ -58,7 +58,8 @@ mod tests {
     use crate::config::Config;
     use crate::repositories::{
         analysis::MongoAnalysisRepository, profile::MongoProfileRepository,
-        session::MongoSessionRepository,
+        challenge::MongoChallengeRepository,
+            session::MongoSessionRepository,
     };
     use app_core::{
         Engine,
@@ -117,6 +118,9 @@ mod tests {
                 client.database("voice_training"),
             )),
             session_repo: Arc::new(MongoSessionRepository::new(
+                client.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
                 client.database("voice_training"),
             )),
         });

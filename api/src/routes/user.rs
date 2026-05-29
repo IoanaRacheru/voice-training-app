@@ -152,6 +152,7 @@ mod tests {
         repositories::{
             analysis::MongoAnalysisRepository,
             profile::{ProfilePatch, ProfileRepository},
+            challenge::MongoChallengeRepository,
             session::MongoSessionRepository,
         },
     };
@@ -247,6 +248,9 @@ mod tests {
                 profile: Arc::new(Mutex::new(profile)),
             }),
             session_repo: Arc::new(MongoSessionRepository::new(
+                client.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
                 client.database("voice_training"),
             )),
         })

@@ -172,6 +172,7 @@ mod tests {
         repositories::{
             analysis::{AnalysisArtifact, AnalysisRepository},
             profile::MongoProfileRepository,
+            challenge::MongoChallengeRepository,
             session::MongoSessionRepository,
         },
     };
@@ -267,6 +268,9 @@ mod tests {
                 client.database("voice_training"),
             )),
             session_repo: Arc::new(MongoSessionRepository::new(
+                client.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
                 client.database("voice_training"),
             )),
         })

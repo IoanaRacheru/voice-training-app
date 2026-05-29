@@ -271,6 +271,7 @@ mod tests {
         models::session::Session,
         repositories::{
             analysis::MongoAnalysisRepository,
+            challenge::MongoChallengeRepository,
             profile::MongoProfileRepository,
             session::{CreateSessionInput, SessionRepository},
         },
@@ -363,6 +364,9 @@ mod tests {
             session_repo: Arc::new(MemorySessionRepository {
                 sessions: Arc::new(Mutex::new(Vec::new())),
             }),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                client.database("voice_training"),
+            )),
         })
     }
 

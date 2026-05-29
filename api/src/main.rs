@@ -22,6 +22,7 @@ use axum::{Router, middleware as axum_middleware};
 use mongodb::Database;
 use repositories::{
     analysis::{AnalysisRepository, MongoAnalysisRepository},
+    challenge::{ChallengeRepository, MongoChallengeRepository},
     profile::{MongoProfileRepository, ProfileRepository},
     session::{MongoSessionRepository, SessionRepository},
 };
@@ -54,6 +55,8 @@ pub struct AppState {
     pub profile_repo: Arc<dyn ProfileRepository>,
     /// Session repository abstraction.
     pub session_repo: Arc<dyn SessionRepository>,
+    /// Challenge repository abstraction.
+    pub challenge_repo: Arc<dyn ChallengeRepository>,
 }
 
 /// Build a coach implementation from runtime configuration.
@@ -289,11 +292,14 @@ async fn main() {
         analysis_repo: Arc::new(MongoAnalysisRepository::new(database.clone())),
         profile_repo: Arc::new(MongoProfileRepository::new(database.clone())),
         session_repo: Arc::new(MongoSessionRepository::new(database.clone())),
+        challenge_repo: Arc::new(MongoChallengeRepository::new(database.clone())),
     });
 
     let protected = Router::new()
         .merge(routes::user::router())
         .merge(routes::sessions::router())
+        .merge(routes::challenge::router())
+        .merge(routes::chat::router())
         .merge(routes::artifacts::router())
         .merge(routes::analysis::router(config.analyze_max_body_bytes))
         .route_layer(axum_middleware::from_fn_with_state(

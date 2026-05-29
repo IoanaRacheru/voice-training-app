@@ -33,7 +33,13 @@ impl Modify for SecurityAddon {
     paths(
         crate::routes::health::health,
         crate::routes::llm::health,
+        crate::routes::chat::chat,
         crate::routes::analysis::analyze,
+        crate::routes::challenge::get_today,
+        crate::routes::challenge::generate,
+        crate::routes::challenge::start,
+        crate::routes::challenge::complete_exercise,
+        crate::routes::challenge::get_streak,
         crate::routes::artifacts::list_artifacts,
         crate::routes::artifacts::get_artifact,
         crate::routes::user::me,
@@ -50,6 +56,13 @@ impl Modify for SecurityAddon {
             crate::routes::artifacts::ArtifactListResponse,
             crate::routes::health::HealthResponse,
             crate::routes::llm::LlmHealthResponse,
+            crate::routes::chat::ChatRequest,
+            crate::routes::chat::ChatResponse,
+            crate::routes::challenge::TodayQuery,
+            crate::routes::challenge::UpsertChallengeRequest,
+            crate::routes::challenge::TodayResponse,
+            crate::routes::challenge::ChallengeEnvelope,
+            crate::routes::challenge::StreakResponse,
             crate::routes::user::MeResponse,
             crate::routes::user::PatchMeRequest,
             crate::routes::user::PatchMeResponse,
@@ -65,6 +78,8 @@ impl Modify for SecurityAddon {
         (name = "Health"),
         (name = "Analysis"),
         (name = "LLM"),
+        (name = "Chat"),
+        (name = "Challenge"),
         (name = "User"),
         (name = "Sessions")
     ),
@@ -89,6 +104,8 @@ mod tests {
         assert!(paths.contains_key("/health"));
         assert!(paths.contains_key("/api/llm/health"));
         assert!(paths.contains_key("/api/analyze"));
+        assert!(paths.contains_key("/api/chat"));
+        assert!(paths.contains_key("/api/challenge/today"));
         assert!(paths.contains_key("/api/analysis-artifacts"));
         assert!(paths.contains_key("/api/analysis-artifacts/{id}"));
         assert!(paths.contains_key("/api/me"));

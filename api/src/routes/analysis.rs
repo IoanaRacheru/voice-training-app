@@ -151,6 +151,7 @@ mod tests {
         repositories::{
             analysis::{AnalysisArtifact, AnalysisRepository},
             profile::MongoProfileRepository,
+            challenge::MongoChallengeRepository,
             session::MongoSessionRepository,
         },
     };
@@ -320,6 +321,9 @@ mod tests {
             session_repo: Arc::new(MongoSessionRepository::new(
                 mongo.database("voice_training"),
             )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                mongo.database("voice_training"),
+            )),
         });
 
         let user = AppwriteUser {
@@ -404,6 +408,9 @@ mod tests {
                 mongo.database("voice_training"),
             )),
             session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
                 mongo.database("voice_training"),
             )),
         });
@@ -492,6 +499,9 @@ mod tests {
             session_repo: Arc::new(MongoSessionRepository::new(
                 mongo.database("voice_training"),
             )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                mongo.database("voice_training"),
+            )),
         });
 
         let user = AppwriteUser {
@@ -568,6 +578,9 @@ mod tests {
                 mongo.database("voice_training"),
             )),
             session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
                 mongo.database("voice_training"),
             )),
         });

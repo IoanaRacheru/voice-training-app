@@ -145,6 +145,7 @@ mod tests {
         config::Config,
         repositories::{
             analysis::MongoAnalysisRepository, profile::MongoProfileRepository,
+            challenge::MongoChallengeRepository,
             session::MongoSessionRepository,
         },
     };
@@ -233,6 +234,9 @@ xDcBwamKcKejhkO6y4v4yfFcp7clWuANXQ3TGMRdin2qDmObIr52U3QjWE9C9E+U
             analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
             profile_repo: Arc::new(MongoProfileRepository::new(client.database("voice_training"))),
             session_repo: Arc::new(MongoSessionRepository::new(client.database("voice_training"))),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                client.database("voice_training"),
+            )),
         })
     }
 
