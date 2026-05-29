@@ -1,6 +1,4 @@
-/**
- * Reusable structure for guided exercise metadata.
- */
+
 export type ExerciseExperience = {
   focus: string;
   icon: "timer" | "hydration" | "breath" | "resonance" | "larynx";
@@ -9,19 +7,18 @@ export type ExerciseExperience = {
   extraTip?: string;
 };
 
-/**
- * Core exercise contract used across list, details, and sessions.
- */
+
 export type VoiceExercise = {
   id: string;
   name: string;
   explanation: string;
   howTo: string;
   examples: string[];
+  readingPassageTitle?: string;
+  readingPassageLines?: string[];
   trains: string;
   goal: string;
   goalType: string;
   goalLabel: string;
   experience?: ExerciseExperience;
 };
-

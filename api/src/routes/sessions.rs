@@ -16,8 +16,9 @@ const MAX_DURATION_SECONDS: u32 = 86_400;
 const MIN_AVERAGE_PITCH: f64 = 50.0;
 const MAX_AVERAGE_PITCH: f64 = 2_000.0;
 const MAX_ENUM_LIKE_LEN: usize = 64;
+const MAX_AUDIO_DATA_URL_LEN: usize = 8 * 1024 * 1024;
 
-/// Register training-session routes.
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/sessions", post(create))
@@ -99,6 +100,7 @@ pub struct CreateRequest {
     pub exercise_type: String,
     #[serde(deserialize_with = "deserialize_enum_like_string")]
     pub goal: String,
+    pub audio_data_url: Option<String>,
 }
 
 const VALID_EXERCISE_TYPES: &[&str] = &["pitch", "resonance", "intonation", "breath_control"];
@@ -139,10 +141,22 @@ fn validate_create(body: &CreateRequest) -> Result<(), AppError> {
             VALID_GOALS.join(", ")
         )));
     }
+    if let Some(audio_data_url) = &body.audio_data_url {
+        if audio_data_url.len() > MAX_AUDIO_DATA_URL_LEN {
+            return Err(AppError::Validation(format!(
+                "audio_data_url must be <= {MAX_AUDIO_DATA_URL_LEN} bytes"
+            )));
+        }
+        if !audio_data_url.starts_with("data:audio/") {
+            return Err(AppError::Validation(
+                "audio_data_url must be an audio data URL".into(),
+            ));
+        }
+    }
     Ok(())
 }
 
-/// Create a training session for the authenticated user.
+
 #[utoipa::path(
     post,
     path = "/api/sessions",
@@ -172,6 +186,7 @@ pub async fn create(
             score: body.score,
             exercise_type: body.exercise_type,
             goal: body.goal,
+            audio_data_url: body.audio_data_url,
         })
         .await?;
 
@@ -181,7 +196,7 @@ pub async fn create(
     }))
 }
 
-/// List sessions for the authenticated user, most recent first.
+
 #[utoipa::path(
     get,
     path = "/api/sessions",
@@ -212,6 +227,7 @@ pub async fn list(
                 score: s.score,
                 exercise_type: s.exercise_type.clone(),
                 goal: s.goal.clone(),
+                audio_url: s.audio_data_url.clone(),
             }
         })
         .collect();
@@ -219,32 +235,34 @@ pub async fn list(
     Ok(Json(body))
 }
 
-/// Response payload for `POST /api/sessions`.
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct CreateResponse {
-    /// Inserted session identifier in hex format.
+    
     pub id: Option<String>,
-    /// Human-readable operation status.
+    
     pub message: String,
 }
 
-/// Session payload returned by `GET /api/sessions`.
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SessionItem {
-    /// Session identifier in hex format.
+    
     pub id: Option<String>,
-    /// UTC session timestamp in RFC 3339 format.
+    
     pub date: String,
-    /// Session duration in seconds.
+    
     pub duration_seconds: u32,
-    /// Average pitch estimate in Hz.
+    
     pub average_pitch: f64,
-    /// Session score in `[0, 100]`.
+    
     pub score: u32,
-    /// Exercise type tag.
+    
     pub exercise_type: String,
-    /// Goal tag.
+    
     pub goal: String,
+    
+    pub audio_url: Option<String>,
 }
 
 #[cfg(test)]
@@ -296,6 +314,7 @@ mod tests {
                 score: input.score,
                 exercise_type: input.exercise_type,
                 goal: input.goal,
+                audio_data_url: input.audio_data_url,
             });
             Ok(Some("fake-id".into()))
         }
@@ -386,6 +405,7 @@ mod tests {
                 score: 88,
                 exercise_type: "pitch".into(),
                 goal: "feminine".into(),
+                audio_data_url: Some("data:audio/webm;base64,AAAA".into()),
             }),
         )
         .await
@@ -394,6 +414,7 @@ mod tests {
         let list_resp = list(State(state), Extension(user)).await.expect("list ok");
         assert_eq!(list_resp.0.len(), 1);
         assert_eq!(list_resp.0[0].exercise_type, "pitch");
+        assert!(list_resp.0[0].audio_url.is_some());
     }
 
     #[tokio::test]
@@ -412,6 +433,7 @@ mod tests {
                 score: 88,
                 exercise_type: "pitch".into(),
                 goal: "feminine".into(),
+                audio_data_url: None,
             }),
         )
         .await

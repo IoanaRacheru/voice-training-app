@@ -8,14 +8,14 @@ export type SessionVisualAidType =
   | "larynx"
   | "general";
 
-/**
- * Declarative voice analytics tool descriptor used for card lists and sessions.
- */
+
 export type VoiceAnalyticsTool = {
   id: string;
   name: string;
   description: string;
   shortInstruction: string;
+  readingPassageTitle?: string;
+  readingPassageLines?: string[];
   visualAid: SessionVisualAidType;
   showReset: boolean;
   requiresPitchGraph: boolean;

@@ -37,7 +37,7 @@ const HARMONIC_DEFINITIONS: Record<string, string> = {
 
 const chartConfig = {
   value: {
-    label: "Level",
+    label: "Relative level (%)",
     color: "#68A691",
   },
 };
@@ -90,7 +90,7 @@ function HarmonicTooltip({ active, payload }: any) {
 
   return (
     <div className="max-w-64 rounded-[4px] border border-border bg-card p-3 text-xs shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
-      <p className="font-black uppercase text-foreground">{point.label}: {point.value}</p>
+      <p className="font-black uppercase text-foreground">{point.label}: {point.value}%</p>
       <p className="mt-1 leading-5 text-muted-foreground">{point.definition}</p>
     </div>
   );
@@ -103,7 +103,7 @@ export function HarmonicsChart({ data, title = "Harmonics" }: HarmonicsChartProp
   return (
     <VoiceChartCard
       title={title}
-      description="Live harmonic levels from H1 to H5."
+      description="Live harmonic relative levels (%) from H1 to H5."
     >
       <div className="space-y-4">
         <ChartContainer config={chartConfig} className="h-[240px] w-full">
@@ -112,7 +112,7 @@ export function HarmonicsChart({ data, title = "Harmonics" }: HarmonicsChartProp
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} width={30} domain={[0, 100]} />
             <ChartTooltip content={<HarmonicTooltip />} />
-            <Bar dataKey="value" name="Level" fill="var(--color-value)" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="value" name="Relative level (%)" fill="var(--color-value)" radius={[4, 4, 0, 0]}>
               <LabelList dataKey="value" position="top" className="fill-foreground text-xs font-bold" />
             </Bar>
           </BarChart>

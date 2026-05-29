@@ -3,39 +3,39 @@ use utoipa::ToSchema;
 
 use crate::errors::CoreError;
 
-/// Prosodic metrics derived from pitch and pause behavior.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProsodyOutput {
-    /// Pitch stability score in `[0, 1]`.
+    
     pub stability: f64,
-    /// Pause ratio in `[0, 1]`.
+    
     pub pause_ratio: f64,
-    /// Rhythm quality proxy in `[0, 1]`.
+    
     pub rhythm_score: f64,
 }
 
-/// Voice presentation estimate with confidence metadata.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct VoicePresentationOutput {
-    /// Estimated score in `[0, 100]`.
+    
     pub score: f64,
-    /// Confidence estimate in `[0, 1]`.
+    
     pub confidence: f64,
-    /// Leaning label for the estimate.
+    
     pub label: String,
-    /// Explicit uncertainty disclaimer.
+    
     pub uncertainty_note: String,
 }
 
-/// Prosody analysis tool contract.
+
 pub trait ProsodyTool: Send + Sync {
-    /// Analyze prosody from precomputed stability and pause metrics.
+    
     fn analyze(&self, pitch_stability: f64, pause_ratio: f64) -> Result<ProsodyOutput, CoreError>;
 }
 
-/// Voice presentation estimation tool contract.
+
 pub trait VoicePresentationTool: Send + Sync {
-    /// Estimate voice presentation from acoustic/prosodic features.
+    
     fn estimate(
         &self,
         median_pitch_hz: f64,
@@ -44,7 +44,7 @@ pub trait VoicePresentationTool: Send + Sync {
     ) -> Result<VoicePresentationOutput, CoreError>;
 }
 
-/// Baseline deterministic prosody tool used for MVP/testing.
+
 #[derive(Default)]
 pub struct DeterministicDspProsodyTool;
 
@@ -77,7 +77,7 @@ impl ProsodyTool for DeterministicDspProsodyTool {
     }
 }
 
-/// Baseline deterministic voice presentation estimator used for MVP/testing.
+
 #[derive(Default)]
 pub struct DeterministicDspVoicePresentationTool;
 
@@ -102,8 +102,8 @@ impl VoicePresentationTool for DeterministicDspVoicePresentationTool {
         let normalized_pitch = ((median_pitch_hz - 80.0) / (300.0 - 80.0)).clamp(0.0, 1.0);
         let pitch_score = smoothstep(normalized_pitch);
         let brightness_score = smoothstep(spectral_brightness.clamp(0.0, 1.0));
-        let rhythm_component = (prosody.rhythm_score * 0.7 + (1.0 - prosody.pause_ratio) * 0.3)
-            .clamp(0.0, 1.0);
+        let rhythm_component =
+            (prosody.rhythm_score * 0.7 + (1.0 - prosody.pause_ratio) * 0.3).clamp(0.0, 1.0);
         let score = (pitch_score * 0.45
             + brightness_score * 0.2
             + prosody.stability * 0.2
@@ -111,7 +111,11 @@ impl VoicePresentationTool for DeterministicDspVoicePresentationTool {
             * 100.0;
 
         let stability_guard = if prosody.stability < 0.35 { 0.12 } else { 0.0 };
-        let pause_guard = if prosody.pause_ratio > 0.45 { 0.15 } else { 0.0 };
+        let pause_guard = if prosody.pause_ratio > 0.45 {
+            0.15
+        } else {
+            0.0
+        };
         let confidence = (0.48
             + prosody.stability * 0.24
             + prosody.rhythm_score * 0.2

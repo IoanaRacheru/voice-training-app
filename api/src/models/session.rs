@@ -12,4 +12,6 @@ pub struct Session {
     pub score: u32,
     pub exercise_type: String,
     pub goal: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audio_data_url: Option<String>,
 }

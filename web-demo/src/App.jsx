@@ -29,6 +29,7 @@ const AuthenticatedApp = () => {
         <Route path="/progress" element={<Progress />} />
         <Route path="/chatbot" element={<Chatbot />} />
         <Route path="/tutorials" element={<Tutorials />} />
+        <Route path="/tutorials/:tutorialId" element={<Tutorials />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

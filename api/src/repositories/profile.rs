@@ -1,31 +1,33 @@
 use async_trait::async_trait;
-use mongodb::bson::{Document, doc};
+use mongodb::bson::{Bson, Document, doc};
 
-use crate::models::profile::Profile;
+use crate::models::profile::{InitialVoiceSample, Profile};
 
-/// Mutable subset of profile fields accepted by `PATCH /api/me`.
+
 #[derive(Debug, Clone, Default)]
 pub struct ProfilePatch {
-    /// Optional voice-goal value.
+    
     pub voice_goal: Option<String>,
-    /// Optional experience-level value.
+    
     pub experience_level: Option<String>,
-    /// Optional target pitch range.
+    
     pub target_pitch_range: Option<Vec<f64>>,
-    /// Optional training focus list.
+    
     pub training_focus: Option<Vec<String>>,
+    
+    pub initial_voice_sample: Option<Option<InitialVoiceSample>>,
 }
 
-/// Repository abstraction for user profile persistence.
+
 #[async_trait]
 pub trait ProfileRepository: Send + Sync {
-    /// Fetch a profile by authenticated user ID.
+    
     async fn find_by_user_id(
         &self,
         user_id: &str,
     ) -> Result<Option<Profile>, mongodb::error::Error>;
 
-    /// Upsert profile fields for a user.
+    
     async fn upsert_by_user_id(
         &self,
         user_id: &str,
@@ -34,13 +36,13 @@ pub trait ProfileRepository: Send + Sync {
     ) -> Result<(), mongodb::error::Error>;
 }
 
-/// MongoDB-backed implementation of [`ProfileRepository`].
+
 pub struct MongoProfileRepository {
     db: mongodb::Database,
 }
 
 impl MongoProfileRepository {
-    /// Create a profile repository bound to a MongoDB database handle.
+    
     pub fn new(db: mongodb::Database) -> Self {
         Self { db }
     }
@@ -86,6 +88,18 @@ fn build_profile_set_doc(email: &str, patch: ProfilePatch) -> Document {
     if let Some(v) = patch.training_focus {
         set.insert("training_focus", v);
     }
+    if let Some(v) = patch.initial_voice_sample {
+        match v {
+            Some(sample) => {
+                let bson = mongodb::bson::to_bson(&sample)
+                    .unwrap_or(Bson::Document(doc! {}));
+                set.insert("initial_voice_sample", bson);
+            }
+            None => {
+                set.insert("initial_voice_sample", Bson::Null);
+            }
+        }
+    }
     set
 }
 
@@ -102,6 +116,7 @@ mod tests {
                 experience_level: None,
                 target_pitch_range: Some(vec![160.0, 220.0]),
                 training_focus: None,
+                initial_voice_sample: None,
             },
         );
         assert!(doc.get("email").is_some());

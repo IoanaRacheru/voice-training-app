@@ -6,12 +6,12 @@ use utoipa::ToSchema;
 
 use crate::{AppState, auth::AppwriteUser, errors::AppError, repositories::profile::ProfilePatch};
 
-/// Register profile routes.
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/api/me", get(me).patch(patch_me))
 }
 
-/// Return the authenticated user's profile envelope.
+
 #[utoipa::path(
     get,
     path = "/api/me",
@@ -30,14 +30,21 @@ pub async fn me(
 ) -> Result<Json<MeResponse>, AppError> {
     let profile = state.profile_repo.find_by_user_id(&user.id).await?;
 
-    let (voice_goal, experience_level, target_pitch_range, training_focus) = match profile {
+    let (
+        voice_goal,
+        experience_level,
+        target_pitch_range,
+        training_focus,
+        initial_voice_sample,
+    ) = match profile {
         Some(p) => (
             p.voice_goal,
             p.experience_level,
             p.target_pitch_range,
             p.training_focus,
+            p.initial_voice_sample,
         ),
-        None => (None, None, None, None),
+        None => (None, None, None, None, None),
     };
 
     Ok(Json(MeResponse {
@@ -47,41 +54,46 @@ pub async fn me(
         experience_level,
         target_pitch_range,
         training_focus,
+        initial_voice_sample,
     }))
 }
 
-/// Response payload for `GET /api/me`.
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct MeResponse {
-    /// Authenticated user ID.
+    
     pub user_id: String,
-    /// Authenticated user email.
+    
     pub email: String,
-    /// Optional selected voice goal.
+    
     pub voice_goal: Option<String>,
-    /// Optional experience level.
+    
     pub experience_level: Option<String>,
-    /// Optional target pitch range in Hz.
+    
     pub target_pitch_range: Option<Vec<f64>>,
-    /// Optional training-focus tags.
+    
     pub training_focus: Option<Vec<String>>,
+    
+    pub initial_voice_sample: Option<crate::models::profile::InitialVoiceSample>,
 }
 
-/// Request payload for `PATCH /api/me`.
+
 #[derive(Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PatchMeRequest {
-    /// Optional voice goal.
+    
     pub voice_goal: Option<String>,
-    /// Optional experience level.
+    
     pub experience_level: Option<String>,
-    /// Optional target pitch range.
+    
     pub target_pitch_range: Option<Vec<f64>>,
-    /// Optional training-focus tags.
+    
     pub training_focus: Option<Vec<String>>,
+    
+    pub initial_voice_sample: Option<Option<crate::models::profile::InitialVoiceSample>>,
 }
 
-/// Upsert profile fields for the authenticated user.
+
 #[utoipa::path(
     patch,
     path = "/api/me",
@@ -111,6 +123,7 @@ pub async fn patch_me(
                 experience_level: body.experience_level,
                 target_pitch_range: body.target_pitch_range,
                 training_focus: body.training_focus,
+                initial_voice_sample: body.initial_voice_sample,
             },
         )
         .await?;
@@ -120,10 +133,10 @@ pub async fn patch_me(
     }))
 }
 
-/// Response payload for `PATCH /api/me`.
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PatchMeResponse {
-    /// Human-readable operation status.
+    
     pub message: String,
 }
 
@@ -151,8 +164,8 @@ mod tests {
         models::profile::Profile,
         repositories::{
             analysis::MongoAnalysisRepository,
-            profile::{ProfilePatch, ProfileRepository},
             challenge::MongoChallengeRepository,
+            profile::{ProfilePatch, ProfileRepository},
             session::MongoSessionRepository,
         },
     };
@@ -184,6 +197,7 @@ mod tests {
                 experience_level: None,
                 target_pitch_range: None,
                 training_focus: None,
+                initial_voice_sample: None,
             });
             if patch.voice_goal.is_some() {
                 current.voice_goal = patch.voice_goal;
@@ -197,7 +211,9 @@ mod tests {
             if patch.training_focus.is_some() {
                 current.training_focus = patch.training_focus;
             }
-            *guard = Some(current);
+            if patch.initial_voice_sample.is_some() {
+                current.initial_voice_sample = patch.initial_voice_sample.flatten();
+            }
             Ok(())
         }
     }
@@ -262,10 +278,11 @@ mod tests {
             id: None,
             appwrite_user_id: "u-1".into(),
             voice_goal: Some("feminine".into()),
-            experience_level: Some("beginner".into()),
-            target_pitch_range: Some(vec![160.0, 220.0]),
-            training_focus: Some(vec!["pitch".into()]),
-        }))
+                experience_level: Some("beginner".into()),
+                target_pitch_range: Some(vec![160.0, 220.0]),
+                training_focus: Some(vec!["pitch".into()]),
+                initial_voice_sample: None,
+            }))
         .await;
         let user = AppwriteUser {
             id: "u-1".into(),
@@ -291,6 +308,7 @@ mod tests {
                 experience_level: Some("intermediate".into()),
                 target_pitch_range: None,
                 training_focus: Some(vec!["resonance".into()]),
+                initial_voice_sample: None,
             }),
         )
         .await

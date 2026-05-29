@@ -13,16 +13,17 @@ const COUNT_OPTIONS = [
 type ChallengeSetupProps = {
   hasProfileGoal: boolean;
   onGenerate: (count: number, selectedExerciseIds: string[]) => void;
+  onGenerateWithAi: () => void;
 };
 
-export default function ChallengeSetup({ hasProfileGoal, onGenerate }: ChallengeSetupProps) {
+export default function ChallengeSetup({ hasProfileGoal, onGenerate, onGenerateWithAi }: ChallengeSetupProps) {
   const [countValue, setCountValue] = useState<number | "custom">(5);
   const [customCount, setCustomCount] = useState(4);
   const maxAvailable = challengeService.getAvailableExercises().length;
   const selectedCount = Math.max(1, Math.min(maxAvailable, countValue === "custom" ? customCount : countValue));
 
   return (
-    <section className="bg-card p-5 shadow-[0_24px_70px_rgba(105,79,93,0.07)]">
+    <section className="bg-card p-5 shadow-[0_24px_70px_rgba(105,79,93,0.07)]" data-testid="challenge-setup">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="font-mono text-[11px] uppercase text-muted-foreground">Daily setup</p>
@@ -34,9 +35,14 @@ export default function ChallengeSetup({ hasProfileGoal, onGenerate }: Challenge
           )}
         </div>
 
-        <Button onClick={() => onGenerate(selectedCount, [])} size="lg">
-          Generate challenge
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={onGenerateWithAi} variant="outline" size="lg" data-testid="challenge-generate-ai-button">
+            Generate with AI
+          </Button>
+          <Button onClick={() => onGenerate(selectedCount, [])} size="lg" data-testid="challenge-generate-button">
+            Generate challenge
+          </Button>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-4">

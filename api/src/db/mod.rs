@@ -14,7 +14,7 @@ pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> 
         .default_database()
         .unwrap_or_else(|| client.database("voice_training"));
 
-    // Unique index on profiles.appwrite_user_id
+    
     let profiles = db.collection::<mongodb::bson::Document>("profiles");
     profiles
         .create_index(
@@ -25,7 +25,7 @@ pub async fn init(mongodb_uri: &str) -> Result<Database, mongodb::error::Error> 
         )
         .await?;
 
-    // Compound index on sessions for efficient per-user queries sorted by date
+    
     let sessions = db.collection::<mongodb::bson::Document>("sessions");
     sessions
         .create_index(

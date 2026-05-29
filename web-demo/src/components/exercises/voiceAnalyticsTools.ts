@@ -5,17 +5,18 @@ import {
   VocalWeightChart,
   VolumeChart,
 } from "@/components/voice-analytics";
+import { RAINBOW_PASSAGE_LINES, RAINBOW_PASSAGE_TITLE } from "@/data/readingPassages";
 import type { VoiceAnalyticsTool } from "@/features/exercises/toolTypes";
 
-/**
- * Config-driven catalog for Voice Analytics tools.
- */
+
 export const voiceAnalyticsTools: VoiceAnalyticsTool[] = [
   {
     id: "vocal-weight",
     name: "Vocal Weight",
     description: "Track voice weight stability while recording.",
     shortInstruction: "Use a comfortable sustained sound and keep intensity steady while monitoring weight changes.",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
     visualAid: "general",
     showReset: true,
     requiresPitchGraph: false,
@@ -28,6 +29,8 @@ export const voiceAnalyticsTools: VoiceAnalyticsTool[] = [
     name: "Volume Monitor",
     description: "Visualize loudness consistency through the take.",
     shortInstruction: "Read one short phrase repeatedly and keep loudness even from start to finish.",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
     visualAid: "breathing",
     showReset: true,
     requiresPitchGraph: false,
@@ -40,6 +43,8 @@ export const voiceAnalyticsTools: VoiceAnalyticsTool[] = [
     name: "Harmonics",
     description: "Inspect harmonic balance alongside live recording.",
     shortInstruction: "Sustain an easy vowel and compare harmonic shape while keeping a relaxed tone.",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
     visualAid: "resonance",
     showReset: true,
     requiresPitchGraph: false,
@@ -52,6 +57,8 @@ export const voiceAnalyticsTools: VoiceAnalyticsTool[] = [
     name: "Frequency Spectrum",
     description: "View distribution of voice energy by frequency bands.",
     shortInstruction: "Speak naturally for a few seconds and observe where most voice energy sits in the spectrum.",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
     visualAid: "pitch",
     showReset: true,
     requiresPitchGraph: true,
@@ -64,6 +71,8 @@ export const voiceAnalyticsTools: VoiceAnalyticsTool[] = [
     name: "Spectrogram",
     description: "See spectral intensity over time in one view.",
     shortInstruction: "Hold a steady sound, then vary tone slightly and watch how the spectrogram pattern shifts.",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
     visualAid: "humming",
     showReset: true,
     requiresPitchGraph: true,

@@ -14,7 +14,7 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10">
+    <div className="mx-auto max-w-5xl space-y-10" data-testid="page-chatbot">
       <motion.header initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <p className="mb-3 font-mono text-[11px] uppercase text-muted-foreground">Coach channel</p>
         <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">Chatbot</h1>
@@ -39,13 +39,14 @@ export default function Chatbot() {
           <span className="font-mono text-[11px] uppercase text-muted-foreground">Sustained tone</span>
         </div>
 
-        <div className="max-h-[56vh] min-h-[390px] space-y-4 overflow-y-auto p-5 md:p-7">
+        <div className="max-h-[56vh] min-h-[390px] space-y-4 overflow-y-auto p-5 md:p-7" data-testid="chat-transcript">
           {messages.map((message, index) => {
             const isUser = message.role === "user";
 
             return (
               <article
                 key={`${message.role}-${index}`}
+                data-testid="chat-message"
                 className={`max-w-3xl border-l-2 px-4 py-3 ${
                   isUser ? "ml-auto border-foreground bg-background" : "mr-auto border-primary bg-card"
                 }`}
@@ -61,12 +62,13 @@ export default function Chatbot() {
 
         <form onSubmit={handleSubmit} className="grid gap-3 border-t border-border bg-background p-4 md:grid-cols-[1fr_auto]">
           <input
+            data-testid="chat-input"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Type a training note or coaching question"
             aria-label="Message"
           />
-          <Button type="submit" className="h-full min-h-11" disabled={isSending}>
+          <Button type="submit" className="h-full min-h-11" disabled={isSending} data-testid="chat-send-button">
             <Send className="h-4 w-4" />
             {isSending ? "Sending..." : "Send"}
           </Button>

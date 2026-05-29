@@ -18,11 +18,9 @@
       color: #111111;
       min-height: 100vh;
       background-color: #f2f1ee;
-      /* Same grain texture as index.css */
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.075'/%3E%3C/svg%3E");
     }
 
-    /* ── Page shell ── */
     .auth-page {
       min-height: 100vh;
       display: grid;
@@ -30,7 +28,6 @@
       padding: 28px;
     }
 
-    /* ── Card ── */
     .auth-card {
       position: relative;
       width: min(440px, calc(100vw - 32px));
@@ -44,7 +41,6 @@
       box-shadow: 0 24px 70px rgba(17, 17, 17, 0.11);
     }
 
-    /* Brand strip tab above the card */
     .auth-card::before {
       content: "StillCisTho";
       position: absolute;
@@ -59,7 +55,6 @@
       transform: skew(-8deg);
     }
 
-    /* ── Brand icon (VS mark) ── */
     .brand-icon {
       margin: 0 auto 5px;
       width: 78px;
@@ -92,7 +87,6 @@
       transform: skew(-8deg);
     }
 
-    /* ── Typography ── */
     .auth-card h1 {
       color: #111111;
       font-family: Impact, "Arial Black", sans-serif;
@@ -107,7 +101,6 @@
       line-height: 1.55;
     }
 
-    /* ── Inputs ── */
     input[type="text"],
     input[type="email"],
     input[type="password"] {
@@ -132,7 +125,6 @@
       box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.16);
     }
 
-    /* ── Submit button ── */
     .primary-btn {
       width: 100%;
       border: 1px solid #111111;
@@ -158,7 +150,6 @@
       transform: translateY(0);
     }
 
-    /* ── Error banner ── */
     .auth-error {
       background: #fff1f1;
       border: 2px solid #e50914;
@@ -168,7 +159,6 @@
       font-weight: 700;
     }
 
-    /* ── Links row ── */
     .auth-switch {
       font-size: 14px;
       color: #555555;

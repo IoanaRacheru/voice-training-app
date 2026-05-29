@@ -17,32 +17,87 @@ import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { analysisService } from "@/services/analysisService";
 
 type VoiceInputProps = { user: any; onUpdate?: (updates: any) => void };
+const LOCAL_SAMPLE_KEY = "voiceInitialSample";
+
+function readBlobAsDataUrl(blob: Blob): Promise<string | null> {
+  if (!blob || typeof FileReader === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.addEventListener(
+      "load",
+      () => resolve(typeof reader.result === "string" ? reader.result : null),
+      { once: true }
+    );
+    reader.addEventListener("error", () => resolve(null), { once: true });
+    reader.readAsDataURL(blob);
+  });
+}
+
+function toInitialSampleFromUser(user: any) {
+  const raw = user?.initial_voice_sample;
+  if (!raw) return null;
+  const persistedAudioUrl =
+    raw.audioUrl || raw.audio_url || raw.audio_data_url || null;
+  return {
+    ...raw,
+    audioUrl: persistedAudioUrl,
+  };
+}
+
+function readLocalSample() {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_SAMPLE_KEY) || "null");
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function saveLocalSample(sample: any) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(LOCAL_SAMPLE_KEY, JSON.stringify(sample));
+}
+
+function clearLocalSample() {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem(LOCAL_SAMPLE_KEY);
+}
 
 export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
-  const [status, setStatus] = useState(user?.initial_voice_sample ? "uploaded" : "idle");
-  const [sample, setSample] = useState<any>(user?.initial_voice_sample || null);
+  const initialSample = toInitialSampleFromUser(user);
+  const hydratedInitialSample = initialSample || readLocalSample();
+  const [status, setStatus] = useState(hydratedInitialSample ? "uploaded" : "idle");
+  const [sample, setSample] = useState<any>(hydratedInitialSample);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lastAveragePitch, setLastAveragePitch] = useState<number | null>(user?.initial_voice_sample?.average_pitch || null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const objectUrlRef = useRef<string | null>(user?.initial_voice_sample?.audioUrl || null);
+  const objectUrlRef = useRef<string | null>(hydratedInitialSample?.audioUrl || null);
   const { isRecording, currentPitch, error, startRecording, stopRecording, getSessionStats } = useVoiceRecorder() as any;
 
   useEffect(() => () => {
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    if (objectUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(objectUrlRef.current);
   }, []);
 
   const saveSample = (nextSample: any) => {
     onUpdate?.({
-      ...user,
       initial_voice_sample: { ...nextSample, saved_at: new Date().toISOString() },
     });
   };
 
   const replaceSample = (nextSample: any) => {
-    if (objectUrlRef.current && objectUrlRef.current !== nextSample.audioUrl) URL.revokeObjectURL(objectUrlRef.current);
+    if (
+      objectUrlRef.current &&
+      objectUrlRef.current !== nextSample.audioUrl &&
+      objectUrlRef.current.startsWith("blob:")
+    ) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
     objectUrlRef.current = nextSample.audioUrl;
     setSample(nextSample);
     setStatus(nextSample.type === "recording" ? "recorded" : "uploaded");
+    saveLocalSample(nextSample);
     saveSample(nextSample);
   };
 
@@ -57,12 +112,14 @@ export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
         toast.error("Recording is empty and was not saved");
         return;
       }
-      const audioUrl = URL.createObjectURL(audioData.blob);
+      const audioDataUrl = await readBlobAsDataUrl(audioData.blob);
+      const audioUrl = audioDataUrl || URL.createObjectURL(audioData.blob);
       const recordingSample = {
         id: crypto.randomUUID(),
         type: "recording",
         name: "Initial voice recording",
         audioUrl,
+        audio_data_url: audioUrl,
         mimeType: audioData.blob.type,
         size: audioData.blob.size,
         createdAt: new Date().toISOString(),
@@ -88,15 +145,17 @@ export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
     }
   };
 
-  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const audioUrl = URL.createObjectURL(file);
+    const audioDataUrl = await readBlobAsDataUrl(file);
+    const audioUrl = audioDataUrl || URL.createObjectURL(file);
     const uploadedSample = {
       id: crypto.randomUUID(),
       type: "upload",
       name: file.name,
       audioUrl,
+      audio_data_url: audioUrl,
       mimeType: file.type || "audio",
       size: file.size,
       createdAt: new Date().toISOString(),
@@ -107,16 +166,17 @@ export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
   };
 
   const handleDeleteSample = () => {
-    if (objectUrlRef.current) {
+    if (objectUrlRef.current?.startsWith("blob:")) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
     setSample(null);
     setStatus("idle");
     setLastAveragePitch(null);
+    clearLocalSample();
     setDeleteDialogOpen(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    onUpdate?.({ ...user, initial_voice_sample: null });
+    onUpdate?.({ initial_voice_sample: null });
     toast.success("Initial voice sample deleted");
   };
 

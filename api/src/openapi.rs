@@ -22,7 +22,7 @@ impl Modify for SecurityAddon {
     }
 }
 
-/// OpenAPI document for the Voice Training API.
+
 #[derive(OpenApi)]
 #[openapi(
     info(
@@ -39,6 +39,7 @@ impl Modify for SecurityAddon {
         crate::routes::challenge::generate,
         crate::routes::challenge::start,
         crate::routes::challenge::complete_exercise,
+        crate::routes::challenge::plan,
         crate::routes::challenge::get_streak,
         crate::routes::artifacts::list_artifacts,
         crate::routes::artifacts::get_artifact,
@@ -63,6 +64,10 @@ impl Modify for SecurityAddon {
             crate::routes::challenge::TodayResponse,
             crate::routes::challenge::ChallengeEnvelope,
             crate::routes::challenge::StreakResponse,
+            crate::routes::challenge::PlanChallengeRequest,
+            crate::routes::challenge::PlanChallengeResponse,
+            crate::routes::challenge::PlannedExercise,
+            crate::routes::challenge::AvailableExercise,
             crate::routes::user::MeResponse,
             crate::routes::user::PatchMeRequest,
             crate::routes::user::PatchMeResponse,
@@ -87,7 +92,7 @@ impl Modify for SecurityAddon {
 )]
 pub struct ApiDoc;
 
-/// Build Swagger UI route bundle.
+
 pub fn swagger_ui() -> SwaggerUi {
     SwaggerUi::new("/docs").url("/api/openapi.json", ApiDoc::openapi())
 }

@@ -31,7 +31,7 @@ function getResonancePoints(pitchData: PitchEntry[] = []) {
   });
 }
 
-function getGenderPercent(currentPitch: number) {
+function getVoicePresentationPercent(currentPitch: number) {
   if (!analysisService.isValidPitch(currentPitch)) {
     return 50;
   }
@@ -64,16 +64,29 @@ export default function SessionCoreGraphs({
     [pitchData]
   );
   const resonanceData = useMemo(() => getResonancePoints(pitchData), [pitchData]);
-  const femininePercent = useMemo(() => getGenderPercent(currentPitch), [currentPitch]);
+  const resonanceDomain = useMemo<[number, number]>(() => {
+    if (!resonanceData.length) {
+      return [150, 3200];
+    }
+    const values = resonanceData.flatMap((point) => [point.f1, point.f2, point.f3]);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const span = Math.max(220, maxValue - minValue);
+    const padding = Math.max(40, Math.round(span * 0.14));
+    const lower = Math.max(100, minValue - padding);
+    const upper = Math.min(3600, maxValue + padding);
+    return [lower, Math.max(lower + 180, upper)];
+  }, [resonanceData]);
+  const femininePercent = useMemo(() => getVoicePresentationPercent(currentPitch), [currentPitch]);
   const masculinePercent = 100 - femininePercent;
 
   return (
     <div className="grid gap-5">
       {showPitchGraph && <section className="bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-black uppercase text-foreground">Pitch Graph</h3>
+          <h3 className="text-sm font-black uppercase text-foreground">Pitch graph</h3>
           <span className="text-xs font-bold uppercase text-muted-foreground">
-            {pitchTargetEnabled ? "Live pitch with target ranges" : "Live pitch with reference ranges"}
+            {pitchTargetEnabled ? "Live pitch in Hz with target range" : "Live pitch in Hz with reference ranges"}
           </span>
         </div>
         <div className="h-52">
@@ -82,7 +95,7 @@ export default function SessionCoreGraphs({
               <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" />
               <XAxis dataKey="idx" tick={{ fontSize: 10 }} />
               <YAxis domain={[80, 300]} tick={{ fontSize: 10 }} />
-              <Tooltip />
+              <Tooltip formatter={(value: number) => [`${Number(value).toFixed(0)} Hz`, "Pitch"]} />
               <Legend />
               <ReferenceArea y1={MASCULINE_RANGE[0]} y2={MASCULINE_RANGE[1]} fill="#BFD3C1" fillOpacity={0.42} ifOverflow="extendDomain" />
               <ReferenceArea y1={FEMININE_RANGE[0]} y2={FEMININE_RANGE[1]} fill="#EFC7C2" fillOpacity={0.42} ifOverflow="extendDomain" />
@@ -98,7 +111,7 @@ export default function SessionCoreGraphs({
 
       {showResonanceGraph && <section className="bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
         <div className="mb-3 flex items-center gap-2">
-          <h3 className="text-sm font-black uppercase text-foreground">Resonance Graph (F1/F2/F3)</h3>
+          <h3 className="text-sm font-black uppercase text-foreground">Resonance proxy (F1/F2/F3, Hz)</h3>
           <Popover><PopoverTrigger asChild><button type="button" className="text-xs font-bold text-primary">F1</button></PopoverTrigger><PopoverContent className="w-64 text-xs">Shows how open the mouth is and tongue height.</PopoverContent></Popover>
           <Popover><PopoverTrigger asChild><button type="button" className="text-xs font-bold text-primary">F2</button></PopoverTrigger><PopoverContent className="w-64 text-xs">Shows tongue position, from back to front.</PopoverContent></Popover>
           <Popover><PopoverTrigger asChild><button type="button" className="text-xs font-bold text-primary">F3</button></PopoverTrigger><PopoverContent className="w-64 text-xs">Helps describe resonance quality and vocal tract shape.</PopoverContent></Popover>
@@ -108,8 +121,8 @@ export default function SessionCoreGraphs({
             <ScatterChart>
               <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" />
               <XAxis type="number" dataKey="idx" name="Sample" tick={{ fontSize: 10 }} />
-              <YAxis type="number" dataKey="f1" name="Hz" domain={[150, 3200]} tick={{ fontSize: 10 }} />
-              <Tooltip />
+              <YAxis type="number" dataKey="f1" name="Hz" domain={resonanceDomain} tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(value: number) => [`${Number(value).toFixed(0)} Hz`, "Formant proxy"]} />
               <Legend />
               <Scatter name="F1" data={resonanceData} fill="#68A691" />
               <Scatter name="F2" data={resonanceData.map((p) => ({ ...p, f1: p.f2 }))} fill="#EFC7C2" />
@@ -120,7 +133,8 @@ export default function SessionCoreGraphs({
       </section>}
 
       {showGenderGraph && <section className="bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
-        <h3 className="mb-3 text-sm font-black uppercase text-foreground">Gender Graph</h3>
+        <h3 className="mb-1 text-sm font-black uppercase text-foreground">Voice presentation (legacy pitch proxy)</h3>
+        <p className="mb-3 text-[11px] font-bold uppercase text-muted-foreground">0-39 masculine-leaning, 40-60 androgynous-leaning, 61-100 feminine-leaning</p>
         <div className="space-y-3">
           <div className="relative h-16 overflow-hidden rounded-full border border-border bg-gradient-to-r from-[#BFD3C1] via-[#FFE5D4] to-[#EFC7C2]">
             <motion.div

@@ -17,6 +17,31 @@ function formatSessionDate(date: string) {
   return format(parsedDate, "MMM d, HH:mm");
 }
 
+function resolveVoicePresentation(session: any) {
+  const backendScore = Number(session?.backend_analysis?.voice_presentation?.score);
+  const backendConfidence = Number(session?.backend_analysis?.voice_presentation?.confidence);
+  if (Number.isFinite(backendScore)) {
+    return {
+      value: backendScore,
+      source: "backend",
+      confidence: Number.isFinite(backendConfidence) ? Math.round(backendConfidence * 100) : null,
+      label: session?.backend_analysis?.voice_presentation?.label || null,
+    };
+  }
+
+  const legacy = Number(session?.gender_average);
+  if (Number.isFinite(legacy)) {
+    return {
+      value: legacy,
+      source: "legacy_pitch_proxy",
+      confidence: null,
+      label: null,
+    };
+  }
+
+  return { value: null, source: "none", confidence: null, label: null };
+}
+
 export default function ExerciseHistory({ sessions = [] }: { sessions?: any[] }) {
   const [selectedExerciseId, setSelectedExerciseId] = useState("all");
   const safeSessions = useMemo(
@@ -27,6 +52,7 @@ export default function ExerciseHistory({ sessions = [] }: { sessions?: any[] })
           ...session,
           score: Number.isFinite(Number(session.score)) ? Number(session.score) : 0,
           duration_seconds: Number.isFinite(Number(session.duration_seconds)) ? Number(session.duration_seconds) : 0,
+          voice_presentation_meta: resolveVoicePresentation(session),
         })),
     [sessions]
   );
@@ -53,12 +79,16 @@ export default function ExerciseHistory({ sessions = [] }: { sessions?: any[] })
     score: session.score,
     pitch: Number(session.average_pitch) || null,
     resonance: Number(session.resonance_average) || null,
-    gender: Number(session.gender_average) || null,
+    voicePresentation:
+      session.voice_presentation_meta?.value === null ||
+      session.voice_presentation_meta?.value === undefined
+        ? null
+        : Number(session.voice_presentation_meta.value),
     exercise: session.exercise_name,
   }));
   const hasPitch = visibleSessions.some((session) => Number.isFinite(Number(session.average_pitch)));
   const hasResonance = visibleSessions.some((session) => Number.isFinite(Number(session.resonance_average)));
-  const hasGender = visibleSessions.some((session) => Number.isFinite(Number(session.gender_average)));
+  const hasGender = visibleSessions.some((session) => Number.isFinite(Number(session.voice_presentation_meta?.value)));
   const hasToolData = visibleSessions.some((session) => session.tool_chart_data);
   const goalSummary: Array<{ goal: string; sessions: number; average: number; total: number }> = Object.values(
     visibleSessions.reduce((summary: Record<string, any>, session) => {
@@ -168,22 +198,66 @@ export default function ExerciseHistory({ sessions = [] }: { sessions?: any[] })
           {(hasPitch || hasResonance || hasGender || hasToolData) && (
             <div className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
               <div className="mb-4 flex items-center justify-between gap-4">
-                <div><p className="font-mono text-[11px] uppercase text-muted-foreground">Measured results</p><h3 className="mt-1 text-xl font-black uppercase text-foreground">Exercise evolution</h3></div>
+                <div>
+                  <p className="font-mono text-[11px] uppercase text-muted-foreground">Measured results</p>
+                  <h3 className="mt-1 text-xl font-black uppercase text-foreground">Exercise evolution</h3>
+                </div>
                 <span className="text-xs font-bold uppercase text-muted-foreground">{selectedExerciseId === "all" ? "Filtered by all exercises" : "Filtered exercise"}</span>
               </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={scoreTrend} margin={{ top: 8, right: 8, left: -18, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }} tickLine={false} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: 2, borderColor: "hsl(var(--border))" }} />
-                    {hasPitch && <Line type="monotone" dataKey="pitch" name="Pitch avg" stroke="#694F5D" strokeWidth={2.5} dot={false} connectNulls />}
-                    {hasResonance && <Line type="monotone" dataKey="resonance" name="Resonance avg" stroke="#68A691" strokeWidth={2.5} dot={false} connectNulls />}
-                    {hasGender && <Line type="monotone" dataKey="gender" name="Gender avg" stroke="#EFC7C2" strokeWidth={2.5} dot={false} connectNulls />}
-                  </LineChart>
-                </ResponsiveContainer>
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Units are separated: pitch/resonance proxy in Hz, voice presentation as a 0-100 score.
+              </p>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 font-mono text-[11px] uppercase text-muted-foreground">Acoustic trend (Hz)</p>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={scoreTrend} margin={{ top: 8, right: 8, left: -18, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }} tickLine={false} />
+                        <YAxis
+                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }}
+                          tickLine={false}
+                          axisLine={false}
+                          label={{ value: "Hz", angle: -90, position: "insideLeft", fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }}
+                        />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 2, borderColor: "hsl(var(--border))" }}
+                          formatter={(value, name) => [`${Number(value).toFixed(0)} Hz`, name]}
+                        />
+                        {hasPitch && <Line type="monotone" dataKey="pitch" name="Pitch average" stroke="#694F5D" strokeWidth={2.5} dot={false} connectNulls />}
+                        {hasResonance && <Line type="monotone" dataKey="resonance" name="Resonance proxy average" stroke="#68A691" strokeWidth={2.5} dot={false} connectNulls />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 font-mono text-[11px] uppercase text-muted-foreground">Voice presentation (0-100)</p>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={scoreTrend} margin={{ top: 8, right: 8, left: -18, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="2 6" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }} tickLine={false} />
+                        <YAxis
+                          domain={[0, 100]}
+                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }}
+                          tickLine={false}
+                          axisLine={false}
+                          label={{ value: "Score", angle: -90, position: "insideLeft", fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 700 }}
+                        />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 2, borderColor: "hsl(var(--border))" }}
+                          formatter={(value) => [`${Number(value).toFixed(0)}/100`, "Voice presentation"]}
+                        />
+                        {hasGender && <Line type="monotone" dataKey="voicePresentation" name="Voice presentation score" stroke="#EFC7C2" strokeWidth={2.5} dot={false} connectNulls />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Voice presentation uses backend model score when available; older sessions fall back to legacy pitch-only proxy.
+              </p>
               {hasToolData && (
                 <p className="mt-3 text-xs font-bold uppercase text-muted-foreground">
                   Tool-specific chart snapshots are saved per session and listed below.
@@ -197,7 +271,7 @@ export default function ExerciseHistory({ sessions = [] }: { sessions?: any[] })
               <table className="w-full min-w-[980px] text-left text-sm">
                 <thead className="border-b border-border bg-background">
                   <tr className="font-mono text-[11px] uppercase text-muted-foreground">
-                    <th className="px-4 py-3">Exercise</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Duration</th><th className="px-4 py-3">Pitch avg</th><th className="px-4 py-3">Resonance avg</th><th className="px-4 py-3">Gender avg</th><th className="px-4 py-3">Audio</th><th className="px-4 py-3">Tool data</th><th className="px-4 py-3">Score</th><th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Exercise</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Duration</th><th className="px-4 py-3">Pitch avg (Hz)</th><th className="px-4 py-3">Resonance proxy (Hz)</th><th className="px-4 py-3">Voice presentation (0-100)</th><th className="px-4 py-3">Audio</th><th className="px-4 py-3">Tool data</th><th className="px-4 py-3">Score</th><th className="px-4 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -208,7 +282,13 @@ export default function ExerciseHistory({ sessions = [] }: { sessions?: any[] })
                       <td className="px-4 py-4 font-mono">{formatDuration(session.duration_seconds)}</td>
                       <td className="px-4 py-4 font-mono">{session.average_pitch ? `${session.average_pitch} Hz` : "--"}</td>
                       <td className="px-4 py-4 font-mono">{session.resonance_average ? `${session.resonance_average} Hz` : "--"}</td>
-                      <td className="px-4 py-4 font-mono">{session.gender_average === null || session.gender_average === undefined ? "--" : `${session.gender_average}%`}</td>
+                      <td className="px-4 py-4 font-mono">
+                        {session.voice_presentation_meta?.value === null || session.voice_presentation_meta?.value === undefined
+                          ? "--"
+                          : `${Math.round(session.voice_presentation_meta.value)}/100`}
+                        {session.voice_presentation_meta?.confidence != null ? ` (${session.voice_presentation_meta.confidence}% conf)` : ""}
+                        {session.voice_presentation_meta?.source === "legacy_pitch_proxy" ? " (legacy)" : ""}
+                      </td>
                       <td className="px-4 py-4">
                         {session.audio_url ? (
                           <audio controls src={session.audio_url} className="h-9 w-56" aria-label={`${session.exercise_name} recording`} />

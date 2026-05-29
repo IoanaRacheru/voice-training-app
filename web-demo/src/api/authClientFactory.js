@@ -1,6 +1,4 @@
-/**
- * Builds an authenticated API client using a keycloak-compatible token provider.
- */
+
 export function createAuthClient({
   keycloakClient,
   apiUrl,
@@ -92,6 +90,13 @@ export function createAuthClient({
 
     getChallengeStreak() {
       return request("/api/challenge/streak");
+    },
+
+    planChallenge(payload) {
+      return request("/api/challenge/plan", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
 
     chat(payload) {

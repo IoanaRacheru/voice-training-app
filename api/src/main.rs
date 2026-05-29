@@ -9,6 +9,8 @@ mod routes;
 
 use std::sync::Arc;
 
+#[cfg(feature = "vad_silero")]
+use app_core::dsp::SileroVadDetector;
 use app_core::{
     Engine,
     asr::{SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
@@ -16,8 +18,6 @@ use app_core::{
     llm::{HttpLlmCoach, LlmCoach, LlmProvider, LlmProviderConfig, RuleBasedCoach},
     tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
 };
-#[cfg(feature = "vad_silero")]
-use app_core::dsp::SileroVadDetector;
 use axum::{Router, middleware as axum_middleware};
 use mongodb::Database;
 use repositories::{
@@ -35,31 +35,31 @@ use auth::middleware::appwrite_middleware;
 use auth::{JwkKey, Jwks};
 use config::Config;
 
-/// Shared HTTP application state.
+
 pub struct AppState {
-    /// Database handle used by persistence adapters.
+    
     pub db: Database,
-    /// Runtime configuration.
+    
     pub config: Arc<Config>,
-    /// Shared HTTP client for upstream calls.
+    
     pub http: Client,
-    /// Cached Keycloak JWK set used by auth middleware.
+    
     pub jwks: Arc<RwLock<Vec<JwkKey>>>,
-    /// Core analysis/coaching engine.
+    
     pub engine: Arc<Engine>,
-    /// Effective LLM provider in use.
+    
     pub llm_provider: String,
-    /// Analysis artifact repository abstraction.
+    
     pub analysis_repo: Arc<dyn AnalysisRepository>,
-    /// User profile repository abstraction.
+    
     pub profile_repo: Arc<dyn ProfileRepository>,
-    /// Session repository abstraction.
+    
     pub session_repo: Arc<dyn SessionRepository>,
-    /// Challenge repository abstraction.
+    
     pub challenge_repo: Arc<dyn ChallengeRepository>,
 }
 
-/// Build a coach implementation from runtime configuration.
+
 fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
     match config.llm_provider.as_str() {
         "openrouter" => match &config.openrouter_api_key {
@@ -99,7 +99,7 @@ fn build_llm_coach(config: &Config) -> Box<dyn LlmCoach> {
     }
 }
 
-/// Build an ASR backend from runtime configuration.
+
 fn build_asr(config: &Config) -> Result<Box<dyn SpeechRecognizer>, String> {
     match config.asr_provider.as_str() {
         "stub" => Ok(Box::new(VoskAsrStub)),
@@ -117,7 +117,7 @@ fn build_asr(config: &Config) -> Result<Box<dyn SpeechRecognizer>, String> {
     }
 }
 
-/// Build a VAD backend from runtime configuration.
+
 fn build_vad(config: &Config) -> Result<Box<dyn VadDetector>, String> {
     match config.vad_provider.as_str() {
         "silero" => {
@@ -223,7 +223,7 @@ mod tests {
     }
 }
 
-/// Start the API service with a Tokio multi-thread runtime.
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     dotenvy::dotenv().ok();

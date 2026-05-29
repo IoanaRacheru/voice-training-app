@@ -11,49 +11,49 @@ use utoipa::ToSchema;
 
 use crate::{AppState, auth::AppwriteUser, errors::AppError};
 
-/// Register analysis artifact history routes.
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/analysis-artifacts", get(list_artifacts))
         .route("/api/analysis-artifacts/:id", get(get_artifact))
 }
 
-/// Query params for artifact history list.
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ListArtifactsQuery {
-    /// Max items per page.
+    
     pub limit: Option<u32>,
-    /// Pagination offset.
+    
     pub offset: Option<u64>,
 }
 
-/// List item for analysis artifact history.
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ArtifactItem {
-    /// Artifact identifier in hex format.
+    
     pub id: String,
-    /// Creation timestamp in RFC3339 format.
+    
     pub created_at: String,
-    /// Human-readable session summary.
+    
     pub summary: String,
-    /// Voice presentation score in `[0,100]`.
+    
     pub voice_presentation_score: f64,
-    /// Score confidence in `[0,1]`.
+    
     pub voice_presentation_confidence: f64,
 }
 
-/// Response envelope for paginated artifact history.
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ArtifactListResponse {
-    /// Pagination limit used by this response.
+    
     pub limit: u32,
-    /// Pagination offset used by this response.
+    
     pub offset: u64,
-    /// Artifact history items.
+    
     pub items: Vec<ArtifactItem>,
 }
 
-/// List analysis artifacts for authenticated user.
+
 #[utoipa::path(
     get,
     path = "/api/analysis-artifacts",
@@ -103,7 +103,7 @@ pub async fn list_artifacts(
     }))
 }
 
-/// Get one analysis artifact for authenticated user.
+
 #[utoipa::path(
     get,
     path = "/api/analysis-artifacts/{id}",
@@ -171,8 +171,8 @@ mod tests {
         config::Config,
         repositories::{
             analysis::{AnalysisArtifact, AnalysisRepository},
-            profile::MongoProfileRepository,
             challenge::MongoChallengeRepository,
+            profile::MongoProfileRepository,
             session::MongoSessionRepository,
         },
     };

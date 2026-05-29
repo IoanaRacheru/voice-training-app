@@ -3,9 +3,7 @@ import { format } from "date-fns";
 import { exerciseSessionService } from "@/services/exerciseSessionService";
 import { listAnalysisArtifacts } from "@/api/authClient";
 
-/**
- * Coordinates Progress page data fetching and chart projections.
- */
+
 export function useProgressController() {
   const [exerciseSessions, setExerciseSessions] = useState<any[]>([]);
   const [artifacts, setArtifacts] = useState<any[]>([]);

@@ -1,4 +1,4 @@
-# cargo-deny policy for workspace dependency safety checks.
+
 
 [graph]
 all-features = true

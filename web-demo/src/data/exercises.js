@@ -1,3 +1,5 @@
+import { RAINBOW_PASSAGE_LINES, RAINBOW_PASSAGE_TITLE } from "./readingPassages";
+
 export const exercises = [
   {
     id: "bubble-phonation",
@@ -78,6 +80,8 @@ export const exercises = [
     goal: "keep pitch as stable as possible during the sentence.",
     goalType: "pitch_stability",
     goalLabel: "Pitch stability",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
   },
   {
     id: "volume-control",
@@ -89,6 +93,8 @@ export const exercises = [
     goal: "notice and control intensity changes.",
     goalType: "volume_consistency",
     goalLabel: "Volume consistency",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
   },
   {
     id: "lung-capacity",
@@ -148,6 +154,8 @@ export const exercises = [
     goal: "improve clarity while keeping the voice natural.",
     goalType: "clarity",
     goalLabel: "Clarity",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
   },
   {
     id: "diction",
@@ -163,6 +171,8 @@ export const exercises = [
     goal: "stay understandable even at higher speed.",
     goalType: "clarity_and_speed",
     goalLabel: "Clarity and speed",
+    readingPassageTitle: RAINBOW_PASSAGE_TITLE,
+    readingPassageLines: RAINBOW_PASSAGE_LINES,
   },
   {
     id: "mimic-tones",

@@ -101,7 +101,7 @@ export default function Profile() {
 
   return (
     <>
-      <div className="mx-auto max-w-6xl space-y-10">
+      <div className="mx-auto max-w-6xl space-y-10" data-testid="page-profile">
         <motion.header initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <p className="mb-3 font-mono text-[11px] uppercase text-muted-foreground">User dossier</p>
           <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">Profile</h1>

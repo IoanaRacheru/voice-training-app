@@ -31,7 +31,7 @@ export function SpectrogramChart({
         ? data
         : [];
   if (!chartData.length) {
-    return <VoiceChartCard title={title} description="Time-frequency intensity map for a sample voice recording.">No live data yet.</VoiceChartCard>;
+    return <VoiceChartCard title={title} description="Time-frequency map: rows are frequency bands (Hz), columns are time slices, color is relative intensity (%).">No live data yet.</VoiceChartCard>;
   }
   const times = getUniqueValues(chartData, "time").slice(-8);
   const frequencies = getUniqueValues(chartData, "frequency");
@@ -42,7 +42,7 @@ export function SpectrogramChart({
   return (
     <VoiceChartCard
       title={title}
-      description="Time-frequency intensity map for a sample voice recording."
+      description="Time-frequency map: rows are frequency bands (Hz), columns are time slices, color is relative intensity (%)."
     >
       <div className="grid gap-3">
         <div
@@ -88,6 +88,10 @@ export function SpectrogramChart({
               {time}
             </span>
           ))}
+        </div>
+        <div className="flex items-center justify-between text-[11px] font-semibold uppercase text-muted-foreground">
+          <span>Frequency (Hz)</span>
+          <span>Time</span>
         </div>
       </div>
     </VoiceChartCard>

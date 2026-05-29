@@ -9,64 +9,64 @@ use crate::{
     tools::{ProsodyOutput, ProsodyTool, VoicePresentationOutput, VoicePresentationTool},
 };
 
-/// Input contract for a single analysis pass.
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AnalysisInput {
-    /// Median pitch estimate in Hz.
+    
     pub median_pitch_hz: f64,
-    /// Pitch stability score in `[0, 1]`.
+    
     pub pitch_stability: f64,
-    /// Pause ratio in `[0, 1]`.
+    
     pub pause_ratio: f64,
-    /// Spectral brightness score in `[0, 1]`.
+    
     pub spectral_brightness: f64,
-    /// Optional mono PCM samples in `[-1.0, 1.0]` for signal-derived analysis.
+    
     pub audio_samples: Option<Vec<f32>>,
-    /// Sample rate for `audio_samples`.
+    
     pub sample_rate: Option<u32>,
-    /// Optional phrase target for pronunciation feedback.
+    
     pub expected_text: Option<String>,
 }
 
-/// Output contract for analysis and coaching results.
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisOutput {
-    /// Prosodic metrics bundle.
+    
     pub prosody: ProsodyOutput,
-    /// Voice presentation estimate with confidence metadata.
+    
     pub voice_presentation: VoicePresentationOutput,
-    /// Machine-generated concise session summary.
+    
     pub summary: String,
-    /// Suggested next practice points.
+    
     pub practice_next: Vec<String>,
-    /// Human-readable coach response.
+    
     pub llm_coach_feedback: String,
-    /// Signal extraction confidence in `[0, 1]` when audio is provided.
+    
     pub signal_confidence: Option<f64>,
-    /// Signal-quality diagnostic flags.
+    
     pub signal_quality: Option<SignalQuality>,
-    /// VAD implementation used in extraction.
+    
     pub vad_used: Option<String>,
-    /// ASR transcription result if audio is provided.
+    
     pub asr: Option<AsrResult>,
-    /// Pronunciation feedback if `expected_text` and ASR result are available.
+    
     pub pronunciation: Option<PronunciationFeedback>,
 }
 
-/// Signal quality diagnostics exposed to API consumers.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SignalQuality {
-    /// True if RMS energy is very low.
+    
     pub low_energy: bool,
-    /// True if voiced frame ratio is low.
+    
     pub low_voiced_ratio: bool,
-    /// True if too few reliable pitch estimates were extracted.
+    
     pub insufficient_pitch_frames: bool,
-    /// True if pitch variability indicates unstable voicing.
+    
     pub unstable_pitch: bool,
 }
 
-/// Orchestrator that coordinates tools and coach generation.
+
 pub struct Engine {
     prosody_tool: Box<dyn ProsodyTool>,
     voice_tool: Box<dyn VoicePresentationTool>,
@@ -78,7 +78,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    /// Construct the engine with concrete tool/coach implementations.
+    
     pub fn new(
         prosody_tool: Box<dyn ProsodyTool>,
         voice_tool: Box<dyn VoicePresentationTool>,
@@ -98,7 +98,7 @@ impl Engine {
         )
     }
 
-    /// Construct the engine with configurable strict provider error handling.
+    
     pub fn new_with_policy(
         prosody_tool: Box<dyn ProsodyTool>,
         voice_tool: Box<dyn VoicePresentationTool>,
@@ -119,7 +119,7 @@ impl Engine {
         }
     }
 
-    /// Execute the end-to-end analysis and coaching pipeline.
+    
     pub async fn analyze(&self, input: AnalysisInput) -> Result<AnalysisOutput, CoreError> {
         let (
             median_pitch_hz,
@@ -259,7 +259,11 @@ mod tests {
     struct FailingAsr;
 
     impl SpeechRecognizer for FailingAsr {
-        fn recognize(&self, _audio_samples: &[f32], _sample_rate: u32) -> Result<AsrResult, CoreError> {
+        fn recognize(
+            &self,
+            _audio_samples: &[f32],
+            _sample_rate: u32,
+        ) -> Result<AsrResult, CoreError> {
             Err(CoreError::Tool("simulated asr failure".into()))
         }
     }

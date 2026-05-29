@@ -5,6 +5,7 @@ import RecordingControls from "@/components/training/RecordingControls";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { analysisService } from "@/services/analysisService";
 import { exerciseSessionService } from "@/services/exerciseSessionService";
+import ReadingPassageCard from "./ReadingPassageCard";
 import type { VoiceAnalyticsTool } from "@/features/exercises/toolTypes";
 
 function formatTime(seconds: number) {
@@ -106,6 +107,10 @@ export default function VoiceAnalyticsToolSession({ tool, pitchTargetEnabled }: 
           {tool.shortInstruction}
         </p>
       </div>
+      <ReadingPassageCard
+        title={tool.readingPassageTitle}
+        lines={tool.readingPassageLines}
+      />
 
       <div className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
         <p className="mb-4 font-mono text-[11px] uppercase text-muted-foreground">Live analytics output</p>

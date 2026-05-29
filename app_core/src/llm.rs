@@ -3,61 +3,63 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::CoreError;
 
-/// Context passed to a coach implementation for natural-language feedback.
+
 #[derive(Debug, Clone)]
 pub struct LlmContext {
-    /// Machine-generated short session summary.
+    
     pub summary: String,
-    /// Recommended next focus points.
+    
     pub next_focus: Vec<String>,
 }
 
-/// Abstraction for coach feedback generation backends.
+
 #[async_trait]
 pub trait LlmCoach: Send + Sync {
-    /// Produce a coaching message from analysis context.
+    
     async fn coach(&self, context: &LlmContext) -> Result<String, CoreError>;
 }
 
-/// Deterministic non-network coach used as default fallback.
+
 #[derive(Default)]
 pub struct RuleBasedCoach;
 
 #[async_trait]
 impl LlmCoach for RuleBasedCoach {
     async fn coach(&self, context: &LlmContext) -> Result<String, CoreError> {
-        let mut response = format!("Session summary: {}.", context.summary);
-        if !context.next_focus.is_empty() {
-            response.push_str(&format!(
-                " Next, focus on: {}.",
-                context.next_focus.join(", ")
-            ));
+        if context.next_focus.is_empty() {
+            return Ok(
+                "Describe what felt unstable, and I will suggest one short targeted drill."
+                    .into(),
+            );
         }
-        Ok(response)
+        Ok(format!(
+            "Next, focus on {}. Keep effort gentle and stop if throat tension appears.",
+            context.next_focus.join(" and ")
+        ))
     }
 }
 
-/// Supported LLM provider families.
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LlmProvider {
-    /// Generic OpenAI-compatible Chat Completions API.
+    
     OpenAiCompatible,
-    /// Groq-hosted OpenAI-compatible API.
+    
     Groq,
-    /// OpenRouter-hosted OpenAI-compatible API.
+    
     OpenRouter,
 }
 
-/// Runtime configuration for an HTTP-backed LLM coach.
+
 #[derive(Debug, Clone)]
 pub struct LlmProviderConfig {
-    /// Provider family.
+    
     pub provider: LlmProvider,
-    /// Provider API key.
+    
     pub api_key: String,
-    /// Model identifier.
+    
     pub model: String,
-    /// Optional override for API base URL.
+    
     pub base_url: Option<String>,
 }
 
@@ -84,14 +86,14 @@ struct Choice {
     message: ChatMessage,
 }
 
-/// HTTP implementation of [`LlmCoach`] using Chat Completions endpoints.
+
 pub struct HttpLlmCoach {
     http: reqwest::Client,
     cfg: LlmProviderConfig,
 }
 
 impl HttpLlmCoach {
-    /// Build a new HTTP coach from provider configuration.
+    
     pub fn new(cfg: LlmProviderConfig) -> Result<Self, CoreError> {
         if cfg.api_key.trim().is_empty() {
             return Err(CoreError::Validation(
@@ -107,7 +109,7 @@ impl HttpLlmCoach {
         })
     }
 
-    /// Return normalized provider name for diagnostics.
+    
     pub fn provider_name(&self) -> &'static str {
         match self.cfg.provider {
             LlmProvider::OpenAiCompatible => "openai-compatible",

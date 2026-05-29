@@ -21,7 +21,7 @@ type VolumeChartProps = {
 
 const chartConfig = {
   value: {
-    label: "Volume",
+    label: "Relative loudness (%)",
     color: "#68A691",
   },
 };
@@ -29,19 +29,19 @@ const chartConfig = {
 export function VolumeChart({ data = [], title = "Volume" }: VolumeChartProps) {
   const chartData = Array.isArray((data as any)?.volume) ? (data as any).volume : data;
   if (!chartData?.length) {
-    return <VoiceChartCard title={title} description="Live loudness trend from current recording.">No live data yet.</VoiceChartCard>;
+    return <VoiceChartCard title={title} description="Live loudness trend on a normalized 0-100 scale.">No live data yet.</VoiceChartCard>;
   }
   return (
     <VoiceChartCard
       title={title}
-      description="Live loudness trend from current recording."
+      description="Live loudness trend on a normalized 0-100 scale."
     >
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
         <LineChart data={chartData} margin={{ left: 4, right: 8, top: 12 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="timestamp" tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} width={28} domain={[0, 100]} />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip content={<ChartTooltipContent formatter={(value) => `${Number(value).toFixed(0)}%`} />} />
           <Line
             type="monotone"
             dataKey="value"

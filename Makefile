@@ -5,6 +5,7 @@
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
         check-vosk test-vosk-runtime build-api-image-vosk build-api-image-vosk-silero build-api-image-prod verify-api-prod \
+        verify-e2e-smoke \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak wait-api verify-stack verify-vosk-api verify-vosk-silero-api verify-challenge-chat-api \
@@ -13,13 +14,13 @@
 SHELL := /bin/sh
 DOCKER_COMPOSE ?= docker compose
 
-# ── All-in-one ───────────────────────────────────────────────────────────────
+
 
 all: bootstrap dev
 
 bootstrap: setup pull-images up wait-keycloak keycloak-setup verify-stack
 
-# ── Onboarding ──────────────────────────────────────────────────────────────
+
 
 setup: setup-env install-frontend
 
@@ -30,7 +31,7 @@ setup-env:
 install:
 	$(MAKE) setup
 
-# ── Docker ───────────────────────────────────────────────────────────────────
+
 
 docker-check:
 	@docker info > /dev/null 2>&1 || { \
@@ -132,7 +133,7 @@ clean-all: clean-data clean-frontend
 prune: docker-check
 	docker system prune -f
 
-# ── Development ──────────────────────────────────────────────────────────────
+
 
 dev: up
 	$(MAKE) -C web-demo dev
@@ -158,7 +159,7 @@ wait-api:
 	done
 	@echo " ready."
 
-# ── Frontend (delegated) ─────────────────────────────────────────────────────
+
 
 install-frontend:
 	$(MAKE) -C web-demo install
@@ -181,7 +182,7 @@ build-frontend:
 clean-frontend:
 	$(MAKE) -C web-demo clean
 
-# ── Backend (Rust workspace) ────────────────────────────────────────────────
+
 
 check-backend:
 	cargo check --workspace
@@ -243,7 +244,7 @@ dep-deny:
 
 dep-check: dep-tree dep-audit dep-deny
 
-# ── Automation (CI-like local) ───────────────────────────────────────────────
+
 
 check: check-backend check-frontend
 
@@ -254,7 +255,7 @@ test: test-backend
 fmt:
 	cargo fmt --all
 
-# ── Keycloak (delegated) ─────────────────────────────────────────────────────
+
 
 wait-keycloak:
 	@echo "Waiting for Keycloak to be ready..."
@@ -351,7 +352,15 @@ verify-challenge-chat-api: docker-check wait-keycloak wait-api
 	  | grep -q '"reply"'; \
 	echo "Challenge + Chat API verification passed."
 
-# ── Diagnostics / Debug ─────────────────────────────────────────────────────
+verify-e2e-smoke: docker-check wait-keycloak wait-api
+	@echo "Preparing frontend dependencies for Playwright smoke..."
+	@cd web-demo && npm ci
+	@cd web-demo && npx playwright install chromium
+	@echo "Running Playwright smoke E2E against local stack..."
+	@cd web-demo && PLAYWRIGHT_API_URL=http://localhost:3000 PLAYWRIGHT_KEYCLOAK_URL=http://localhost:8080 PLAYWRIGHT_KEYCLOAK_REALM=voice-training PLAYWRIGHT_KEYCLOAK_CLIENT_ID=voice-training-app npm run test:e2e
+	@echo "Playwright smoke E2E verification passed."
+
+
 
 doctor:
 	@echo "== Toolchain =="
@@ -383,7 +392,7 @@ debug-api: up
 	@echo "Recent API logs:"
 	@$(DOCKER_COMPOSE) logs --tail=120 api
 
-# ── Help ─────────────────────────────────────────────────────────────────────
+
 
 help:
 	@echo ""
@@ -404,6 +413,7 @@ help:
 	@echo "  build-api-image-prod build release-profile API image"
 	@echo "  rebuild-api-image clean then build api Docker image"
 	@echo "  verify-api-prod   run release-profile API /health smoke check"
+	@echo "  verify-e2e-smoke  run frontend Playwright smoke tests against local stack"
 	@echo "  logs              stream all service logs"
 	@echo "  logs-api          stream API logs only"
 	@echo "  logs-keycloak     stream Keycloak logs only"

@@ -6,15 +6,11 @@ import {
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-/**
- * @param {{
- *   data: Array<{ time: string | number, pitch: number }>,
- *   targetRange?: [number, number]
- * }} props
- */
+
 export default function PitchChart({ data, targetRange }) {
   const hasTargetRange =
     Array.isArray(targetRange) &&
@@ -44,6 +40,10 @@ export default function PitchChart({ data, targetRange }) {
             axisLine={false}
             tickLine={false}
             tickFormatter={(value) => `${value}Hz`}
+          />
+          <Tooltip
+            formatter={(value) => [`${Number(value).toFixed(0)} Hz`, "Pitch"]}
+            labelFormatter={(label) => `Sample ${label}`}
           />
 
           {hasTargetRange && (

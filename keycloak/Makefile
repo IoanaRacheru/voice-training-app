@@ -1,6 +1,6 @@
 .PHONY: all realm client settings theme dev-user smoke-client status clean help
 
-# ── Config ───────────────────────────────────────────────────────────────────
+
 
 KEYCLOAK_URL    ?= $(shell if curl -sf http://localhost:8080/realms/master >/dev/null 2>&1; then echo http://localhost:8080; else echo http://localhost:8081; fi)
 ADMIN_USER      ?= admin
@@ -12,15 +12,15 @@ FRONTEND_ORIGIN ?= http://localhost:5173
 DEV_USER        ?= devuser
 DEV_PASS        ?= devpass123
 
-# Pull admin password from root .env, fall back to Keycloak default
+
 ADMIN_PASS := $(shell grep -m1 '^KEYCLOAK_ADMIN_PASSWORD=' ../.env 2>/dev/null | cut -d= -f2- | tr -d '"')
 ADMIN_PASS := $(if $(ADMIN_PASS),$(ADMIN_PASS),admin)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
-# Fetches a short-lived admin token and writes it to .token.
-# Falls back to the default `admin` password to handle existing DB state
-# where KEYCLOAK_ADMIN_PASSWORD in .env no longer matches current credentials.
+
+
+
+
 define fetch_token
 	@echo "  → authenticating as $(ADMIN_USER)..."
 	@curl -s -X POST "$(KEYCLOAK_URL)/realms/master/protocol/openid-connect/token" \
@@ -39,9 +39,9 @@ define fetch_token
 	@test -s .token || (echo "ERROR: could not get admin token — check KEYCLOAK_ADMIN_PASSWORD in .env and Keycloak container state." && rm -f .token && exit 1)
 endef
 
-# ── Targets ───────────────────────────────────────────────────────────────────
 
-## all: full setup — realm → client → settings → theme
+
+
 all: realm client settings theme dev-user smoke-client
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -53,7 +53,7 @@ all: realm client settings theme dev-user smoke-client
 	@echo ""
 	@$(MAKE) clean
 
-## realm: create the voice-training realm
+
 realm:
 	@echo "[1/4] Creating realm '$(REALM)'..."
 	$(fetch_token)
@@ -70,7 +70,7 @@ realm:
 	  exit 1; \
 	fi
 
-## client: create the voice-training-app OIDC client
+
 client:
 	@echo "[2/4] Creating client '$(CLIENT_ID)'..."
 	$(fetch_token)
@@ -85,7 +85,7 @@ client:
 	    "directAccessGrantsEnabled":true, \
 	    "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
 	    "webOrigins":["$(FRONTEND_ORIGIN)"], \
-	    "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN) $(FRONTEND_ORIGIN)/*"} \
+	    "attributes":{"post.logout.redirect.uris":"+"} \
 	  }'); \
 	if [ "$$status" = "201" ]; then \
 	  echo "      client created."; \
@@ -106,7 +106,7 @@ client:
 	      "directAccessGrantsEnabled":true, \
 	      "redirectUris":["$(FRONTEND_ORIGIN)/*"], \
 	      "webOrigins":["$(FRONTEND_ORIGIN)"], \
-	      "attributes":{"post.logout.redirect.uris":"$(FRONTEND_ORIGIN) $(FRONTEND_ORIGIN)/*"} \
+	      "attributes":{"post.logout.redirect.uris":"+"} \
 	    }'); \
 	  [ "$$status2" = "204" ] || (echo "ERROR: client update failed (HTTP $$status2)" && exit 1); \
 	  echo "      client updated."; \
@@ -115,7 +115,7 @@ client:
 	  exit 1; \
 	fi
 
-## dev-user: ensure a local development user exists for API smoke checks
+
 dev-user:
 	@echo "[5/5] Ensuring dev user '$(DEV_USER)' exists..."
 	$(fetch_token)
@@ -132,6 +132,8 @@ dev-user:
 	  -H "Content-Type: application/json" \
 	  -d '{ \
 	    "username":"$(DEV_USER)", \
+	    "firstName":"Dev", \
+	    "lastName":"User", \
 	    "email":"$(DEV_USER)@local.dev", \
 	    "enabled":true, \
 	    "emailVerified":true, \
@@ -149,7 +151,7 @@ dev-user:
 	[ "$$status2" = "204" ] || (echo "ERROR: dev user password reset failed (HTTP $$status2)" && exit 1); \
 	echo "      dev user ready."
 
-## smoke-client: ensure service-account client for auth smoke checks
+
 smoke-client:
 	@echo "[6/6] Ensuring smoke client '$(SMOKE_CLIENT_ID)' exists..."
 	$(fetch_token)
@@ -187,7 +189,7 @@ smoke-client:
 	fi; \
 	echo "      smoke client ready."
 
-## settings: enable registration, forgot-password, email-as-username
+
 settings:
 	@echo "[3/4] Configuring realm settings..."
 	$(fetch_token)
@@ -211,7 +213,7 @@ settings:
 	fi; \
 	rm -f .keycloak-settings-response
 
-## theme: apply the voice-training login theme
+
 theme:
 	@echo "[4/4] Applying login theme..."
 	$(fetch_token)
@@ -229,7 +231,7 @@ theme:
 	fi; \
 	rm -f .keycloak-theme-response
 
-## status: show current realm configuration
+
 status:
 	@echo "Fetching realm status..."
 	$(fetch_token)
@@ -240,11 +242,11 @@ status:
 	  | tr '|' '\n'
 	@$(MAKE) clean
 
-## clean: delete cached admin token
+
 clean:
 	@rm -f .token
 
-# ── Help ─────────────────────────────────────────────────────────────────────
+
 
 help:
 	@echo ""

@@ -1,6 +1,4 @@
-/**
- * Returns true when profile updates include preference fields that should be synced locally.
- */
+
 export function shouldSyncPreferenceOverrides(updates) {
   return (
     "voice_goal" in updates ||
@@ -9,9 +7,7 @@ export function shouldSyncPreferenceOverrides(updates) {
   );
 }
 
-/**
- * Picks only preference fields from generic user updates.
- */
+
 export function pickPreferenceOverrides(updates) {
   return {
     voice_goal: updates.voice_goal,

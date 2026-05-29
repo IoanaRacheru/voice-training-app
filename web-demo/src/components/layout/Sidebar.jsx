@@ -13,6 +13,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapse }) {
 
   return (
     <aside
+      data-testid="sidebar"
       className={`hidden md:flex h-screen shrink-0 flex-col border-r border-border bg-background/90 transition-[width] duration-200 ${
         collapsed ? "w-20" : "w-64"
       }`}

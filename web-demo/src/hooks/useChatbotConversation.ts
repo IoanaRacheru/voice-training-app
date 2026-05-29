@@ -12,19 +12,25 @@ const initialMessages: ChatMessage[] = [
     role: "assistant",
     text: "Bring one clean sustained tone into focus. I will track what you report and keep the next exercise plain.",
   },
-  {
-    role: "user",
-    text: "I want to keep the pitch steady without tensing up.",
-  },
-  {
-    role: "assistant",
-    text: "Work in 20 second passes. If the throat tightens, reset with breath before chasing pitch.",
-  },
 ];
 
-/**
- * Manages local chatbot transcript state and submit behavior.
- */
+function buildChatContext(messages: ChatMessage[]) {
+  const recentUserLines = messages
+    .filter((message) => message.role === "user")
+    .slice(-3)
+    .map((message) => message.text.trim())
+    .filter(Boolean);
+
+  if (!recentUserLines.length) {
+    return "";
+  }
+
+  return recentUserLines
+    .map((line, index) => `Recent user intent ${index + 1}: ${line}`)
+    .join("\n");
+}
+
+
 export function useChatbotConversation() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
@@ -39,7 +45,10 @@ export function useChatbotConversation() {
     setMessages((current) => [...current, { role: "user", text }]);
     setDraft("");
     try {
-      const recentContext = messages.slice(-4).map((m) => `${m.role}: ${m.text}`).join("\n");
+      const recentContext = buildChatContext([
+        ...messages,
+        { role: "user", text },
+      ]);
       const response = await chat({ message: text, context: recentContext });
       setMessages((current) => [...current, { role: "assistant", text: response.reply }]);
       setBackendAvailable(true);

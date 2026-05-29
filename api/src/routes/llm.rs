@@ -6,33 +6,33 @@ use utoipa::ToSchema;
 
 use crate::AppState;
 
-/// LLM configuration and readiness metadata.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LlmHealthResponse {
-    /// Configured provider from environment.
+    
     pub configured_provider: String,
-    /// Effective provider selected at runtime.
+    
     pub effective_provider: String,
-    /// Whether OpenRouter credentials are configured.
+    
     pub openrouter_configured: bool,
-    /// Whether Groq credentials are configured.
+    
     pub groq_configured: bool,
-    /// Whether generic OpenAI-compatible credentials are configured.
+    
     pub openai_configured: bool,
-    /// OpenRouter model identifier.
+    
     pub openrouter_model: String,
-    /// Groq model identifier.
+    
     pub groq_model: String,
-    /// OpenAI-compatible model identifier.
+    
     pub openai_model: String,
 }
 
-/// Register LLM routes.
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/api/llm/health", get(health))
 }
 
-/// Return runtime LLM health and configuration metadata.
+
 #[utoipa::path(
     get,
     path = "/api/llm/health",
@@ -57,9 +57,8 @@ mod tests {
     use super::*;
     use crate::config::Config;
     use crate::repositories::{
-        analysis::MongoAnalysisRepository, profile::MongoProfileRepository,
-        challenge::MongoChallengeRepository,
-            session::MongoSessionRepository,
+        analysis::MongoAnalysisRepository, challenge::MongoChallengeRepository,
+        profile::MongoProfileRepository, session::MongoSessionRepository,
     };
     use app_core::{
         Engine,

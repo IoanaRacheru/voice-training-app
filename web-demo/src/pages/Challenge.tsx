@@ -24,7 +24,7 @@ export default function Challenge() {
   const practiceSession = usePracticeSession();
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10">
+    <div className="mx-auto max-w-6xl space-y-10" data-testid="page-challenge">
       <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -69,6 +69,7 @@ export default function Challenge() {
         <ChallengeSetup
           hasProfileGoal={Boolean(user?.voice_goal || user?.target_voice_goal)}
           onGenerate={actions.generate}
+          onGenerateWithAi={actions.generateWithAi}
         />
       ) : (
         <>
@@ -90,6 +91,9 @@ export default function Challenge() {
               activeExerciseIndex={activeExerciseIndex}
               onStartChallenge={actions.startChallenge}
               onMoveExercise={actions.moveExercise}
+              onAddExercise={actions.addExercise}
+              onRemoveExercise={actions.removeExercise}
+              onSetExerciseMinutes={actions.setExerciseMinutes}
               onStartExercise={actions.startExercise}
             />
           )}

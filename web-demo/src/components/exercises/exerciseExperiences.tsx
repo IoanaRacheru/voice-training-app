@@ -10,10 +10,7 @@ const ICON_BY_TYPE = {
   larynx: Sparkles,
 } as const;
 
-/**
- * Renders a compact, reusable guidance block for each exercise session.
- * Keeps exercise-specific UX separate from recording and chart logic.
- */
+
 export function ExerciseExperiencePanel({
   experience,
 }: {

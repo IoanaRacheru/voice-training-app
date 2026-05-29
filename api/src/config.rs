@@ -1,45 +1,45 @@
-/// Runtime configuration loaded from environment variables.
+
 pub struct Config {
-    /// MongoDB connection string.
+    
     pub mongodb_uri: String,
-    /// Keycloak JWKS endpoint URL.
+    
     pub keycloak_realm_url: String,
-    /// Expected issuer (`iss`) in Keycloak access tokens.
+    
     pub keycloak_expected_issuer: String,
-    /// Allowed audience values (`aud`) in Keycloak access tokens.
+    
     pub keycloak_expected_audiences: Vec<String>,
-    /// Maximum accepted analyze payload size in bytes.
+    
     pub analyze_max_body_bytes: usize,
-    /// API bind port.
+    
     pub server_port: u16,
-    /// LLM routing mode (`rule`, `openai`, `openrouter`, `groq`).
+    
     pub llm_provider: String,
-    /// API key for generic OpenAI-compatible endpoint.
+    
     pub llm_api_key: Option<String>,
-    /// Model ID for generic OpenAI-compatible endpoint.
+    
     pub llm_model: String,
-    /// Optional custom OpenAI-compatible base URL.
+    
     pub llm_base_url: Option<String>,
-    /// OpenRouter API key.
+    
     pub openrouter_api_key: Option<String>,
-    /// OpenRouter model ID.
+    
     pub openrouter_model: String,
-    /// Groq API key.
+    
     pub groq_api_key: Option<String>,
-    /// Groq model ID.
+    
     pub groq_model: String,
-    /// VAD provider (`energy` | `silero`).
+    
     pub vad_provider: String,
-    /// ASR provider (`stub` | `vosk_remote`).
+    
     pub asr_provider: String,
-    /// Optional Vosk server URL for `asr_provider=vosk_remote`.
+    
     pub vosk_server_url: Option<String>,
-    /// If true, configured providers must be available or startup/requests fail.
+    
     pub provider_strict: bool,
 }
 
 impl Config {
-    /// Build configuration by reading process environment variables.
+    
     pub fn from_env() -> Self {
         let keycloak_realm_url =
             std::env::var("KEYCLOAK_REALM_URL").expect("KEYCLOAK_REALM_URL must be set");

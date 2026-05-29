@@ -29,7 +29,7 @@ export function savePreferenceOverrides(updates) {
   );
 }
 
-/** @returns {"feminine" | "masculine"} */
+
 export function normalizeVoiceGoal(goal) {
   const normalized = String(goal || "").toLowerCase();
   return normalized === "masculinize" || normalized === "masculine"

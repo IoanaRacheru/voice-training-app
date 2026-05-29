@@ -4,7 +4,7 @@ use mongodb::bson::{DateTime, doc};
 
 use crate::models::challenge::{ChallengeState, ChallengeStreak};
 
-/// Repository abstraction for challenge state and streak persistence.
+
 #[async_trait]
 pub trait ChallengeRepository: Send + Sync {
     async fn get_today(
@@ -49,7 +49,8 @@ fn compute_next_streak(
     }
 
     let maybe_today = NaiveDate::parse_from_str(completed_date, "%Y-%m-%d").ok();
-    let maybe_last = last_completed_date.and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+    let maybe_last =
+        last_completed_date.and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
 
     match (maybe_last, maybe_today) {
         (Some(last), Some(today)) => {
@@ -119,16 +120,25 @@ impl ChallengeRepository for MongoChallengeRepository {
             return Ok(found);
         }
         let now = DateTime::now();
-        let seed = ChallengeStreak {
-            id: None,
-            user_id: user_id.to_string(),
-            current_challenge_streak: 0,
-            longest_challenge_streak: 0,
-            last_completed_date: None,
-            updated_at: now,
-        };
-        let _ = col.insert_one(seed.clone()).await?;
-        Ok(seed)
+        col.update_one(
+            doc! {"user_id": user_id},
+            doc! {
+                "$setOnInsert": {
+                    "user_id": user_id,
+                    "current_challenge_streak": 0_i64,
+                    "longest_challenge_streak": 0_i64,
+                    "last_completed_date": mongodb::bson::Bson::Null,
+                    "updated_at": now,
+                }
+            },
+        )
+        .upsert(true)
+        .await?;
+
+        Ok(col
+            .find_one(doc! {"user_id": user_id})
+            .await?
+            .expect("challenge streak should exist after upsert"))
     }
 
     async fn update_streak_from_completion(
@@ -146,8 +156,9 @@ impl ChallengeRepository for MongoChallengeRepository {
                 current.last_completed_date.as_deref(),
                 completed_date,
             );
-            next.longest_challenge_streak =
-                next.longest_challenge_streak.max(next.current_challenge_streak);
+            next.longest_challenge_streak = next
+                .longest_challenge_streak
+                .max(next.current_challenge_streak);
             next.last_completed_date = Some(completed_date.to_string());
             next.updated_at = DateTime::now();
         }

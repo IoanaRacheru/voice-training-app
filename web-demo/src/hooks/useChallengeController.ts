@@ -6,10 +6,7 @@ import { challengeStreakService } from "@/services/challengeStreakService";
 
 type UnknownUser = Record<string, unknown> | null | undefined;
 
-/**
- * Encapsulates Challenge page orchestration (state, synchronization, actions).
- * Keeps page components focused on rendering.
- */
+
 export function useChallengeController(user: UnknownUser) {
   const [challenge, setChallenge] = useState<any>(null);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
@@ -100,6 +97,21 @@ export function useChallengeController(user: UnknownUser) {
         toast.success("Daily challenge generated.");
       },
 
+      async generateWithAi() {
+        const nextChallenge = await challengeSessionService.planChallengeWithAi({
+          user,
+          goal: currentProfileGoal,
+          progress: {
+            streakDays: streak?.current_challenge_streak || 0,
+            hasActiveChallenge: Boolean(challenge),
+          },
+        });
+        setChallenge(nextChallenge);
+        setActiveExerciseIndex(null);
+        setBackendAvailable(challengeSessionService.isBackendAvailable());
+        toast.success("AI challenge plan generated.");
+      },
+
       async startChallenge() {
         if (!challenge) return;
         const nextChallenge = await challengeSessionService.startChallenge(challenge);
@@ -111,6 +123,21 @@ export function useChallengeController(user: UnknownUser) {
       moveExercise(index: number, direction: number) {
         if (!challenge) return;
         setChallenge(challengeSessionService.reorderExercise(challenge, index, direction));
+      },
+
+      addExercise(exerciseId: string) {
+        if (!challenge) return;
+        setChallenge(challengeSessionService.addExercise(challenge, exerciseId));
+      },
+
+      removeExercise(index: number) {
+        if (!challenge) return;
+        setChallenge(challengeSessionService.removeExercise(challenge, index));
+      },
+
+      setExerciseMinutes(index: number, minutes: number) {
+        if (!challenge) return;
+        setChallenge(challengeSessionService.setExerciseMinutes(challenge, index, minutes));
       },
 
       async startExercise(index: number) {
@@ -148,7 +175,7 @@ export function useChallengeController(user: UnknownUser) {
         setActiveExerciseIndex(null);
       },
     }),
-    [challenge, user]
+    [challenge, currentProfileGoal, streak, user]
   );
 
   return {

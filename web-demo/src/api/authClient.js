@@ -15,4 +15,5 @@ export const saveGeneratedChallenge = client.saveGeneratedChallenge;
 export const startChallenge = client.startChallenge;
 export const completeChallengeExercise = client.completeChallengeExercise;
 export const getChallengeStreak = client.getChallengeStreak;
+export const planChallenge = client.planChallenge;
 export const chat = client.chat;

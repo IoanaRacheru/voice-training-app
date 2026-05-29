@@ -12,13 +12,49 @@ import {
   scoreExercise,
 } from "./exerciseSessionScoring.js";
 import { validateExerciseSessionData } from "./exerciseSessionValidator.js";
+import {
+  mapExerciseTypeForBackend,
+  mapGoalForBackend,
+} from "./sessionPayloadMapper.js";
 
-const AUDIO_HISTORY_EXERCISE_IDS = new Set(["pronunciation", "diction"]);
 const backendStatus = {
   sessionsApiAvailable: true,
   analyzeApiAvailable: true,
   createSessionApiAvailable: true,
 };
+
+function buildSessionKey(session) {
+  if (!session || typeof session !== "object") return "";
+  const id = session.id ? String(session.id) : "";
+  if (id) return `id:${id}`;
+  const date = session.date ? String(session.date) : "";
+  const exercise = session.exercise_id || session.exercise_name || session.exercise_type || "";
+  const duration = Number.isFinite(Number(session.duration_seconds))
+    ? String(session.duration_seconds)
+    : "";
+  const score = Number.isFinite(Number(session.score)) ? String(session.score) : "";
+  return `k:${date}|${exercise}|${duration}|${score}`;
+}
+
+function mergeSessionsPreferLocal(localSessions, apiSessions) {
+  const map = new Map();
+  for (const session of Array.isArray(apiSessions) ? apiSessions : []) {
+    const key = buildSessionKey(session);
+    if (!key) continue;
+    map.set(key, session);
+  }
+  for (const session of Array.isArray(localSessions) ? localSessions : []) {
+    const key = buildSessionKey(session);
+    if (!key) continue;
+    const existing = map.get(key) || {};
+    map.set(key, { ...existing, ...session });
+  }
+  return [...map.values()].sort((a, b) => {
+    const left = new Date(b?.date || 0).getTime();
+    const right = new Date(a?.date || 0).getTime();
+    return left - right;
+  });
+}
 
 function getAverage(values) {
   const clean = values.filter((value) => Number.isFinite(value));
@@ -70,16 +106,6 @@ async function decodeAudioForAnalyze(blob) {
   }
 }
 
-function normalizeEnumLike(value, fallback) {
-  if (!value || typeof value !== "string") return fallback;
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return normalized || fallback;
-}
-
 function estimatePitchStability(pitches = []) {
   const clean = pitches.filter((value) => Number.isFinite(value));
   if (clean.length < 2) return 0.5;
@@ -93,13 +119,14 @@ function estimatePitchStability(pitches = []) {
 
 export const exerciseSessionService = {
   async getSessions() {
+    const localSessions = exerciseSessionRepository.getAll();
     try {
       const apiSessions = await getSessionsApi();
       backendStatus.sessionsApiAvailable = true;
-      return Array.isArray(apiSessions) ? apiSessions : [];
+      return mergeSessionsPreferLocal(localSessions, apiSessions);
     } catch (_error) {
       backendStatus.sessionsApiAvailable = false;
-      return exerciseSessionRepository.getAll();
+      return localSessions;
     }
   },
 
@@ -157,7 +184,9 @@ export const exerciseSessionService = {
       stopped_early: !completed,
     };
 
-    // Feed real backend analyze pipeline and attach returned diagnostics.
+    session.audio_url = await readBlobAsDataUrl(sessionData.audioData.blob);
+
+    
     try {
       const audioAnalyzeData = await decodeAudioForAnalyze(sessionData.audioData.blob);
       const expectedText = sessionData.exercise?.shortInstruction || sessionData.exercise?.name || null;
@@ -184,28 +213,34 @@ export const exerciseSessionService = {
         pronunciation: analyzeResult.pronunciation,
       };
     } catch (_error) {
-      // Keep local save resilient when backend analyze is temporarily unavailable.
+      
       backendStatus.analyzeApiAvailable = false;
       session.backend_analysis = null;
     }
 
-    // Persist canonical session to backend when possible.
+    
     try {
-      await createSessionApi({
+      const backendPayload = {
         duration_seconds: session.duration_seconds,
         average_pitch: Number.isFinite(session.average_pitch) ? session.average_pitch : 150.0,
         score: Number.isFinite(session.score) ? session.score : 0,
-        exercise_type: normalizeEnumLike(session.exercise_id, "exercise"),
-        goal: normalizeEnumLike(session.goal_type || session.goal, "general_training"),
+        exercise_type: mapExerciseTypeForBackend(session.exercise_id, session.exercise_name),
+        goal: mapGoalForBackend(session.goal_type, session.goal),
+        audio_data_url: session.audio_url,
+      };
+      await createSessionApi({
+        ...backendPayload,
       });
       backendStatus.createSessionApiAvailable = true;
-    } catch (_error) {
-      // Local repository remains fallback source if backend persistence fails.
+    } catch (error) {
+      
+      
+      console.warn("createSessionApi failed", {
+        exercise_id: session.exercise_id,
+        goal_type: session.goal_type,
+        error: error?.message || String(error),
+      });
       backendStatus.createSessionApiAvailable = false;
-    }
-
-    if (AUDIO_HISTORY_EXERCISE_IDS.has(sessionData.exercise.id)) {
-      session.audio_url = await readBlobAsDataUrl(sessionData.audioData.blob);
     }
 
     exerciseSessionRepository.save(session);

@@ -20,7 +20,7 @@ export const streakService = {
     updateAfterSession() {
         const today = getToday();
 
-        // reset zi noua
+        
         if (state.todayProgress.date !== today) {
             state.todayProgress = {
                 date: today,
@@ -32,7 +32,7 @@ export const streakService = {
 
         state.todayProgress.completedSessions += 1;
 
-        // check goal
+        
         if (
             state.todayProgress.completedSessions >= state.todayProgress.dailyGoal &&
             !state.todayProgress.isGoalCompleted

@@ -1,10 +1,10 @@
-//! Basic DSP utilities used by the core engine.
+
 
 use rustfft::{FftPlanner, num_complex::Complex};
 
-/// Voice activity detector abstraction.
+
 pub trait VadDetector: Send + Sync {
-    /// Return a voiced mask per frame from frame-level RMS values.
+    
     fn voiced_mask(
         &self,
         samples: &[f32],
@@ -13,11 +13,10 @@ pub trait VadDetector: Send + Sync {
         hop: usize,
         rms_values: &[f64],
     ) -> Vec<bool>;
-    /// Human-readable detector name.
+    
     fn name(&self) -> &'static str;
 }
 
-/// Simple RMS-threshold VAD baseline.
 pub struct EnergyVadDetector;
 
 impl VadDetector for EnergyVadDetector {
@@ -42,7 +41,7 @@ impl VadDetector for EnergyVadDetector {
     }
 }
 
-/// Placeholder Silero-compatible VAD adapter hook.
+
 pub struct SileroVadDetector;
 
 impl VadDetector for SileroVadDetector {
@@ -76,14 +75,26 @@ fn silero_voiced_mask(
         8_000 => SampleRate::Rate8k,
         16_000 => SampleRate::Rate16k,
         _ => {
-            return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values);
+            return EnergyVadDetector.voiced_mask(
+                samples,
+                sample_rate,
+                frame_size,
+                hop,
+                rms_values,
+            );
         }
     };
 
     let mut session = match Session::bundled() {
         Ok(s) => s,
         Err(_) => {
-            return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values);
+            return EnergyVadDetector.voiced_mask(
+                samples,
+                sample_rate,
+                frame_size,
+                hop,
+                rms_values,
+            );
         }
     };
 
@@ -92,7 +103,13 @@ fn silero_voiced_mask(
     let segments = match detect_speech(&mut session, samples, options) {
         Ok(s) => s,
         Err(_) => {
-            return EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values);
+            return EnergyVadDetector.voiced_mask(
+                samples,
+                sample_rate,
+                frame_size,
+                hop,
+                rms_values,
+            );
         }
     };
 
@@ -109,7 +126,6 @@ fn silero_voiced_mask(
             let seg_end = seg.end_seconds();
             seg_end > start_s && seg_start < end_s
         });
-        *voiced = frame_voiced;
     }
 
     mask
@@ -126,44 +142,31 @@ fn silero_voiced_mask(
     EnergyVadDetector.voiced_mask(samples, sample_rate, frame_size, hop, rms_values)
 }
 
-/// Signal quality flags for diagnostics and confidence interpretation.
 #[derive(Debug, Clone, Default)]
 pub struct SignalQualityFlags {
-    /// True if RMS energy is very low.
     pub low_energy: bool,
-    /// True if voiced frame ratio is low.
     pub low_voiced_ratio: bool,
-    /// True if too few reliable pitch estimates were extracted.
     pub insufficient_pitch_frames: bool,
-    /// True if pitch variability indicates unstable voicing.
     pub unstable_pitch: bool,
 }
 
-/// Result of signal-derived feature extraction.
 #[derive(Debug, Clone)]
 pub struct SignalFeatures {
-    /// Estimated median pitch in Hz.
     pub median_pitch_hz: f64,
-    /// Pitch stability score in `[0, 1]`.
     pub pitch_stability: f64,
-    /// Speech pause ratio in `[0, 1]`.
     pub pause_ratio: f64,
-    /// Spectral brightness score in `[0, 1]`.
     pub spectral_brightness: f64,
-    /// Confidence estimate in `[0, 1]`.
     pub confidence: f64,
-    /// Quality flags describing extraction reliability.
     pub quality_flags: SignalQualityFlags,
-    /// VAD implementation used for this extraction.
     pub vad_name: &'static str,
 }
 
-/// Extract signal features from mono PCM samples.
+
 pub fn extract_signal_features(samples: &[f32], sample_rate: u32) -> Option<SignalFeatures> {
     extract_signal_features_with_vad(samples, sample_rate, &EnergyVadDetector)
 }
 
-/// Extract signal features from mono PCM samples using the provided VAD.
+
 pub fn extract_signal_features_with_vad(
     samples: &[f32],
     sample_rate: u32,
@@ -310,7 +313,7 @@ fn spectral_brightness(frame: &[f32]) -> f64 {
         .map(|(i, s)| {
             let w = 0.5
                 - 0.5
-                    * (2.0 * std::f64::consts::PI * i as f64 / (n.saturating_sub(1) as f64)).cos();
+                    * (2.0 * std::f64::consts::PI * i as f64 / (n as f64 - 1.0)).cos();
             Complex::new(*s as f64 * w, 0.0)
         })
         .collect();
@@ -410,7 +413,7 @@ mod tests {
         let len = sr as usize;
         let samples: Vec<f32> = (0..len)
             .map(|i| {
-                // 40ms voiced burst, then 460ms silence.
+                
                 let phase = i % (sr as usize / 2);
                 if phase < (sr as usize * 4 / 100) {
                     let t = i as f32 / sr as f32;

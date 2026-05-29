@@ -1,8 +1,6 @@
 import { getSavedProfilePreferences } from "../profilePreferences.js";
 
-/**
- * Builds the app-level user model from API payload + locally saved preferences.
- */
+
 export function mapApiUserToAppUser(data) {
   const preferences = getSavedProfilePreferences(data);
   return {

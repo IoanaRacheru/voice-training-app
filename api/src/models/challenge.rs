@@ -1,7 +1,7 @@
 use mongodb::bson::{DateTime, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 
-/// Persisted daily challenge state for a user.
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChallengeState {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -12,7 +12,7 @@ pub struct ChallengeState {
     pub updated_at: DateTime,
 }
 
-/// Persisted challenge streak counters for a user.
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChallengeStreak {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]

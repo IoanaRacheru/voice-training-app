@@ -17,6 +17,7 @@ export default function ScoreChart({ data }: { data: DataPoint[] }) {
     <section className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.06)]">
       <p className="font-mono text-[11px] uppercase text-muted-foreground">Score</p>
       <h3 className="mt-1 text-xl font-black uppercase text-foreground">Improvement</h3>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Scale: 0-100</p>
       <div className="mt-5 h-56">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
@@ -31,4 +32,3 @@ export default function ScoreChart({ data }: { data: DataPoint[] }) {
     </section>
   );
 }
-

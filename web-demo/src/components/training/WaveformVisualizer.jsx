@@ -1,10 +1,5 @@
 import React from "react";
-/**
- * @param {{
- *   isRecording: boolean,
- *   waveformData?: number[]
- * }} props
- */
+
 export default function WaveformVisualizer({ isRecording, waveformData = [] }) {
   const bars = Array.from({ length: 56 }, (_, index) => {
     const amplitude = waveformData[index] ?? 0;

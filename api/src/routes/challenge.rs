@@ -6,7 +6,7 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 use utoipa::ToSchema;
 
 use crate::{AppState, auth::AppwriteUser, errors::AppError};
@@ -17,6 +17,7 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/api/challenge/generate", post(generate))
         .route("/api/challenge/start", post(start))
         .route("/api/challenge/complete-exercise", post(complete_exercise))
+        .route("/api/challenge/plan", post(plan))
         .route("/api/challenge/streak", get(get_streak))
 }
 
@@ -47,6 +48,39 @@ pub struct StreakResponse {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct TodayResponse {
     pub challenge: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlanChallengeRequest {
+    pub goal: String,
+    pub progress: Option<Value>,
+    pub available_exercises: Vec<AvailableExercise>,
+}
+
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct AvailableExercise {
+    pub id: String,
+    pub title: String,
+    pub category: Option<String>,
+    pub difficulty: Option<String>,
+    pub default_minutes: Option<u32>,
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PlanChallengeResponse {
+    pub plan: Vec<PlannedExercise>,
+    pub source: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
+pub struct PlannedExercise {
+    pub exercise_id: String,
+    pub order: usize,
+    pub minutes: u32,
+    pub rationale: Option<String>,
 }
 
 #[utoipa::path(get, path = "/api/challenge/today", tag = "Challenge", security(("bearer_auth"=[])), responses((status=200, body=TodayResponse)))]
@@ -92,6 +126,33 @@ pub async fn complete_exercise(
     Json(body): Json<UpsertChallengeRequest>,
 ) -> Result<Json<ChallengeEnvelope>, AppError> {
     upsert_challenge(state, user, body, true).await
+}
+
+#[utoipa::path(post, path = "/api/challenge/plan", tag = "Challenge", security(("bearer_auth"=[])), request_body=PlanChallengeRequest, responses((status=200, body=PlanChallengeResponse)))]
+pub async fn plan(
+    State(state): State<Arc<AppState>>,
+    Extension(_user): Extension<AppwriteUser>,
+    Json(body): Json<PlanChallengeRequest>,
+) -> Result<Json<PlanChallengeResponse>, AppError> {
+    if body.goal.trim().is_empty() {
+        return Err(AppError::Validation("goal must not be empty".into()));
+    }
+    if body.available_exercises.is_empty() {
+        return Err(AppError::Validation(
+            "available_exercises must not be empty".into(),
+        ));
+    }
+
+    match plan_with_llm(&state, &body).await {
+        Ok(plan) if !plan.is_empty() => Ok(Json(PlanChallengeResponse {
+            plan,
+            source: "llm".into(),
+        })),
+        _ => Ok(Json(PlanChallengeResponse {
+            plan: build_fallback_plan(&body.available_exercises),
+            source: "fallback".into(),
+        })),
+    }
 }
 
 async fn upsert_challenge(
@@ -244,11 +305,140 @@ fn validate_challenge_payload(
     }
     if completion_endpoint && status != "completed" && available_indices.is_empty() {
         return Err(AppError::Validation(
-            "completion update must preserve a next available exercise unless fully completed".into(),
+            "completion update must preserve a next available exercise unless fully completed"
+                .into(),
         ));
     }
 
     Ok(())
+}
+
+fn build_fallback_plan(available_exercises: &[AvailableExercise]) -> Vec<PlannedExercise> {
+    available_exercises
+        .iter()
+        .take(5)
+        .enumerate()
+        .map(|(order, exercise)| PlannedExercise {
+            exercise_id: exercise.id.clone(),
+            order,
+            minutes: exercise.default_minutes.unwrap_or(2).clamp(1, 60),
+            rationale: Some("Balanced fallback routine.".into()),
+        })
+        .collect()
+}
+
+async fn plan_with_llm(
+    state: &Arc<AppState>,
+    request: &PlanChallengeRequest,
+) -> Result<Vec<PlannedExercise>, AppError> {
+    let (api_key, model, base_url) = match state.config.llm_provider.as_str() {
+        "openrouter" => (
+            state.config.openrouter_api_key.clone(),
+            state.config.openrouter_model.clone(),
+            Some("https://openrouter.ai/api/v1".to_string()),
+        ),
+        "groq" => (
+            state.config.groq_api_key.clone(),
+            state.config.groq_model.clone(),
+            Some("https://api.groq.com/openai/v1".to_string()),
+        ),
+        "openai" => (
+            state.config.llm_api_key.clone(),
+            state.config.llm_model.clone(),
+            state.config.llm_base_url.clone(),
+        ),
+        _ => return Err(AppError::Validation("LLM provider is disabled".into())),
+    };
+
+    let api_key = api_key.ok_or_else(|| AppError::Validation("LLM api key is missing".into()))?;
+    let base = base_url.unwrap_or_else(|| "https://api.openai.com/v1".to_string());
+    let endpoint = format!("{}/chat/completions", base.trim_end_matches('/'));
+    let catalog_json = serde_json::to_string(&request.available_exercises)
+        .map_err(|err| AppError::Validation(format!("catalog serialization failed: {err}")))?;
+    let progress_json = serde_json::to_string(&request.progress)
+        .map_err(|err| AppError::Validation(format!("progress serialization failed: {err}")))?;
+
+    let user_prompt = format!(
+        "Goal: {}\nProgress: {}\nAvailable exercises: {}\nReturn ONLY JSON object: {{\"plan\":[{{\"exercise_id\":\"...\",\"order\":0,\"minutes\":3,\"rationale\":\"...\"}}]}}. Use only listed exercise_id values.",
+        request.goal, progress_json, catalog_json
+    );
+
+    let payload = json!({
+        "model": model,
+        "temperature": 0.2,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You create concise daily voice training plans. Output strict JSON only with key `plan`."
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
+        ]
+    });
+
+    let response_value: Value = state
+        .http
+        .post(endpoint)
+        .bearer_auth(api_key)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| AppError::Validation(format!("LLM request failed: {err}")))?
+        .error_for_status()
+        .map_err(|err| AppError::Validation(format!("LLM response status error: {err}")))?
+        .json()
+        .await
+        .map_err(|err| AppError::Validation(format!("LLM response parse failed: {err}")))?;
+
+    let content = response_value
+        .get("choices")
+        .and_then(Value::as_array)
+        .and_then(|choices| choices.first())
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::Validation("LLM returned no content".into()))?;
+
+    let parsed: Value = serde_json::from_str(content)
+        .map_err(|err| AppError::Validation(format!("LLM returned invalid JSON: {err}")))?;
+    let plan_value = parsed
+        .get("plan")
+        .ok_or_else(|| AppError::Validation("LLM JSON is missing `plan`".into()))?;
+    let proposed: Vec<PlannedExercise> = serde_json::from_value(plan_value.clone())
+        .map_err(|err| AppError::Validation(format!("Invalid plan schema: {err}")))?;
+    Ok(sanitize_plan(proposed, &request.available_exercises))
+}
+
+fn sanitize_plan(
+    proposed: Vec<PlannedExercise>,
+    available_exercises: &[AvailableExercise],
+) -> Vec<PlannedExercise> {
+    let available_ids = available_exercises
+        .iter()
+        .map(|exercise| exercise.id.as_str())
+        .collect::<std::collections::HashSet<_>>();
+    let mut seen = std::collections::HashSet::new();
+    let mut sanitized = proposed
+        .into_iter()
+        .filter(|exercise| available_ids.contains(exercise.exercise_id.as_str()))
+        .filter(|exercise| seen.insert(exercise.exercise_id.clone()))
+        .take(8)
+        .enumerate()
+        .map(|(order, exercise)| PlannedExercise {
+            exercise_id: exercise.exercise_id,
+            order,
+            minutes: exercise.minutes.clamp(1, 60),
+            rationale: exercise.rationale,
+        })
+        .collect::<Vec<_>>();
+
+    if sanitized.is_empty() {
+        sanitized = build_fallback_plan(available_exercises);
+    }
+
+    sanitized
 }
 
 #[utoipa::path(get, path = "/api/challenge/streak", tag = "Challenge", security(("bearer_auth"=[])), responses((status=200, body=StreakResponse)))]
@@ -343,7 +533,6 @@ mod tests {
                 challenge,
                 updated_at: DateTime::now(),
             };
-            *self.state.lock().expect("lock") = Some(next.clone());
             Ok(next)
         }
 
@@ -361,8 +550,9 @@ mod tests {
         ) -> Result<ChallengeStreak, mongodb::error::Error> {
             let mut streak = self.streak.lock().expect("lock");
             streak.current_challenge_streak += 1;
-            streak.longest_challenge_streak =
-                streak.longest_challenge_streak.max(streak.current_challenge_streak);
+            streak.longest_challenge_streak = streak
+                .longest_challenge_streak
+                .max(streak.current_challenge_streak);
             streak.last_completed_date = Some(completed_date.to_string());
             streak.updated_at = DateTime::now();
             Ok(streak.clone())
@@ -408,9 +598,15 @@ mod tests {
                 Box::new(EnergyVadDetector),
             )),
             llm_provider: "rule".into(),
-            analysis_repo: Arc::new(MongoAnalysisRepository::new(client.database("voice_training"))),
-            profile_repo: Arc::new(MongoProfileRepository::new(client.database("voice_training"))),
-            session_repo: Arc::new(MongoSessionRepository::new(client.database("voice_training"))),
+            analysis_repo: Arc::new(MongoAnalysisRepository::new(
+                client.database("voice_training"),
+            )),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                client.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                client.database("voice_training"),
+            )),
             challenge_repo,
         })
     }
@@ -469,7 +665,9 @@ mod tests {
         let _ = complete_exercise(State(state.clone()), Extension(user.clone()), Json(body))
             .await
             .expect("should pass");
-        let Json(streak) = get_streak(State(state), Extension(user)).await.expect("streak");
+        let Json(streak) = get_streak(State(state), Extension(user))
+            .await
+            .expect("streak");
         assert_eq!(streak.current_challenge_streak, 1);
     }
 

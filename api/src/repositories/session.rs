@@ -4,43 +4,45 @@ use mongodb::bson::{DateTime, doc};
 
 use crate::models::session::Session;
 
-/// Input payload used to persist a training session.
+
 #[derive(Debug, Clone)]
 pub struct CreateSessionInput {
-    /// Authenticated user ID.
+    
     pub user_id: String,
-    /// Session duration in seconds.
+    
     pub duration_seconds: u32,
-    /// Average pitch in Hz.
+    
     pub average_pitch: f64,
-    /// Session score in `[0, 100]`.
+    
     pub score: u32,
-    /// Exercise type tag.
+    
     pub exercise_type: String,
-    /// Goal tag.
+    
     pub goal: String,
+    
+    pub audio_data_url: Option<String>,
 }
 
-/// Repository abstraction for training session persistence.
+
 #[async_trait]
 pub trait SessionRepository: Send + Sync {
-    /// Insert a session record and return inserted ID hex when available.
+    
     async fn insert_session(
         &self,
         input: CreateSessionInput,
     ) -> Result<Option<String>, mongodb::error::Error>;
 
-    /// List sessions for a user ordered by most recent first.
+    
     async fn list_by_user_id(&self, user_id: &str) -> Result<Vec<Session>, mongodb::error::Error>;
 }
 
-/// MongoDB-backed implementation of [`SessionRepository`].
+
 pub struct MongoSessionRepository {
     db: mongodb::Database,
 }
 
 impl MongoSessionRepository {
-    /// Create a session repository bound to a MongoDB database handle.
+    
     pub fn new(db: mongodb::Database) -> Self {
         Self { db }
     }
@@ -79,6 +81,7 @@ fn build_session_from_input(input: CreateSessionInput, now: DateTime) -> Session
         score: input.score,
         exercise_type: input.exercise_type,
         goal: input.goal,
+        audio_data_url: input.audio_data_url,
     }
 }
 
@@ -99,6 +102,7 @@ mod tests {
                 score: 90,
                 exercise_type: "pitch".into(),
                 goal: "feminine".into(),
+                audio_data_url: Some("data:audio/webm;base64,AAAA".into()),
             },
             now,
         );
@@ -108,5 +112,6 @@ mod tests {
         assert_eq!(session.score, 90);
         assert_eq!(session.exercise_type, "pitch");
         assert_eq!(session.goal, "feminine");
+        assert!(session.audio_data_url.is_some());
     }
 }

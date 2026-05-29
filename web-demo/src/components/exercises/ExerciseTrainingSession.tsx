@@ -6,6 +6,7 @@ import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { analysisService } from "@/services/analysisService";
 import { exerciseSessionService } from "@/services/exerciseSessionService";
 import SessionCoreGraphs from "./SessionCoreGraphs";
+import ReadingPassageCard from "./ReadingPassageCard";
 import { getExerciseSessionConfig } from "./exerciseSessionConfig";
 import type { VoiceExercise } from "@/features/exercises/types";
 
@@ -125,6 +126,10 @@ export default function ExerciseTrainingSession({
           {sessionConfig.shortInstruction}
         </p>
       </div>
+      <ReadingPassageCard
+        title={exercise.readingPassageTitle}
+        lines={exercise.readingPassageLines}
+      />
 
       <div className="space-y-5">
         {(showPitchGraph || showResonanceGraph || showGenderGraph) && (

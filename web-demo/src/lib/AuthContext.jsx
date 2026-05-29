@@ -9,37 +9,12 @@ import {
   shouldSyncPreferenceOverrides,
 } from "@/lib/auth/profilePreferenceSync";
 
-/**
- * @typedef {{
- *   id: string;
- *   username: string;
- *   email: string;
- *   first_name?: string;
- *   last_name?: string;
- *   full_name?: string;
- *   voice_goal?: "feminize" | "masculinize" | "feminine" | "masculine" | "androgynous" | "custom";
- *   experience_level?: "beginner" | "intermediate" | "advanced";
- *   target_pitch_range?: number[];
- *   training_focus?: string[];
- *   identity_background?: string;
- *   personalization_goals?: string[];
- *   age?: string | number;
- *   puberty_background?: string;
- *   initial_voice_sample?: {
- *     name: string;
- *     type?: string;
- *     size?: number;
- *     source?: "recording" | "upload";
- *     saved_at?: string;
- *   };
- *   pitch_target_enabled?: boolean;
- * }} User
- */
 
-const AuthContext = createContext(/** @type {any} */ (null));
 
-export function AuthProvider(/** @type {{ children: import("react").ReactNode }} */ { children }) {
-  const [user, setUser] = useState(/** @type {User | null} */ (null));
+const AuthContext = createContext( (null));
+
+export function AuthProvider( { children }) {
+  const [user, setUser] = useState( (null));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -64,10 +39,10 @@ export function AuthProvider(/** @type {{ children: import("react").ReactNode }}
 
   const logout = () => {
     setUser(null);
-    keycloak.logout({ redirectUri: getAuthRedirectUri("/profile") });
+    keycloak.logout({ redirectUri: getAuthRedirectUri("/") });
   };
 
-  const updateUser = async (/** @type {Partial<User>} */ updates) => {
+  const updateUser = async ( updates) => {
     if (!user) return;
     if (shouldSyncPreferenceOverrides(updates)) {
       savePreferenceOverrides(pickPreferenceOverrides(updates));
@@ -76,7 +51,7 @@ export function AuthProvider(/** @type {{ children: import("react").ReactNode }}
     try {
       await authApi.patchMe(updates);
     } catch (_error) {
-      // Keep local profile settings usable even when backend profile patch fails.
+      
     }
     setUser({ ...user, ...updates });
   };

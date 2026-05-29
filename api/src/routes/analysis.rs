@@ -14,59 +14,59 @@ use crate::{
     AppState, auth::AppwriteUser, errors::AppError, repositories::analysis::AnalysisArtifact,
 };
 
-/// Register analysis routes with a configurable body-size guard.
+
 pub fn router(max_body_bytes: usize) -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/analyze", post(analyze))
         .layer(DefaultBodyLimit::max(max_body_bytes))
 }
 
-/// Request body for on-demand voice analysis.
+
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AnalyzeRequest {
-    /// Median pitch estimate in Hz.
+    
     pub median_pitch_hz: f64,
-    /// Pitch stability score in `[0, 1]`.
+    
     pub pitch_stability: f64,
-    /// Pause ratio in `[0, 1]`.
+    
     pub pause_ratio: f64,
-    /// Spectral brightness score in `[0, 1]`.
+    
     pub spectral_brightness: f64,
-    /// Optional mono PCM samples in `[-1.0, 1.0]` for signal-derived analysis.
+    
     pub audio_samples: Option<Vec<f32>>,
-    /// Sample rate for `audio_samples`.
+    
     pub sample_rate: Option<u32>,
-    /// Optional target phrase used for pronunciation feedback.
+    
     pub expected_text: Option<String>,
 }
 
-/// Response body for on-demand voice analysis.
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AnalyzeResponse {
-    /// Session summary synthesized by the engine.
+    
     pub summary: String,
-    /// Ordered list of practice suggestions.
+    
     pub practice_next: Vec<String>,
-    /// Natural language coach feedback.
+    
     pub llm_coach_feedback: String,
-    /// Prosodic analysis output.
+    
     pub prosody: app_core::tools::ProsodyOutput,
-    /// Voice presentation estimate and confidence.
+    
     pub voice_presentation: app_core::tools::VoicePresentationOutput,
-    /// Signal extraction confidence in `[0, 1]` when audio is supplied.
+    
     pub signal_confidence: Option<f64>,
-    /// Signal quality diagnostics.
+    
     pub signal_quality: Option<app_core::engine::SignalQuality>,
-    /// Name of the VAD implementation used.
+    
     pub vad_used: Option<String>,
-    /// ASR transcript output for provided audio.
+    
     pub asr: Option<app_core::asr::AsrResult>,
-    /// Pronunciation feedback against `expected_text`.
+    
     pub pronunciation: Option<app_core::asr::PronunciationFeedback>,
 }
 
-/// Perform voice analysis and persist a compact analysis artifact.
+
 #[utoipa::path(
     post,
     path = "/api/analyze",
@@ -150,16 +150,16 @@ mod tests {
         config::Config,
         repositories::{
             analysis::{AnalysisArtifact, AnalysisRepository},
-            profile::MongoProfileRepository,
             challenge::MongoChallengeRepository,
+            profile::MongoProfileRepository,
             session::MongoSessionRepository,
         },
     };
     use app_core::{
         Engine,
         asr::{AsrResult, SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
-        errors::CoreError,
         dsp::EnergyVadDetector,
+        errors::CoreError,
         llm::RuleBasedCoach,
         tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
     };

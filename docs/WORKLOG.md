@@ -171,6 +171,13 @@
 - Added API-level Vosk container E2E verification target:
   - `make verify-vosk-api` (uses Dockerized Vosk service)
   - runs authenticated `/api/analyze` against `api_vosk` service and asserts `asr` payload presence.
+- Added frontend Playwright smoke E2E coverage:
+  - `web-demo/playwright.config.ts` with local webServer and Keycloak/API environment wiring.
+  - Smoke specs for auth shell, challenge route generation/start, chatbot send/reply, and progress route rendering.
+- Added deterministic E2E selectors (`data-testid`) on demo-critical frontend surfaces.
+- Added root automation target:
+  - `make verify-e2e-smoke` to execute Playwright smoke against the local backend/keycloak stack.
+- Updated `docs/BACKEND_DEMO_RUNBOOK.md` with Playwright smoke steps and troubleshooting notes.
 
 ### Next In Queue
 - Production runtime profile parity hardening:

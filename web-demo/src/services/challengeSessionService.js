@@ -1,6 +1,7 @@
 import { analysisService } from "./analysisService.js";
 import { challengeGeneratorService } from "./challengeGeneratorService.js";
 import { challengeStreakService } from "./challengeStreakService.js";
+import { exerciseDurationService } from "./exerciseDurationService.js";
 import { MIN_SESSION_DURATION_SECONDS } from "./sessionService.js";
 import { resolveTargetRange } from "./targetRangeUtils.js";
 import { createLocalJsonStore } from "./core/localJsonStore.js";
@@ -10,9 +11,11 @@ import {
   completeChallengeExercise as completeChallengeExerciseApi,
   getChallengeStreak as getChallengeStreakApi,
   getTodayChallenge as getTodayChallengeApi,
+  planChallenge as planChallengeApi,
   saveGeneratedChallenge,
   startChallenge as startChallengeApi,
 } from "@/api/authClient";
+import { challengeService } from "./challengeService.js";
 
 const STORAGE_KEY = "voiceDailyChallenge";
 const challengeStore = createLocalJsonStore(STORAGE_KEY, () => null);
@@ -26,6 +29,20 @@ function writeChallenge(challenge) {
   challengeStore.write(challenge);
   emitAppEvent("voiceDailyChallenge:changed", challenge);
   return challenge;
+}
+
+function toPlannerCatalogEntry(exercise) {
+  return {
+    id: exercise.id,
+    title: exercise.name,
+    category: exercise.goalType || "general",
+    difficulty: exercise.experience ? "easy" : "medium",
+    default_minutes: Math.max(
+      1,
+      Math.round(exerciseDurationService.getRecommendedDurationSeconds(exercise) / 60)
+    ),
+    tags: [],
+  };
 }
 
 function clampScore(value) {
@@ -115,21 +132,23 @@ function validateResult({ exercise, audioData, analysis }) {
 }
 
 export const challengeSessionService = {
-  _backendAvailable: true,
+  _todayAvailable: true,
+  _streakAvailable: true,
+  _upsertAvailable: true,
 
   async getBackendStreak() {
     try {
       const streak = await getChallengeStreakApi();
-      this._backendAvailable = true;
+      this._streakAvailable = true;
       return streak;
     } catch (_error) {
-      this._backendAvailable = false;
+      this._streakAvailable = false;
       return challengeStreakService.getState();
     }
   },
 
   isBackendAvailable() {
-    return this._backendAvailable;
+    return this._todayAvailable && this._streakAvailable && this._upsertAvailable;
   },
 
   getTargetRange,
@@ -138,14 +157,14 @@ export const challengeSessionService = {
     const today = challengeGeneratorService.getToday();
     try {
       const payload = await getTodayChallengeApi(today);
-      this._backendAvailable = true;
+      this._todayAvailable = true;
       const existing = payload?.challenge;
       if (existing?.date === today) {
         writeChallenge(existing);
         return existing;
       }
     } catch (_error) {
-      this._backendAvailable = false;
+      this._todayAvailable = false;
       const existing = readChallenge();
       if (existing?.date === today) {
         return existing;
@@ -161,12 +180,118 @@ export const challengeSessionService = {
     );
     try {
       const payload = await saveGeneratedChallenge({ date: challenge.date, challenge });
-      this._backendAvailable = true;
+      this._upsertAvailable = true;
       return writeChallenge(payload.challenge);
     } catch (_error) {
-      this._backendAvailable = false;
+      this._upsertAvailable = false;
     }
     return challenge;
+  },
+
+  async planChallengeWithAi({ user, goal, progress, availableExercises, date }) {
+    const normalizedDate = date || challengeGeneratorService.getToday();
+    const payload = {
+      goal: String(goal || challengeGeneratorService.getProfileSnapshot(user).goal || "general"),
+      progress: progress || {},
+      available_exercises:
+        availableExercises?.map(toPlannerCatalogEntry) ||
+        challengeService.getAvailableExercises().map(toPlannerCatalogEntry),
+    };
+
+    try {
+      const response = await planChallengeApi(payload);
+      this._upsertAvailable = true;
+      const plan = Array.isArray(response?.plan) ? response.plan : [];
+      const selectedExerciseIds = plan.map((item) => item.exercise_id).filter(Boolean);
+      const challenge = challengeGeneratorService.generateDailyChallenge({
+        user,
+        exerciseCount: Math.max(1, selectedExerciseIds.length || 5),
+        selectedExerciseIds,
+        date: normalizedDate,
+      });
+      const byExerciseId = new Map(plan.map((item) => [item.exercise_id, item]));
+      challenge.exercises = challenge.exercises.map((exercise, index) => {
+        const planned = byExerciseId.get(exercise.id);
+        if (!planned) {
+          return exercise;
+        }
+        const minutes = Math.max(1, Math.min(60, Number(planned.minutes) || 1));
+        return {
+          ...exercise,
+          order: index,
+          durationSeconds: minutes * 60,
+        };
+      });
+      challenge.selectedExerciseCount = challenge.exercises.length;
+      writeChallenge(challenge);
+      return challenge;
+    } catch (_error) {
+      this._upsertAvailable = false;
+      return this.generateChallenge(user, 5, []);
+    }
+  },
+
+  removeExercise(challenge, index) {
+    if (challenge.orderLocked || challenge.exercises.length <= 1) {
+      return challenge;
+    }
+    const exercises = challenge.exercises
+      .filter((_exercise, currentIndex) => currentIndex !== index)
+      .map((exercise, currentIndex) => ({
+        ...exercise,
+        order: currentIndex,
+        status: currentIndex === 0 ? "available" : "locked",
+      }));
+    return writeChallenge({
+      ...challenge,
+      exercises,
+      selectedExerciseCount: exercises.length,
+      currentExerciseIndex: 0,
+    });
+  },
+
+  addExercise(challenge, exerciseId) {
+    if (challenge.orderLocked || !exerciseId) {
+      return challenge;
+    }
+    if (challenge.exercises.some((exercise) => exercise.id === exerciseId)) {
+      return challenge;
+    }
+    const created = challengeService.buildChallengeExercises({
+      selectedExerciseIds: [...challenge.exercises.map((exercise) => exercise.id), exerciseId],
+      count: challenge.exercises.length + 1,
+      date: challenge.date,
+      goal: challenge.profileGoalSnapshot?.goal || "general",
+    });
+    const exercises = created.map((exercise, index) => ({
+      ...exercise,
+      status: index === 0 ? "available" : "locked",
+    }));
+    return writeChallenge({
+      ...challenge,
+      exercises,
+      selectedExerciseCount: exercises.length,
+      currentExerciseIndex: 0,
+    });
+  },
+
+  setExerciseMinutes(challenge, index, minutes) {
+    if (challenge.orderLocked) {
+      return challenge;
+    }
+    const clampedMinutes = Math.max(1, Math.min(60, Number(minutes) || 1));
+    const exercises = challenge.exercises.map((exercise, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...exercise,
+            durationSeconds: clampedMinutes * 60,
+          }
+        : exercise
+    );
+    return writeChallenge({
+      ...challenge,
+      exercises,
+    });
   },
 
   async startChallenge(challenge) {
@@ -192,10 +317,10 @@ export const challengeSessionService = {
         date: nextChallenge.date,
         challenge: nextChallenge,
       });
-      this._backendAvailable = true;
+      this._upsertAvailable = true;
       return writeChallenge(payload.challenge);
     } catch (_error) {
-      this._backendAvailable = false;
+      this._upsertAvailable = false;
       return nextChallenge;
     }
   },
@@ -293,10 +418,10 @@ export const challengeSessionService = {
         date: nextChallenge.date,
         challenge: nextChallenge,
       });
-      this._backendAvailable = true;
+      this._upsertAvailable = true;
       return { ok: true, error: null, challenge: writeChallenge(payload.challenge), result };
     } catch (_error) {
-      this._backendAvailable = false;
+      this._upsertAvailable = false;
       return { ok: true, error: null, challenge: nextChallenge, result };
     }
   },

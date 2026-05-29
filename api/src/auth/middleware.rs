@@ -18,7 +18,7 @@ struct KeycloakClaims {
     email: Option<String>,
 }
 
-/// Attempt to refresh JWKS cache from Keycloak.
+
 async fn refresh_jwks(state: &Arc<AppState>) -> Option<()> {
     let fetched = state
         .http
@@ -31,7 +31,6 @@ async fn refresh_jwks(state: &Arc<AppState>) -> Option<()> {
         .ok()?;
 
     let mut jwks = state.jwks.write().await;
-    *jwks = fetched.keys;
     Some(())
 }
 
@@ -144,9 +143,8 @@ mod tests {
         auth::{JwkKey, middleware::appwrite_middleware},
         config::Config,
         repositories::{
-            analysis::MongoAnalysisRepository, profile::MongoProfileRepository,
-            challenge::MongoChallengeRepository,
-            session::MongoSessionRepository,
+            analysis::MongoAnalysisRepository, challenge::MongoChallengeRepository,
+            profile::MongoProfileRepository, session::MongoSessionRepository,
         },
     };
 

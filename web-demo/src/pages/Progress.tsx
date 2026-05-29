@@ -35,7 +35,7 @@ export default function Progress() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10">
+    <div className="mx-auto max-w-6xl space-y-10" data-testid="page-progress">
       <motion.header initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <p className="mb-3 font-mono text-[11px] uppercase text-muted-foreground">Session archive</p>
         <h1 className="font-display text-5xl uppercase leading-[0.95] text-foreground md:text-7xl">Progress</h1>
@@ -53,6 +53,7 @@ export default function Progress() {
         <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">Loading sessions...</div>
       ) : !hasSessions ? (
         <motion.div
+          data-testid="progress-empty-state"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center gap-4 bg-card py-24 text-center shadow-[0_24px_70px_rgba(105,79,93,0.07)]"
@@ -68,7 +69,7 @@ export default function Progress() {
           </div>
         </motion.div>
       ) : (
-        <>
+        <div data-testid="progress-data-state">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <PitchEvolutionChart data={pitchData} />
             <ScoreChart data={scoreData} />
@@ -107,7 +108,7 @@ export default function Progress() {
             ) : null}
           </div>
           <ExerciseHistory sessions={exerciseSessions} />
-        </>
+        </div>
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import RecordingControls from "@/components/training/RecordingControls";
 import SessionCoreGraphs from "@/components/exercises/SessionCoreGraphs";
+import ReadingPassageCard from "@/components/exercises/ReadingPassageCard";
 import { getExerciseSessionConfig } from "@/components/exercises/exerciseSessionConfig";
 import { exercises } from "@/data/exercises";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
@@ -115,6 +116,10 @@ export default function ChallengeExerciseSession({
           </div>
         </div>
       </div>
+      <ReadingPassageCard
+        title={sourceExercise?.readingPassageTitle}
+        lines={sourceExercise?.readingPassageLines}
+      />
 
       {error && <div className="border-l-4 border-destructive bg-card px-4 py-3 text-sm font-bold text-destructive">{error}</div>}
 

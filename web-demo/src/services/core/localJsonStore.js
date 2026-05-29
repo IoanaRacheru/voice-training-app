@@ -1,7 +1,4 @@
-/**
- * Creates a small JSON storage adapter over localStorage.
- * It centralizes error handling and default values.
- */
+
 export function createLocalJsonStore(storageKey, fallbackValue) {
   const getFallback = () =>
     typeof fallbackValue === "function" ? fallbackValue() : fallbackValue;

@@ -21,7 +21,7 @@ type VocalWeightChartProps = {
 
 const chartConfig = {
   value: {
-    label: "Weight",
+    label: "Vocal weight (%)",
     color: "#68A691",
   },
 };
@@ -32,12 +32,12 @@ export function VocalWeightChart({
 }: VocalWeightChartProps) {
   const chartData = Array.isArray((data as any)?.vocalWeight) ? (data as any).vocalWeight : data;
   if (!chartData?.length) {
-    return <VoiceChartCard title={title} description="Estimated vocal intensity balance over the recording window.">No live data yet.</VoiceChartCard>;
+    return <VoiceChartCard title={title} description="Estimated vocal weight on a normalized 0-100 scale.">No live data yet.</VoiceChartCard>;
   }
   return (
     <VoiceChartCard
       title={title}
-      description="Estimated vocal intensity balance over the recording window."
+      description="Estimated vocal weight on a normalized 0-100 scale."
     >
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
         <AreaChart data={chartData} margin={{ left: 4, right: 8, top: 12 }}>
@@ -50,7 +50,7 @@ export function VocalWeightChart({
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="timestamp" tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} width={28} domain={[0, 100]} />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip content={<ChartTooltipContent formatter={(value) => `${Number(value).toFixed(0)}%`} />} />
           <Area
             type="monotone"
             dataKey="value"

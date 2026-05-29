@@ -1,67 +1,67 @@
-//! ASR and pronunciation feedback abstractions.
+
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::errors::CoreError;
 
-/// Recognition result emitted by ASR backends.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AsrResult {
-    /// Best-effort transcript text.
+    
     pub transcript: String,
-    /// Confidence estimate in `[0, 1]`.
+    
     pub confidence: f64,
-    /// Optional recognized words with timing/confidence metadata when provided by backend.
+    
     pub words: Option<Vec<AsrWord>>,
 }
 
-/// Word-level recognition output when available from ASR backend.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AsrWord {
-    /// Recognized token.
+    
     pub word: String,
-    /// Token start time in seconds.
+    
     pub start_seconds: f64,
-    /// Token end time in seconds.
+    
     pub end_seconds: f64,
-    /// Token confidence estimate in `[0, 1]`.
+    
     pub confidence: f64,
 }
 
-/// Pronunciation feedback result for phrase-level coaching.
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PronunciationFeedback {
-    /// Expected phrase supplied by the caller.
+    
     pub expected_text: String,
-    /// Transcript produced by ASR.
+    
     pub recognized_text: String,
-    /// Token-level overlap ratio in `[0, 1]`.
+    
     pub token_match_ratio: f64,
-    /// Relative token order match ratio in `[0, 1]`.
+    
     pub word_order_ratio: f64,
-    /// Timing smoothness proxy in `[0, 1]` when ASR word timestamps are available.
+    
     pub timing_alignment_ratio: Option<f64>,
-    /// Human-readable coaching note.
+    
     pub feedback: String,
 }
 
-/// Speech recognizer abstraction.
+
 pub trait SpeechRecognizer: Send + Sync {
-    /// Recognize text from mono PCM samples.
+    
     fn recognize(&self, audio_samples: &[f32], sample_rate: u32) -> Result<AsrResult, CoreError>;
 }
 
-/// Pronunciation evaluator abstraction.
+
 pub trait PronunciationEvaluator: Send + Sync {
-    /// Evaluate pronunciation quality against expected text.
+    
     fn evaluate(&self, expected_text: &str, asr: &AsrResult) -> PronunciationFeedback;
 }
 
-/// Vosk-style ASR adapter stub for MVP scaffolding.
-///
-/// This intentionally avoids linking native Vosk now; it preserves contract
-/// shape so a real Vosk backend can be dropped in without API churn.
+
+
+
+
 #[derive(Default)]
 pub struct VoskAsrStub;
 
@@ -89,12 +89,12 @@ impl SpeechRecognizer for VoskAsrStub {
     }
 }
 
-/// Vosk-server ASR adapter.
-///
-/// Expects a running Vosk websocket endpoint (for example
-/// `ws://vosk:2700` in Docker Compose).
+
+
+
+
 pub struct VoskAsr {
-    /// Vosk websocket endpoint URL.
+    
     pub server_url: String,
 }
 
@@ -165,7 +165,7 @@ impl SpeechRecognizer for VoskAsr {
     }
 }
 
-/// Simple token-overlap pronunciation evaluator.
+
 #[derive(Default)]
 pub struct SimplePronunciationEvaluator;
 
@@ -184,7 +184,10 @@ impl PronunciationEvaluator for SimplePronunciationEvaluator {
         };
         let order_ratio = token_order_ratio(&expected_tokens, &recognized_tokens);
         let sequence_ratio = sequence_alignment_ratio(&expected_tokens, &recognized_tokens);
-        let timing_ratio = asr.words.as_ref().map(|words| timing_alignment_ratio(words));
+        let timing_ratio = asr
+            .words
+            .as_ref()
+            .map(|words| timing_alignment_ratio(words));
 
         let aggregate = ratio * 0.45 + order_ratio * 0.25 + sequence_ratio * 0.30;
         let feedback = build_feedback(aggregate, timing_ratio);
@@ -356,9 +359,10 @@ mod tests {
             ]),
         };
         let fb = eval.evaluate("hello training", &asr);
-        assert!(fb
-            .feedback
-            .contains("Timing varies a lot; aim for more even syllable duration."));
+        assert!(
+            fb.feedback
+                .contains("Timing varies a lot; aim for more even syllable duration.")
+        );
     }
 
     #[test]
