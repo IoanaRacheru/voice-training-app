@@ -1,0 +1,51 @@
+FROM rust:1.88-bookworm AS builder
+ARG API_FEATURES="--features asr_vosk"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkgconf \
+    libssl-dev \
+    build-essential \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY Cargo.toml Cargo.lock* ./
+COPY api/Cargo.toml api/Cargo.toml
+COPY app_core/Cargo.toml app_core/Cargo.toml
+COPY desktop/Cargo.toml desktop/Cargo.toml
+COPY web/Cargo.toml web/Cargo.toml
+
+RUN mkdir -p api/src app_core/src desktop/src web/src && \
+    printf 'fn main(){}' | tee \
+        api/src/main.rs \
+        desktop/src/main.rs \
+        web/src/main.rs > /dev/null
+RUN printf 'pub fn _stub() {}' > app_core/src/lib.rs
+
+RUN cargo build --release -p api ${API_FEATURES}
+
+RUN rm api/src/main.rs
+COPY api/src api/src
+RUN rm app_core/src/lib.rs
+COPY app_core/src app_core/src
+RUN touch api/src/main.rs app_core/src/lib.rs && cargo build --release -p api ${API_FEATURES}
+
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --system appgroup && useradd --system --uid 1001 --gid appgroup appuser
+
+WORKDIR /app
+
+COPY --from=builder /app/target/release/api ./api
+
+USER appuser
+
+EXPOSE 3000
+
+CMD ["./api"]

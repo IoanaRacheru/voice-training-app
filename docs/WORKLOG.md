@@ -1,0 +1,222 @@
+# Worklog
+
+## 2026-05-29
+
+### Completed
+- Added authenticated Challenge backend APIs:
+  - `GET /api/challenge/today?date=YYYY-MM-DD`
+  - `POST /api/challenge/generate`
+  - `POST /api/challenge/start`
+  - `POST /api/challenge/complete-exercise`
+  - `GET /api/challenge/streak`
+- Added authenticated Chat API:
+  - `POST /api/chat`
+- Added Mongo-backed challenge persistence:
+  - `challenge_states` collection (unique index on `user_id + date`)
+  - `challenge_streaks` collection (unique index on `user_id`)
+- Enforced strict server-side challenge payload validation for state transitions.
+- Implemented streak policy hardening:
+  - same-day completion deduplication
+  - increment on consecutive-day completion
+  - reset current streak to `1` after missed-day gaps
+- Added backend tests for:
+  - challenge route validation + streak update behavior
+  - chat route success/validation
+  - challenge streak computation edge cases
+- Wired frontend challenge flow to backend-first persistence with local fallback.
+- Wired frontend chatbot to backend `/api/chat` with loading/error states.
+- Removed active-screen mock analytics defaults in voice analytics charts (real data or explicit empty state only).
+- Runtime-verified new endpoints on rebuilt API container:
+  - `/api/challenge/today`, `/api/challenge/streak`, `/api/chat`.
+- Added production Docker build profile and smoke target:
+  - `api/Dockerfile.prod`
+  - `make build-api-image-prod`
+  - `make verify-api-prod`
+- Added backend demo runbook:
+  - `docs/BACKEND_DEMO_RUNBOOK.md`
+- Aligned stable Docker verification profile to Vosk + energy VAD:
+  - `verify-vosk-api` now asserts `vad_used="energy_vad"`.
+- Documented Silero Docker runtime blocker:
+  - ORT linker errors with missing `__isoc23_*` symbols can break `vad_silero` image builds on some host/toolchain combinations.
+- Made Silero VAD the default runtime path when `vad_silero` feature is present:
+  - `api` feature mapping now enables `app_core/vad_silero`;
+  - default `VAD_PROVIDER` resolves to `silero` when compiled with feature.
+- Hardened provider selection:
+  - unknown `ASR_PROVIDER`/`VAD_PROVIDER` now return explicit configuration errors;
+  - strict mode remains fail-fast; non-strict mode logs and falls back.
+- Aligned Docker/Make defaults to Silero-backed verification:
+  - compose `api` and `api_vosk` profiles now run with `VAD_PROVIDER=silero`;
+  - fixed cargo feature argument syntax in build targets;
+  - `verify-vosk-api` now asserts `vad_used=\"silero_vad\"`.
+- Added structured `/api/analyze` pipeline logs:
+  - request receipt, pipeline completion, artifact persistence.
+- Expanded analyze route behavior tests:
+  - non-strict mode degradation test when ASR runtime fails.
+- Added strict `/api/analyze` route coverage for strict-provider ASR runtime failure handling.
+- Added Dockerized Vosk + Silero runtime verification path:
+  - `make build-api-image-vosk-silero`
+  - `make verify-vosk-silero-api`
+  - verified green on 2026-05-29 after compose/make fixes
+- Added authenticated analysis artifact history APIs:
+  - `GET /api/analysis-artifacts`
+  - `GET /api/analysis-artifacts/:id`
+- Expanded analysis repository abstraction with user-scoped list/detail methods.
+- Added MongoDB TTL retention index for `analysis_artifacts` (90-day default).
+- Added explicit TTL operational warning and retention-window adjustment guidance in runtime docs.
+- Renamed analysis tool implementations from `Heuristic*` to deterministic DSP names across `app_core` and `api`.
+- Fixed runtime verification wiring issues:
+  - `verify-vosk-api` now targets rebuilt `api_vosk` on port `3001`;
+  - `verify-vosk-silero-api` now rebuilds `api_vosk_silero` with valid cargo feature args (`asr_vosk,vad_silero`);
+  - removed duplicate `/api/openapi.json` route registration that caused `api_vosk` startup panic.
+- Calibrated deterministic DSP v2 scoring in `app_core` prosody/voice tools while preserving API output ranges and labels.
+- Added pronunciation v3 improvements with sequence-alignment scoring and timing-aware feedback cues.
+- Added strict provider fail-fast test coverage:
+  - core engine test for strict ASR runtime failure path
+  - API bootstrap tests for invalid/valid provider configuration handling.
+- Added real Silero-backed VAD implementation path in `app_core` behind `vad_silero` feature, with energy fallback compatibility path when feature is not enabled.
+- Improved Vosk ASR parsing to preserve word-level timing/confidence metadata.
+- Upgraded pronunciation scoring from token-overlap-only to combined token + order scoring with optional timing smoothness signal.
+- Added strict provider runtime policy wiring:
+  - `PROVIDER_STRICT=true|false` (default `true`)
+  - strict mode fails fast for configured unavailable providers
+  - non-strict mode keeps explicit fallbacks.
+- Updated backend roadmap to MongoDB-first application data strategy and replaced app-level PostgreSQL split milestone.
+- Updated runtime/env docs for strict provider behavior.
+
+## 2026-05-28
+
+### Completed
+- Added `app_core` orchestration engine, tool traits, and baseline heuristic tools.
+- Added authenticated `POST /api/analyze` API flow and artifact persistence.
+- Added unit tests for engine/tool behavior and request DTO validation.
+- Added provider-based LLM adapter support (OpenAI-compatible, OpenRouter, Groq) with rule fallback.
+- Added `GET /api/llm/health` endpoint for runtime provider visibility.
+- Added repository abstraction for analysis persistence to decouple route tests from Mongo runtime.
+- Added integration-style `/api/analyze` route test with in-memory repository.
+- Added backend `Makefile` test targets: `test-api`, `test-core`, `test-fast`.
+- Added docstrings for public interfaces touched in `app_core` and API config/state/repository layers.
+- Added OpenAPI generation and Swagger UI endpoints:
+  - `GET /api/openapi.json`
+  - `GET /docs`
+- Added OpenAPI contract test and `make test-openapi`.
+- Added Cargo dependency/security quality gates:
+  - `make dep-tree`
+  - `make dep-outdated`
+  - `make dep-audit`
+  - `make dep-deny`
+  - `make dep-check`
+- Added baseline `deny.toml` and dependency workflow notes in `docs/CARGO_QUALITY.md`.
+- Added CI dependency gates workflow for `cargo-audit` and `cargo-deny`.
+- Expanded Rust CI workflow to run workspace checks/tests on `main` and `dev-ariimia`.
+- Added DSP feature extraction module in `app_core`:
+  - frame-based energy VAD/pause ratio
+  - autocorrelation pitch estimation
+  - FFT-based spectral brightness
+- Extended analysis input contract with optional PCM payload (`audio_samples`, `sample_rate`) while preserving backward compatibility for numeric-only clients.
+- Integrated DSP-derived metrics into engine pipeline when audio is provided.
+- Added DSP robustness metadata:
+  - signal confidence score
+  - quality flags (low energy, low voiced ratio, insufficient pitch frames, unstable pitch)
+  - VAD implementation identifier in analysis output
+- Added pluggable VAD interface with `EnergyVadDetector` and `SileroVadDetector` stub adapter hook.
+- Added `make test-dsp-bench` and extra DSP regression threshold tests.
+- Added lightweight infra reliability improvements for dev bootstrap:
+  - `wait-api` target
+  - `verify-stack` target (API + Keycloak reachability and config status)
+  - `bootstrap` now runs `verify-stack` after Keycloak setup
+- Added ASR/pronunciation v1 scaffold in `app_core`:
+  - `SpeechRecognizer` trait
+  - `PronunciationEvaluator` trait
+  - `VoskAsrStub` adapter (contract-preserving placeholder)
+  - `SimplePronunciationEvaluator`
+- Extended analysis engine and `/api/analyze` response with:
+  - `asr` transcript/confidence
+  - `pronunciation` feedback against optional `expected_text`
+- Extended request contract with optional `expected_text`.
+- Hardened JWT validation and key handling:
+  - enforced `iss`/`aud` checks
+  - added JWKS refresh on unknown `kid`
+  - added `/api/analyze` body-size guard (`ANALYZE_MAX_BODY_BYTES`)
+- Added auth and payload-limit integration-style tests:
+  - invalid `iss` -> `401`
+  - invalid `aud` -> `401`
+  - valid signed token -> `200`
+  - oversized analyze payload -> `413`
+- Wired auth/body-limit env vars into Docker API service and aligned local issuer default for browser token flow.
+- Introduced repository abstractions for profiles and sessions (`ProfileRepository`, `SessionRepository`) and refactored routes to depend on interfaces.
+- Added OpenAPI coverage for:
+  - `GET /api/me`
+  - `PATCH /api/me`
+  - `POST /api/sessions`
+  - `GET /api/sessions`
+- Added OpenAPI bearer security scheme and protected-route security annotations.
+- Removed dead `AppError` variants and made Tokio runtime explicitly multi-thread (`#[tokio::main(flavor = "multi_thread")]`).
+- Added integration-style tests for `/api/me` and `/api/sessions` with in-memory repository doubles.
+- Extended Keycloak automation and stack verification:
+  - enabled `directAccessGrantsEnabled` for dev client
+  - ensured deterministic `devuser` bootstrap
+  - `verify-stack` now includes protected-route token smoke.
+- Replaced VAD stub path with real Silero-backed adapter wiring (with safe fallback to energy VAD on runtime/model failures).
+- Added feature-gated Vosk ASR adapter (`asr_vosk`) with runtime selection hooks:
+  - `ASR_PROVIDER` (`stub|vosk_remote`)
+  - `VOSK_SERVER_URL`
+  - `VAD_PROVIDER` (`energy|silero`)
+- Added Vosk build/packaging validation paths:
+  - `make check-vosk`
+  - `make build-api-image-vosk`
+- Added repository-layer unit tests for profile/session persistence mapping helpers.
+- Added ASR/VAD runtime guide: `docs/ASR_VAD_RUNTIME.md`.
+- Added Vosk runtime smoke test target:
+  - `make test-vosk-runtime` (requires `VOSK_SERVER_URL`)
+- Added API-level Vosk container E2E verification target:
+  - `make verify-vosk-api` (uses Dockerized Vosk service)
+  - runs authenticated `/api/analyze` against `api_vosk` service and asserts `asr` payload presence.
+- Added frontend Playwright smoke E2E coverage:
+  - `web-demo/playwright.config.ts` with local webServer and Keycloak/API environment wiring.
+  - Smoke specs for auth shell, challenge route generation/start, chatbot send/reply, and progress route rendering.
+- Added deterministic E2E selectors (`data-testid`) on demo-critical frontend surfaces.
+- Added root automation target:
+  - `make verify-e2e-smoke` to execute Playwright smoke against the local backend/keycloak stack.
+- Updated `docs/BACKEND_DEMO_RUNBOOK.md` with Playwright smoke steps and troubleshooting notes.
+
+### Next In Queue
+- Production runtime profile parity hardening:
+  - keep release Docker image verification (`verify-api-prod`) green in CI-like flow;
+  - track startup/runtime differences between debug and release profiles.
+- Expand structured observability:
+  - add request correlation IDs for `/api/analyze` and artifact operations.
+
+### Branches
+- `feat-analyze-strict-auth-matrix`: strict `/api/analyze` failure-path tests with strict auth config coverage.
+- `feat-vosk-silero-runtime-e2e`: Vosk+Silero Docker build and verification targets.
+- `feat-analysis-artifacts-api`: artifact list/detail endpoints, repository expansion, and TTL retention index.
+- `refactor-dsp-tool-names`: hard rename from heuristic tool names to deterministic DSP tool names.
+- `fix-post-merge-tool-rename`: post-merge fixture rename consistency fix.
+- `feat-dsp-v2-deterministic`: deterministic DSP v2 scoring calibration for prosody and voice presentation.
+- `feat-pronunciation-v3-token-timing`: pronunciation v3 token sequence alignment and timing feedback cues.
+- `feat-strict-runtime-test-hardening`: strict-provider runtime test coverage in `app_core` and `api`.
+- `feat-vad-silero-real`: real Silero-backed VAD feature path in `app_core`.
+- `feat-asr-pronunciation-v2`: richer Vosk parsing + pronunciation scoring v2 + strict provider runtime policy.
+- `chore-mongo-roadmap-realign`: roadmap/runtime docs realigned to MongoDB-first app data strategy.
+- `feat/roadmap-agent-docs`: roadmap and agent tracking docs.
+- `feat/llm-provider-adapters`: provider-backed LLM coach wiring and health endpoint.
+- `feat/analyze-integration-tests-make-docs`: analysis repository abstraction, integration tests, Make targets, docstrings.
+- `feat/openapi-swagger`: OpenAPI/Swagger wiring and API docs tests.
+- `feat/cargo-quality-gates`: Cargo-native dependency and advisory quality gates.
+- `feat/ci-dependency-gates`: CI enforcement for dependency security and workspace Rust checks.
+- `feat/dsp-tools-v1`: DSP feature extraction and audio-aware analysis pipeline.
+- `feat/dsp-robustness-v2`: confidence/quality diagnostics and pluggable VAD contracts.
+- `feat/infra-dev-stability`: minimal stack verification/reliability hardening for MVP development.
+- `feat/asr-pronunciation-v1`: ASR/pronunciation scaffolding and API integration.
+- `feat/auth-jwks-payload-hardening`: strict claim validation, JWKS refresh, analyze payload limits + tests.
+- `feat/auth-positive-test`: positive-path middleware auth test.
+- `feat/docker-auth-env-wiring`: docker env propagation for auth/body guard and local issuer alignment.
+- `feat/repositories-profiles-sessions`: profile/session repository abstractions and route refactor.
+- `feat/openapi-me-sessions`: OpenAPI schemas/paths for user and session routes.
+- `feat/async-mt-and-warning-cleanup`: dead warning cleanup and explicit Tokio multi-thread runtime.
+- `feat/integration-tests-me-sessions`: integration-style tests for profile/session flows.
+- `feat/verify-stack-auth-smoke`: dev user bootstrap and protected route smoke in stack verification.
+- `feat/openapi-bearer-auth`: bearer auth scheme and protected-route security docs.
+- `feat/asr-vad-adapters`: Silero-backed VAD path and feature-gated Vosk ASR runtime wiring.
+- `feat/vosk-packaging-and-repo-tests`: Vosk build-path validation and repository-layer mapping tests.
+- `feat/vosk-runtime-smoke`: runtime smoke test target for real Vosk model validation.

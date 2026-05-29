@@ -1,0 +1,38 @@
+name: Dependency Gates
+
+on:
+  push:
+    branches: ["main", "dev-ariimia"]
+  pull_request:
+    branches: ["main", "dev-ariimia"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  dependency-safety:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+
+      - name: Dependency tree snapshot
+        run: make dep-tree
+
+      - name: Advisory audit
+        run: make dep-audit
+
+      - name: Deny policy check
+        run: make dep-deny

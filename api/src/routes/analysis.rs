@@ -1,0 +1,613 @@
+use std::sync::Arc;
+
+use app_core::AnalysisInput;
+use axum::{
+    Extension, Json, Router,
+    extract::{DefaultBodyLimit, State},
+    routing::post,
+};
+use mongodb::bson::DateTime;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+use crate::{
+    AppState, auth::AppwriteUser, errors::AppError, repositories::analysis::AnalysisArtifact,
+};
+
+
+pub fn router(max_body_bytes: usize) -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/api/analyze", post(analyze))
+        .layer(DefaultBodyLimit::max(max_body_bytes))
+}
+
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AnalyzeRequest {
+    
+    pub median_pitch_hz: f64,
+    
+    pub pitch_stability: f64,
+    
+    pub pause_ratio: f64,
+    
+    pub spectral_brightness: f64,
+    
+    pub audio_samples: Option<Vec<f32>>,
+    
+    pub sample_rate: Option<u32>,
+    
+    pub expected_text: Option<String>,
+}
+
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AnalyzeResponse {
+    
+    pub summary: String,
+    
+    pub practice_next: Vec<String>,
+    
+    pub llm_coach_feedback: String,
+    
+    pub prosody: app_core::tools::ProsodyOutput,
+    
+    pub voice_presentation: app_core::tools::VoicePresentationOutput,
+    
+    pub signal_confidence: Option<f64>,
+    
+    pub signal_quality: Option<app_core::engine::SignalQuality>,
+    
+    pub vad_used: Option<String>,
+    
+    pub asr: Option<app_core::asr::AsrResult>,
+    
+    pub pronunciation: Option<app_core::asr::PronunciationFeedback>,
+}
+
+
+#[utoipa::path(
+    post,
+    path = "/api/analyze",
+    tag = "Analysis",
+    security(
+        ("bearer_auth" = [])
+    ),
+    request_body = AnalyzeRequest,
+    responses(
+        (status = 200, description = "Analysis results", body = AnalyzeResponse),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal error")
+    )
+)]
+pub async fn analyze(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AppwriteUser>,
+    Json(body): Json<AnalyzeRequest>,
+) -> Result<Json<AnalyzeResponse>, AppError> {
+    tracing::info!(
+        user_id = %user.id,
+        has_audio = body.audio_samples.as_ref().map(|s| !s.is_empty()).unwrap_or(false),
+        sample_rate = ?body.sample_rate,
+        has_expected_text = body.expected_text.as_ref().map(|s| !s.is_empty()).unwrap_or(false),
+        "Analyze request received"
+    );
+    let output = state
+        .engine
+        .analyze(AnalysisInput {
+            median_pitch_hz: body.median_pitch_hz,
+            pitch_stability: body.pitch_stability,
+            pause_ratio: body.pause_ratio,
+            spectral_brightness: body.spectral_brightness,
+            audio_samples: body.audio_samples,
+            sample_rate: body.sample_rate,
+            expected_text: body.expected_text,
+        })
+        .await
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    tracing::info!(
+        user_id = %user.id,
+        vad_used = ?output.vad_used,
+        has_asr = output.asr.is_some(),
+        has_pronunciation = output.pronunciation.is_some(),
+        "Analyze pipeline finished"
+    );
+
+    let artifact = AnalysisArtifact {
+        id: None,
+        user_id: user.id,
+        created_at: DateTime::now(),
+        summary: output.summary.clone(),
+        voice_presentation_score: output.voice_presentation.score,
+        voice_presentation_confidence: output.voice_presentation.confidence,
+    };
+    state.analysis_repo.insert_analysis(&artifact).await?;
+    tracing::info!(user_id = %artifact.user_id, "Analyze artifact persisted");
+
+    Ok(Json(AnalyzeResponse {
+        summary: output.summary,
+        practice_next: output.practice_next,
+        llm_coach_feedback: output.llm_coach_feedback,
+        prosody: output.prosody,
+        voice_presentation: output.voice_presentation,
+        signal_confidence: output.signal_confidence,
+        signal_quality: output.signal_quality,
+        vad_used: output.vad_used,
+        asr: output.asr,
+        pronunciation: output.pronunciation,
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use super::{AnalyzeRequest, analyze, router};
+    use crate::{
+        AppState,
+        auth::AppwriteUser,
+        config::Config,
+        repositories::{
+            analysis::{AnalysisArtifact, AnalysisRepository},
+            challenge::MongoChallengeRepository,
+            profile::MongoProfileRepository,
+            session::MongoSessionRepository,
+        },
+    };
+    use app_core::{
+        Engine,
+        asr::{AsrResult, SimplePronunciationEvaluator, SpeechRecognizer, VoskAsrStub},
+        dsp::EnergyVadDetector,
+        errors::CoreError,
+        llm::RuleBasedCoach,
+        tools::{DeterministicDspProsodyTool, DeterministicDspVoicePresentationTool},
+    };
+    use async_trait::async_trait;
+    use axum::{
+        Extension, Json,
+        body::Body,
+        extract::State,
+        http::{Request, StatusCode},
+    };
+    use mongodb::{
+        Client,
+        bson::{DateTime, oid::ObjectId},
+    };
+    use reqwest::Client as HttpClient;
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
+
+    struct FailingAsr;
+
+    impl SpeechRecognizer for FailingAsr {
+        fn recognize(
+            &self,
+            _audio_samples: &[f32],
+            _sample_rate: u32,
+        ) -> Result<AsrResult, CoreError> {
+            Err(CoreError::Tool("forced asr failure".into()))
+        }
+    }
+
+    struct MemoryAnalysisRepository {
+        saved: Arc<Mutex<Vec<AnalysisArtifact>>>,
+    }
+
+    #[async_trait]
+    impl AnalysisRepository for MemoryAnalysisRepository {
+        async fn insert_analysis(
+            &self,
+            artifact: &AnalysisArtifact,
+        ) -> Result<(), mongodb::error::Error> {
+            self.saved.lock().expect("lock").push(AnalysisArtifact {
+                id: None,
+                user_id: artifact.user_id.clone(),
+                created_at: DateTime::now(),
+                summary: artifact.summary.clone(),
+                voice_presentation_score: artifact.voice_presentation_score,
+                voice_presentation_confidence: artifact.voice_presentation_confidence,
+            });
+            Ok(())
+        }
+
+        async fn list_by_user_id(
+            &self,
+            user_id: &str,
+            limit: u32,
+            offset: u64,
+        ) -> Result<Vec<AnalysisArtifact>, mongodb::error::Error> {
+            let saved = self.saved.lock().expect("lock");
+            let mut filtered: Vec<AnalysisArtifact> = saved
+                .iter()
+                .filter(|a| a.user_id == user_id)
+                .cloned()
+                .collect();
+            filtered.sort_by_key(|a| a.created_at);
+            filtered.reverse();
+            Ok(filtered
+                .into_iter()
+                .skip(offset as usize)
+                .take(limit as usize)
+                .collect())
+        }
+
+        async fn find_by_id_for_user(
+            &self,
+            user_id: &str,
+            id: ObjectId,
+        ) -> Result<Option<AnalysisArtifact>, mongodb::error::Error> {
+            let saved = self.saved.lock().expect("lock");
+            Ok(saved
+                .iter()
+                .find(|a| a.user_id == user_id && a.id == Some(id))
+                .cloned())
+        }
+    }
+
+    #[test]
+    fn parse_valid_payload() {
+        let payload = r#"{
+            "median_pitch_hz": 180.0,
+            "pitch_stability": 0.72,
+            "pause_ratio": 0.2,
+            "spectral_brightness": 0.62
+        }"#;
+        let parsed: AnalyzeRequest = serde_json::from_str(payload).expect("valid payload");
+        assert_eq!(parsed.median_pitch_hz, 180.0);
+    }
+
+    #[test]
+    fn reject_unknown_fields() {
+        let payload = r#"{
+            "median_pitch_hz": 180.0,
+            "pitch_stability": 0.72,
+            "pause_ratio": 0.2,
+            "spectral_brightness": 0.62,
+            "extra": 1
+        }"#;
+        let err = serde_json::from_str::<AnalyzeRequest>(payload).expect_err("must fail");
+        assert!(err.to_string().contains("unknown field"));
+    }
+
+    #[tokio::test]
+    async fn analyze_persists_artifact_and_returns_payload() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let saved = Arc::new(Mutex::new(Vec::new()));
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_server_url: None,
+                provider_strict: false,
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new(
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::clone(&saved),
+            }),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                mongo.database("voice_training"),
+            )),
+        });
+
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+
+        let response = analyze(
+            State(state),
+            Extension(user),
+            Json(AnalyzeRequest {
+                median_pitch_hz: 190.0,
+                pitch_stability: 0.71,
+                pause_ratio: 0.2,
+                spectral_brightness: 0.62,
+                audio_samples: None,
+                sample_rate: None,
+                expected_text: None,
+            }),
+        )
+        .await
+        .expect("analysis route should succeed");
+
+        let payload = response.0;
+        assert!(!payload.summary.is_empty());
+        assert!((0.0..=100.0).contains(&payload.voice_presentation.score));
+        assert!(payload.signal_confidence.is_none());
+        assert!(payload.signal_quality.is_none());
+        assert!(payload.asr.is_none());
+        assert!(payload.pronunciation.is_none());
+
+        let saved_entries = saved.lock().expect("lock");
+        assert_eq!(saved_entries.len(), 1);
+        assert_eq!(saved_entries[0].user_id, "u-1");
+    }
+
+    #[tokio::test]
+    async fn analyze_route_rejects_oversized_payload_with_413() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_server_url: None,
+                provider_strict: false,
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new(
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(VoskAsrStub),
+                Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::new(Mutex::new(Vec::new())),
+            }),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                mongo.database("voice_training"),
+            )),
+        });
+
+        let app = router(1024)
+            .layer(Extension(AppwriteUser {
+                id: "u-1".into(),
+                email: "u1@example.com".into(),
+            }))
+            .with_state(state);
+
+        let oversized_audio = vec![0.0_f32; 20_000];
+        let body = serde_json::json!({
+            "median_pitch_hz": 180.0,
+            "pitch_stability": 0.7,
+            "pause_ratio": 0.2,
+            "spectral_brightness": 0.6,
+            "audio_samples": oversized_audio,
+            "sample_rate": 16000
+        })
+        .to_string();
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/analyze")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should execute");
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[tokio::test]
+    async fn analyze_route_strict_mode_surfaces_asr_runtime_failure() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_server_url: None,
+                provider_strict: true,
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new_with_policy(
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(FailingAsr),
+                Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
+                true,
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::new(Mutex::new(Vec::new())),
+            }),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                mongo.database("voice_training"),
+            )),
+        });
+
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let samples = vec![0.2_f32; 4096];
+
+        let err = analyze(
+            State(state),
+            Extension(user),
+            Json(AnalyzeRequest {
+                median_pitch_hz: 180.0,
+                pitch_stability: 0.7,
+                pause_ratio: 0.2,
+                spectral_brightness: 0.6,
+                audio_samples: Some(samples),
+                sample_rate: Some(16_000),
+                expected_text: Some("hello world".into()),
+            }),
+        )
+        .await
+        .expect_err("strict mode should surface ASR failure");
+
+        assert!(err.to_string().contains("ASR provider failed"));
+    }
+
+    #[tokio::test]
+    async fn analyze_route_non_strict_mode_falls_back_when_asr_fails() {
+        let mongo = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .expect("mongodb uri should parse");
+
+        let state = Arc::new(AppState {
+            db: mongo.database("voice_training"),
+            config: Arc::new(Config {
+                mongodb_uri: "mongodb://127.0.0.1:27017".into(),
+                keycloak_realm_url:
+                    "http://localhost:8080/realms/voice-training/protocol/openid-connect/certs"
+                        .into(),
+                keycloak_expected_issuer: "http://localhost:8080/realms/voice-training".into(),
+                keycloak_expected_audiences: vec!["account".into()],
+                analyze_max_body_bytes: 1024 * 1024,
+                server_port: 3000,
+                llm_provider: "rule".into(),
+                llm_api_key: None,
+                llm_model: "openai/gpt-4o-mini".into(),
+                llm_base_url: None,
+                openrouter_api_key: None,
+                openrouter_model: "meta-llama/llama-3.3-70b-instruct".into(),
+                groq_api_key: None,
+                groq_model: "llama-3.3-70b-versatile".into(),
+                vad_provider: "energy".into(),
+                asr_provider: "stub".into(),
+                vosk_server_url: None,
+                provider_strict: false,
+            }),
+            http: HttpClient::new(),
+            jwks: Arc::new(RwLock::new(Vec::new())),
+            engine: Arc::new(Engine::new_with_policy(
+                Box::new(DeterministicDspProsodyTool),
+                Box::new(DeterministicDspVoicePresentationTool),
+                Box::new(RuleBasedCoach),
+                Box::new(FailingAsr),
+                Box::new(SimplePronunciationEvaluator),
+                Box::new(EnergyVadDetector),
+                false,
+            )),
+            llm_provider: "rule".into(),
+            analysis_repo: Arc::new(MemoryAnalysisRepository {
+                saved: Arc::new(Mutex::new(Vec::new())),
+            }),
+            profile_repo: Arc::new(MongoProfileRepository::new(
+                mongo.database("voice_training"),
+            )),
+            session_repo: Arc::new(MongoSessionRepository::new(
+                mongo.database("voice_training"),
+            )),
+            challenge_repo: Arc::new(MongoChallengeRepository::new(
+                mongo.database("voice_training"),
+            )),
+        });
+
+        let user = AppwriteUser {
+            id: "u-1".into(),
+            email: "u1@example.com".into(),
+        };
+        let samples = vec![0.2_f32; 4096];
+
+        let response = analyze(
+            State(state),
+            Extension(user),
+            Json(AnalyzeRequest {
+                median_pitch_hz: 180.0,
+                pitch_stability: 0.7,
+                pause_ratio: 0.2,
+                spectral_brightness: 0.6,
+                audio_samples: Some(samples),
+                sample_rate: Some(16_000),
+                expected_text: Some("hello world".into()),
+            }),
+        )
+        .await
+        .expect("non-strict mode should degrade gracefully");
+
+        assert!(response.0.asr.is_none());
+        assert!(response.0.pronunciation.is_none());
+    }
+}

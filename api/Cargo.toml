@@ -3,4 +3,30 @@ name = "api"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+asr_vosk = ["app_core/asr_vosk"]
+vad_silero = ["app_core/vad_silero"]
+
 [dependencies]
+app_core = { path = "../app_core" }
+async-trait = "0.1"
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+mongodb = "3"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+futures = "0.3"
+jsonwebtoken = "9"
+utoipa = { version = "4", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
+
+[dev-dependencies]
+tower = "0.5"
