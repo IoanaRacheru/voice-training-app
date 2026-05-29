@@ -27,6 +27,7 @@ node_modules/
 web-demo/node_modules/
 
 # Logs
+<<<<<<< HEAD
 *.log
 
 # Secrets — never commit
@@ -39,3 +40,6 @@ web-demo/.env.local
 # Keycloak — temporary admin token
 keycloak/.token
 
+=======
+*.log
+>>>>>>> ioana/main

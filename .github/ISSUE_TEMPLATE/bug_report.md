@@ -2,7 +2,11 @@
 name: Bug report
 about: Create a report to help us improve
 title: '[BUG] '
+<<<<<<< HEAD
 labels: bug, triage
+=======
+labels: 'bug, triage'
+>>>>>>> ioana/main
 assignees: ''
 
 ---
