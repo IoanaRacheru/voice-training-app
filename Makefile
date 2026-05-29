@@ -117,7 +117,7 @@ status: ps
 health: docker-check
 	@echo "API health:" && curl -sf http://localhost:3000/health || true
 	@echo ""
-	@echo "Keycloak realm endpoint:" && curl -sf http://localhost:8081/realms/master > /dev/null && echo "ok" || echo "unreachable"
+	@echo "Keycloak realm endpoint:" && (curl -sf http://localhost:8080/realms/master > /dev/null || curl -sf http://localhost:8081/realms/master > /dev/null) && echo "ok" || echo "unreachable"
 
 restart: docker-check
 	$(DOCKER_COMPOSE) restart
@@ -258,7 +258,7 @@ fmt:
 
 wait-keycloak:
 	@echo "Waiting for Keycloak to be ready..."
-	@until curl -sf http://localhost:8081/realms/master > /dev/null 2>&1; do \
+	@until curl -sf http://localhost:8080/realms/master > /dev/null 2>&1 || curl -sf http://localhost:8081/realms/master > /dev/null 2>&1; do \
 	  printf '.'; \
 	  sleep 3; \
 	done
@@ -291,6 +291,8 @@ verify-stack: docker-check wait-keycloak wait-api
 verify-vosk-api: docker-check
 	@echo "Starting stack with Dockerized Vosk..."
 	@$(DOCKER_COMPOSE) up -d --build vosk mongodb postgres keycloak api_vosk
+	@$(MAKE) -s wait-keycloak
+	@$(MAKE) -s keycloak-setup >/dev/null
 	@echo "Waiting for API (http://localhost:3001/health)..."
 	@until curl -sf http://localhost:3001/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
 	@echo "Requesting service-account token from Keycloak..."
@@ -311,6 +313,8 @@ verify-vosk-api: docker-check
 verify-vosk-silero-api: docker-check
 	@echo "Starting stack with Dockerized Vosk + Silero-enabled API..."
 	@$(DOCKER_COMPOSE) up -d --build vosk mongodb postgres keycloak api_vosk_silero
+	@$(MAKE) -s wait-keycloak
+	@$(MAKE) -s keycloak-setup >/dev/null
 	@echo "Waiting for API (http://localhost:3002/health)..."
 	@until curl -sf http://localhost:3002/health > /dev/null 2>&1; do printf '.'; sleep 2; done; echo " ready."
 	@echo "Requesting service-account token from Keycloak..."
