@@ -1,20 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { exerciseSessionService } from "@/services/exerciseSessionService";
+import { listAnalysisArtifacts } from "@/api/authClient";
 
 /**
  * Coordinates Progress page data fetching and chart projections.
  */
 export function useProgressController() {
-  const [exerciseSessions, setExerciseSessions] = useState(() =>
-    exerciseSessionService.getSessions()
-  );
-  const [loading] = useState(false);
+  const [exerciseSessions, setExerciseSessions] = useState<any[]>([]);
+  const [artifacts, setArtifacts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const sync = () => setExerciseSessions(exerciseSessionService.getSessions());
+    let alive = true;
+    const sync = async () => {
+      const sessions = await exerciseSessionService.getSessions();
+      if (alive) {
+        setExerciseSessions(Array.isArray(sessions) ? sessions : []);
+      }
+    };
+    const loadArtifacts = async () => {
+      try {
+        const payload = await listAnalysisArtifacts({ limit: 20, offset: 0 });
+        if (alive) {
+          setArtifacts(Array.isArray(payload?.items) ? payload.items : []);
+        }
+      } catch (_error) {
+        if (alive) setArtifacts([]);
+      }
+    };
+    const load = async () => {
+      setLoading(true);
+      await Promise.all([sync(), loadArtifacts()]);
+      if (alive) setLoading(false);
+    };
+    load();
     window.addEventListener("voiceExerciseSessions:changed", sync);
-    return () => window.removeEventListener("voiceExerciseSessions:changed", sync);
+    return () => {
+      alive = false;
+      window.removeEventListener("voiceExerciseSessions:changed", sync);
+    };
   }, []);
 
   const chronological = useMemo(() => [...exerciseSessions], [exerciseSessions]);
@@ -42,5 +67,6 @@ export function useProgressController() {
     hasSessions: exerciseSessions.length > 0,
     pitchData,
     scoreData,
+    artifacts,
   };
 }
