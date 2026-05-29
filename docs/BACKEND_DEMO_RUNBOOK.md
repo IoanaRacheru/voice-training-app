@@ -1,5 +1,11 @@
 # Backend Demo Runbook
 
+Related docs:
+- Architecture: `docs/ARCHITECTURE.md`
+- Deployment/docker: `docs/DEPLOYMENT.md`
+- Edge/network: `docs/EDGE.md`
+- CI/CD: `docs/CICD.md`
+
 ## Preconditions
 - Docker daemon is running.
 - `.env` is present and valid for local stack.
@@ -15,7 +21,8 @@
 2. `make verify-api-prod`
 3. Optional: `make verify-vosk-silero-api`
 4. `make verify-challenge-chat-api`
-4. Verify challenge/chat APIs with auth token:
+5. `make verify-e2e-smoke`
+6. Verify challenge/chat APIs with auth token:
    - `GET /api/challenge/today?date=YYYY-MM-DD`
    - `POST /api/challenge/generate`
    - `POST /api/challenge/complete-exercise`
@@ -30,6 +37,16 @@
 - Challenge APIs return authenticated JSON payloads (`200`) with user-scoped state.
 - Chat API returns a non-empty `reply` field from configured coach backend/fallback.
 - Production smoke check reports: `Production-profile API verification passed.`
+- Playwright smoke suite passes auth + challenge route + chatbot + progress route flows.
+
+## Playwright Smoke (Frontend + Backend)
+- Preconditions:
+  - Stack is up and configured (`make up && make keycloak-setup && make verify-stack`).
+  - Seeded Keycloak user is available (`devuser` / `devpass123`, created by `make keycloak-setup`).
+- Run:
+  - `make verify-e2e-smoke`
+- Optional direct run:
+  - `cd web-demo && npm run test:e2e`
 
 ## Direct API Smoke Commands
 Use a service-account token (stable demo path):
@@ -79,6 +96,9 @@ curl -s -X POST "http://localhost:3000/api/chat" \
   - `docker compose logs --tail=200 vosk`
 - Auth/token smoke issues:
   - `docker compose logs --tail=200 keycloak`
+- Playwright auth failures:
+  - Confirm Keycloak client redirect URI includes `http://localhost:5173/*` (managed by `make keycloak-setup`).
+  - Re-run `make keycloak-setup` to reset `devuser` credentials.
 
 ## Degraded Presentation Fallback
 - If Vosk runtime is unstable, keep backend online with strict config and present deterministic analysis plus authenticated profile/session/artifact flows.
