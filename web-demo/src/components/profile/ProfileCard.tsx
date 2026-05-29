@@ -14,8 +14,11 @@ export default function ProfileCard({ user }: ProfileCardProps) {
   const goal = normalizeVoiceGoal(user?.voice_goal) === "masculine" ? "Masculine" : "Feminine";
 
   useEffect(() => {
-    const updateStats = () => {
-      const completedExercises = exerciseSessionService.getSessions().filter((session: any) => session?.completed).length;
+    const updateStats = async () => {
+      const sessions = await exerciseSessionService.getSessions();
+      const completedExercises = (Array.isArray(sessions) ? sessions : []).filter(
+        (session: any) => session?.completed
+      ).length;
       setExerciseCount(completedExercises);
       setStreak(challengeStreakService.getState().currentChallengeStreak || 0);
     };
@@ -47,4 +50,3 @@ export default function ProfileCard({ user }: ProfileCardProps) {
     </section>
   );
 }
-
