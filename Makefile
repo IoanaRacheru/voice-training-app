@@ -4,7 +4,7 @@
         dev dev-fast dev-frontend dev-stack \
         install-frontend run-frontend lint-frontend typecheck-frontend check-frontend build-frontend clean-frontend \
         check-backend build-backend test-backend test-api test-core test-fast test-openapi test-dsp-bench \
-        check-vosk test-vosk-runtime build-api-image-vosk build-api-image-vosk-silero \
+        check-vosk test-vosk-runtime build-api-image-vosk build-api-image-vosk-silero build-api-image-prod verify-api-prod \
         dep-tree dep-outdated dep-audit dep-deny dep-check \
         check build test fmt \
         keycloak-setup keycloak-status wait-keycloak wait-api verify-stack verify-vosk-api verify-vosk-silero-api \
@@ -61,6 +61,39 @@ build-api-image-vosk: docker-check
 
 build-api-image-vosk-silero: docker-check
 	$(DOCKER_COMPOSE) build --build-arg API_FEATURES="--features asr_vosk,vad_silero" api
+
+build-api-image-prod: docker-check
+	docker build -f api/Dockerfile.prod -t voice-training-app-api:prod .
+
+verify-api-prod: build-api-image-prod
+	@echo "Running production-profile API smoke check..."
+	@docker rm -f voice-training-api-prod-smoke >/dev/null 2>&1 || true
+	@docker run -d --name voice-training-api-prod-smoke \
+	  --network voice-training-app_default \
+	  -p 3003:3000 \
+	  -e MONGODB_URI="$$(grep -E '^MONGODB_URI=' .env | head -n1 | cut -d= -f2-)" \
+	  -e KEYCLOAK_REALM_URL='http://keycloak:8080/realms/voice-training/protocol/openid-connect/certs' \
+	  -e KEYCLOAK_EXPECTED_ISSUER='http://localhost:8080/realms/voice-training' \
+	  -e KEYCLOAK_EXPECTED_AUDIENCES='account' \
+	  -e ASR_PROVIDER='stub' \
+	  -e VAD_PROVIDER='energy' \
+	  -e PROVIDER_STRICT='true' \
+	  -e SERVER_PORT='3000' \
+	  voice-training-app-api:prod >/dev/null
+	@i=0; until curl -sf http://localhost:3003/health > /dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 45 ]; then \
+	    echo ""; \
+	    docker logs --tail=120 voice-training-api-prod-smoke || true; \
+	    docker rm -f voice-training-api-prod-smoke >/dev/null 2>&1 || true; \
+	    echo "production smoke failed: /health not ready"; \
+	    exit 1; \
+	  fi; \
+	  printf '.'; sleep 2; \
+	done; echo " ready."
+	@curl -sf http://localhost:3003/health | grep -q '"status":"ok"'
+	@docker rm -f voice-training-api-prod-smoke >/dev/null 2>&1 || true
+	@echo "Production-profile API verification passed."
 
 rebuild-api-image: clean build-api-image
 
@@ -272,7 +305,7 @@ verify-vosk-api: docker-check
 	  -H "Content-Type: application/json" \
 	  --data "{\"median_pitch_hz\":180.0,\"pitch_stability\":0.7,\"pause_ratio\":0.2,\"spectral_brightness\":0.6,\"sample_rate\":16000,\"audio_samples\":[$$audio]}"); \
 	echo "$$resp" | grep -q '"asr":{' || { echo "ASR output missing in analyze response"; echo "$$resp"; exit 1; }; \
-	echo "$$resp" | grep -q '"vad_used":"silero_vad"' || { echo "Silero VAD not used in analyze response"; echo "$$resp"; exit 1; }; \
+	echo "$$resp" | grep -q '"vad_used":"energy_vad"' || { echo "Expected energy VAD in stable verify profile"; echo "$$resp"; exit 1; }; \
 	echo "Vosk API verification passed."
 
 verify-vosk-silero-api: docker-check
@@ -345,7 +378,9 @@ help:
 	@echo "  up/down           start/stop stack"
 	@echo "  pull-images       pull core runtime images (mongo/postgres/keycloak/vosk)"
 	@echo "  build-api-image   rebuild and start api Docker image"
+	@echo "  build-api-image-prod build release-profile API image"
 	@echo "  rebuild-api-image clean then build api Docker image"
+	@echo "  verify-api-prod   run release-profile API /health smoke check"
 	@echo "  logs              stream all service logs"
 	@echo "  logs-api          stream API logs only"
 	@echo "  logs-keycloak     stream Keycloak logs only"
