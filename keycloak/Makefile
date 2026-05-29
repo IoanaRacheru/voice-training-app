@@ -2,7 +2,7 @@
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
-KEYCLOAK_URL    ?= http://localhost:8081
+KEYCLOAK_URL    ?= $(shell if curl -sf http://localhost:8080/realms/master >/dev/null 2>&1; then echo http://localhost:8080; else echo http://localhost:8081; fi)
 ADMIN_USER      ?= admin
 REALM           ?= voice-training
 CLIENT_ID       ?= voice-training-app
