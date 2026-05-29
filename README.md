@@ -30,6 +30,17 @@ make dev
 
 Run `make help` at any time to see all available targets.
 
+# Documentation index
+- Architecture: `docs/ARCHITECTURE.md`
+- Backend design patterns: `docs/BACKEND_DESIGN.md`
+- Dependencies/runtime matrix: `docs/DEPENDENCIES.md`
+- Docker/deployment: `docs/DEPLOYMENT.md`
+- Edge/network: `docs/EDGE.md`
+- CI/CD and quality gates: `docs/CICD.md`
+- Backend demo runbook: `docs/BACKEND_DEMO_RUNBOOK.md`
+- Runtime provider notes: `docs/ASR_VAD_RUNTIME.md`
+- Handoff snapshot: `docs/HANDOFF_2026-05-29.md`
+
 # Roadmap overview
 TODO
 
