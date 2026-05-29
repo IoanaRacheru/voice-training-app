@@ -22,18 +22,19 @@ type VolumeChartProps = {
 const chartConfig = {
   value: {
     label: "Volume",
-    color: "#16a34a",
+    color: "#68A691",
   },
 };
 
 export function VolumeChart({ data = volumeData, title = "Volume" }: VolumeChartProps) {
+  const chartData = Array.isArray((data as any)?.volume) ? (data as any).volume : data;
   return (
     <VoiceChartCard
       title={title}
       description="Mock loudness trend using normalized amplitude values."
     >
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
-        <LineChart data={data} margin={{ left: 4, right: 8, top: 12 }}>
+        <LineChart data={chartData} margin={{ left: 4, right: 8, top: 12 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="timestamp" tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} width={28} domain={[0, 100]} />
@@ -51,4 +52,3 @@ export function VolumeChart({ data = volumeData, title = "Volume" }: VolumeChart
     </VoiceChartCard>
   );
 }
-

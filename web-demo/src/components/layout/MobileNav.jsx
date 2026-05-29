@@ -10,7 +10,7 @@ export default function MobileNav() {
     <div className="flex h-full flex-col bg-background">
       <div className="border-b border-border p-5">
         <div className="flex items-center gap-3">
-          <span className="brand-icon !h-8 !w-10 !bg-foreground !text-foreground !shadow-none">
+          <span className="brand-icon !h-8 !w-10 !bg-primary !text-primary !shadow-none">
             <DuckMark />
           </span>
           <div>
@@ -34,8 +34,8 @@ export default function MobileNav() {
               to={path}
               className={`relative flex items-center gap-3 px-3 py-3 text-sm font-bold uppercase ${
                 isActive
-                  ? "bg-white text-foreground"
-                  : "text-muted-foreground hover:bg-white hover:text-foreground"
+                  ? "bg-card text-foreground"
+                  : "text-muted-foreground hover:bg-background hover:text-foreground"
               }`}
             >
               {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-primary" />}

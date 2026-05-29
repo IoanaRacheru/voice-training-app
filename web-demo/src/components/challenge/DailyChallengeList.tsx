@@ -19,17 +19,17 @@ export default function DailyChallengeList({
 }: DailyChallengeListProps) {
   const completedCount = challenge.exercises.filter((exercise: any) => exercise.status === "completed").length;
   const progress = Math.round((completedCount / challenge.exercises.length) * 100);
-  const canMove = !challenge.orderLocked;
+  const canMove = false;
 
   return (
     <section className="space-y-5">
-      <div className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.05)]">
+      <div className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-[11px] uppercase text-muted-foreground">Today&apos;s route</p>
             <h2 className="mt-1 text-2xl font-black uppercase text-foreground">{challenge.selectedExerciseCount} challenge exercises</h2>
             <p className="mt-3 text-sm font-medium leading-6 text-muted-foreground">
-              Complete them in order. You can reorder before starting; after that the route locks.
+              Complete them in order. The route is fixed, and each next exercise unlocks only after the current one is completed.
             </p>
           </div>
 
@@ -65,4 +65,3 @@ export default function DailyChallengeList({
     </section>
   );
 }
-

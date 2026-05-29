@@ -50,7 +50,7 @@ export default function ProfileExtension({ user, onUpdate, onDirtyChange, regist
   }, [registerSaveHandler, handleSave]);
 
   return (
-    <section className="bg-white p-6 shadow-[0_24px_70px_rgba(17,17,17,0.07)]">
+    <section className="bg-card p-6 shadow-[0_24px_70px_rgba(105,79,93,0.07)]">
       <div className="border-b border-border pb-5">
         <p className="font-mono text-[11px] uppercase text-muted-foreground">Personalization</p>
         <h2 className="mt-2 text-2xl font-black uppercase text-foreground">Background</h2>
@@ -84,7 +84,7 @@ export default function ProfileExtension({ user, onUpdate, onDirtyChange, regist
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase text-muted-foreground">Puberty background</Label>
             <Select value={draft.puberty_background} onValueChange={(value) => setDraft((prev: any) => ({ ...prev, puberty_background: value }))}>
-              <SelectTrigger aria-label="Puberty background" className="h-11 rounded-[2px] border border-border bg-white font-semibold shadow-none">
+              <SelectTrigger aria-label="Puberty background" className="h-11 rounded-[2px] border border-border bg-card font-semibold shadow-none">
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>

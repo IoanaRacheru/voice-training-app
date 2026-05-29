@@ -24,7 +24,7 @@ export default function ChallengeExerciseCard({
 
   return (
     <article
-      className={`border bg-white p-4 shadow-[0_14px_40px_rgba(17,17,17,0.05)] ${
+      className={`border bg-card p-4 shadow-[0_14px_40px_rgba(105,79,93,0.05)] ${
         isActive ? "border-primary ring-2 ring-primary/20" : "border-border"
       } ${isLocked ? "opacity-65" : ""}`}
     >
@@ -35,7 +35,7 @@ export default function ChallengeExerciseCard({
             <span
               className={`inline-flex items-center gap-1 px-2 py-1 font-mono text-[10px] uppercase ${
                 isCompleted
-                  ? "bg-emerald-100 text-emerald-800"
+                  ? "bg-primary/20 text-foreground"
                   : isLocked
                     ? "bg-muted text-muted-foreground"
                     : "bg-primary/10 text-primary"
@@ -77,4 +77,3 @@ export default function ChallengeExerciseCard({
     </article>
   );
 }
-

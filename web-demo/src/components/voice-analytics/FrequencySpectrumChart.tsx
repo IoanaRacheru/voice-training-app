@@ -25,7 +25,7 @@ type FrequencySpectrumChartProps = {
 const chartConfig = {
   amplitude: {
     label: "Amplitude",
-    color: "#dc2626",
+    color: "#68A691",
   },
 };
 
@@ -33,13 +33,14 @@ export function FrequencySpectrumChart({
   data = frequencySpectrumData,
   title = "Frequency Spectrum",
 }: FrequencySpectrumChartProps) {
+  const chartData = Array.isArray((data as any)?.spectrum) ? (data as any).spectrum : data;
   return (
     <VoiceChartCard
       title={title}
       description="Snapshot of amplitude distribution across frequency bands."
     >
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
-        <BarChart data={data} margin={{ left: 4, right: 8, top: 12 }}>
+        <BarChart data={chartData} margin={{ left: 4, right: 8, top: 12 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="frequency" tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} width={28} domain={[0, 100]} />
@@ -50,4 +51,3 @@ export function FrequencySpectrumChart({
     </VoiceChartCard>
   );
 }
-

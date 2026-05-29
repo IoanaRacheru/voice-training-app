@@ -36,7 +36,7 @@ const metrics = [
       return "Very soft";
     },
     hint: "Volume shows microphone intensity, not voice quality. If it stays very low, move closer or speak a little louder so analysis works better.",
-    accent: "bg-cyan-500",
+    accent: "bg-muted",
   },
   {
     key: "resonance",
@@ -50,7 +50,7 @@ const metrics = [
       return "Darker sound";
     },
     hint: "Resonance is estimated from spectral brightness.",
-    accent: "bg-emerald-500",
+    accent: "bg-primary",
   },
   {
     key: "presentation",
@@ -58,7 +58,7 @@ const metrics = [
     value: ({ isRecording, voicePresentation }: any) => (isRecording ? voicePresentation?.label || "--" : "--"),
     subValue: ({ isRecording, voicePresentation }: any) => (isRecording ? voicePresentation?.detail || "Pitch and resonance estimate" : "Feature estimate"),
     hint: "This is not an identity label.",
-    accent: "bg-amber-500",
+    accent: "bg-secondary",
   },
   {
     key: "confidence",
@@ -66,7 +66,7 @@ const metrics = [
     value: ({ isRecording, voicePresentation }: any) => (isRecording ? voicePresentation?.confidence || "--" : "--"),
     subValue: ({ isRecording }: any) => (isRecording ? "Estimate quality" : "Waiting"),
     hint: "Confidence tells you how reliable the estimate is.",
-    accent: "bg-rose-500",
+    accent: "bg-primary/55",
   },
 ];
 
@@ -117,4 +117,3 @@ export default function VoiceMetricsPanel({
     </div>
   );
 }
-

@@ -26,10 +26,10 @@ export default function WaveformVisualizer({ isRecording, waveformData = [] }) {
               height: `${height}px`,
               background:
                 isRecording && index % 11 === 0
-                  ? "#e50914"
+                  ? "#EFC7C2"
                   : isRecording
-                    ? "#111111"
-                    : "#d6d3ce",
+                    ? "#68A691"
+                    : "#BFD3C1",
             }}
           />
         ))}

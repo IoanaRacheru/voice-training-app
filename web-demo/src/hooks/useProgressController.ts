@@ -1,30 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { getSessions } from "@/api/authClient";
 import { exerciseSessionService } from "@/services/exerciseSessionService";
-
-type SessionLike = {
-  date: string;
-  average_pitch: number;
-  score: number;
-};
 
 /**
  * Coordinates Progress page data fetching and chart projections.
  */
 export function useProgressController() {
-  const [sessions, setSessions] = useState<SessionLike[]>([]);
   const [exerciseSessions, setExerciseSessions] = useState(() =>
     exerciseSessionService.getSessions()
   );
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getSessions()
-      .then((data) => setSessions(Array.isArray(data) ? data : []))
-      .catch(() => setSessions([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const [loading] = useState(false);
 
   useEffect(() => {
     const sync = () => setExerciseSessions(exerciseSessionService.getSessions());
@@ -32,31 +17,30 @@ export function useProgressController() {
     return () => window.removeEventListener("voiceExerciseSessions:changed", sync);
   }, []);
 
-  const chronological = useMemo(() => [...sessions].reverse(), [sessions]);
+  const chronological = useMemo(() => [...exerciseSessions], [exerciseSessions]);
   const pitchData = useMemo(
     () =>
-      chronological.map((s) => ({
+      chronological.filter((s: any) => Number.isFinite(Number(s.average_pitch))).map((s: any) => ({
         date: format(new Date(s.date), "MMM d"),
-        pitch: s.average_pitch,
+        pitch: Number(s.average_pitch),
       })),
     [chronological]
   );
   const scoreData = useMemo(
     () =>
-      chronological.map((s) => ({
+      chronological.map((s: any) => ({
         date: format(new Date(s.date), "MMM d"),
-        score: s.score,
+        score: Number(s.score) || 0,
       })),
     [chronological]
   );
 
   return {
-    sessions,
+    sessions: exerciseSessions,
     exerciseSessions,
     loading,
-    hasSessions: sessions.length > 0,
+    hasSessions: exerciseSessions.length > 0,
     pitchData,
     scoreData,
   };
 }
-

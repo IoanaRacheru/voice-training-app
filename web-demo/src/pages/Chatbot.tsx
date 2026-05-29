@@ -26,7 +26,7 @@ export default function Chatbot() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
-        className="bg-white shadow-[0_24px_70px_rgba(17,17,17,0.07)]"
+        className="bg-card shadow-[0_24px_70px_rgba(105,79,93,0.07)]"
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-black uppercase text-foreground">Transcript</h2>
@@ -41,7 +41,7 @@ export default function Chatbot() {
               <article
                 key={`${message.role}-${index}`}
                 className={`max-w-3xl border-l-2 px-4 py-3 ${
-                  isUser ? "ml-auto border-foreground bg-background" : "mr-auto border-primary bg-white"
+                  isUser ? "ml-auto border-foreground bg-background" : "mr-auto border-primary bg-card"
                 }`}
               >
                 <p className={`font-mono text-[11px] uppercase ${isUser ? "text-muted-foreground" : "text-primary"}`}>

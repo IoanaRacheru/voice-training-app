@@ -16,7 +16,7 @@ type VoiceChartCardProps = {
 
 export function VoiceChartCard({ title, description, children }: VoiceChartCardProps) {
   return (
-    <Card className="h-full border-border/70 bg-card shadow-[0_18px_50px_rgba(17,17,17,0.05)]">
+    <Card className="h-full border-border/70 bg-card shadow-[0_18px_50px_rgba(105,79,93,0.05)]">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
         {description ? (

@@ -4,7 +4,7 @@ import { SpectrogramCell, spectrogramData } from "./mockVoiceAnalyticsData";
 import { VoiceChartCard } from "./VoiceChartCard";
 
 type SpectrogramChartProps = {
-  data?: SpectrogramCell[];
+  data?: SpectrogramCell[] | { spectrogram?: SpectrogramCell[] };
   title?: string;
 };
 
@@ -24,10 +24,16 @@ export function SpectrogramChart({
   data = spectrogramData,
   title = "Spectrogram",
 }: SpectrogramChartProps) {
-  const times = getUniqueValues(data, "time");
-  const frequencies = getUniqueValues(data, "frequency");
+  const chartData: SpectrogramCell[] =
+    Array.isArray((data as any)?.spectrogram) && (data as any).spectrogram.length
+      ? (data as any).spectrogram
+      : Array.isArray(data)
+        ? data
+        : spectrogramData;
+  const times = getUniqueValues(chartData, "time").slice(-8);
+  const frequencies = getUniqueValues(chartData, "frequency");
   const cellsByCoordinate = new Map(
-    data.map((cell) => [`${cell.frequency}-${cell.time}`, cell])
+    chartData.map((cell: SpectrogramCell) => [`${cell.frequency}-${cell.time}`, cell])
   );
 
   return (

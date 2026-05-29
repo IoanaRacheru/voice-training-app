@@ -22,7 +22,7 @@ type VocalWeightChartProps = {
 const chartConfig = {
   value: {
     label: "Weight",
-    color: "#2563eb",
+    color: "#68A691",
   },
 };
 
@@ -30,13 +30,14 @@ export function VocalWeightChart({
   data = vocalWeightData,
   title = "Vocal Weight",
 }: VocalWeightChartProps) {
+  const chartData = Array.isArray((data as any)?.vocalWeight) ? (data as any).vocalWeight : data;
   return (
     <VoiceChartCard
       title={title}
       description="Estimated vocal intensity balance over the recording window."
     >
       <ChartContainer config={chartConfig} className="h-[240px] w-full">
-        <AreaChart data={data} margin={{ left: 4, right: 8, top: 12 }}>
+        <AreaChart data={chartData} margin={{ left: 4, right: 8, top: 12 }}>
           <defs>
             <linearGradient id="vocalWeightFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.28} />
@@ -59,4 +60,3 @@ export function VocalWeightChart({
     </VoiceChartCard>
   );
 }
-

@@ -3,7 +3,7 @@ import React from "react";
 const UserNotRegisteredError = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md border-2 border-foreground bg-white p-8 shadow-[7px_7px_0_rgba(17,17,17,0.14)]">
+      <div className="w-full max-w-md border-2 border-foreground bg-card p-8 shadow-[7px_7px_0_rgba(105,79,93,0.08)]">
         <div className="text-center">
           <div className="mb-6 inline-grid h-16 w-16 place-items-center border-2 border-foreground bg-background">
             <svg className="h-8 w-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">

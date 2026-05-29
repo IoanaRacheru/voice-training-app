@@ -6,7 +6,6 @@ import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { analysisService } from "@/services/analysisService";
 import { exerciseSessionService } from "@/services/exerciseSessionService";
 import SessionCoreGraphs from "./SessionCoreGraphs";
-import ExerciseVisualAid from "./ExerciseVisualAid";
 import { getExerciseSessionConfig } from "./exerciseSessionConfig";
 import type { VoiceExercise } from "@/features/exercises/types";
 
@@ -61,13 +60,17 @@ export default function ExerciseTrainingSession({
     try {
       const audioData = await stopRecording();
       const analysis = analysisService.process(audioData);
-      const saveResult = exerciseSessionService.createSession({
+      const saveResult = await exerciseSessionService.createSession({
         exercise,
         audioData,
         analysis,
         selectedDurationSeconds: duration,
         targetPitch,
         targetRange,
+        recorderState: {
+          pitchData,
+          currentPitch: safePitch,
+        },
       });
 
       if (!saveResult.ok) {
@@ -107,23 +110,20 @@ export default function ExerciseTrainingSession({
     };
   }, [exercise.id, reset]);
 
-  const showPitchGraph = sessionConfig.graphType === "pitch";
-  const showResonanceGraph = sessionConfig.graphType === "resonance";
-  const showGenderGraph = sessionConfig.graphType === "gender";
+  const showPitchGraph = sessionConfig.graphTypes.includes("pitch");
+  const showResonanceGraph = sessionConfig.graphTypes.includes("resonance");
+  const showGenderGraph = sessionConfig.graphTypes.includes("gender");
 
   return (
     <div className="space-y-6">
-      {error && <div className="border-l-4 border-destructive bg-white px-4 py-3 text-sm font-bold text-destructive">{error}</div>}
+      {error && <div className="border-l-4 border-destructive bg-card px-4 py-3 text-sm font-bold text-destructive">{error}</div>}
 
-      <div className="grid gap-4 border border-border bg-white p-4 md:grid-cols-[minmax(0,1fr)_300px]">
-        <div>
-          <p className="font-mono text-[11px] uppercase text-muted-foreground">How to do it</p>
-          <h3 className="mt-2 text-lg font-black uppercase text-foreground">{exercise.name}</h3>
-          <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-muted-foreground">
-            {sessionConfig.shortInstruction}
-          </p>
-        </div>
-        <ExerciseVisualAid type={sessionConfig.visualAid} />
+      <div className="border border-border bg-card p-4">
+        <p className="font-mono text-[11px] uppercase text-muted-foreground">How to do it</p>
+        <h3 className="mt-2 text-lg font-black uppercase text-foreground">{exercise.name}</h3>
+        <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-muted-foreground">
+          {sessionConfig.shortInstruction}
+        </p>
       </div>
 
       <div className="space-y-5">
@@ -138,33 +138,37 @@ export default function ExerciseTrainingSession({
           />
         )}
       </div>
-      <div className="h-24" />
-      <div className="sticky bottom-0 z-20 -mx-1 border-t border-border bg-background/95 backdrop-blur md:-mx-2">
-        <RecordingControls
-          isRecording={isRecording}
-          isPaused={isPaused}
-          onPrimaryAction={handlePrimaryAction}
-          onFinish={processRecording}
-          onReset={() => {
-            setResult(null);
-            reset();
-          }}
-          duration={duration}
-          timeLabel="Elapsed"
-          showReset={sessionConfig.showReset}
-          layout="bar"
-        />
-      </div>
+      {sessionConfig.requiresRecorder && (
+        <>
+          <div className="h-24" />
+          <div className="sticky bottom-0 z-20 -mx-1 border-t border-border bg-background/95 backdrop-blur md:-mx-2">
+            <RecordingControls
+              isRecording={isRecording}
+              isPaused={isPaused}
+              onPrimaryAction={handlePrimaryAction}
+              onFinish={processRecording}
+              onReset={() => {
+                setResult(null);
+                reset();
+              }}
+              duration={duration}
+              timeLabel="Elapsed"
+              showReset={sessionConfig.showReset}
+              layout="bar"
+            />
+          </div>
+        </>
+      )}
 
       {isProcessing && (
-        <div className="flex items-center gap-2 bg-white px-4 py-3 text-sm font-bold text-muted-foreground">
+        <div className="flex items-center gap-2 bg-card px-4 py-3 text-sm font-bold text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           Processing audio and saving valid results...
         </div>
       )}
 
       {result && (
-        <div className="grid gap-4 bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.05)] sm:grid-cols-4">
+        <div className="grid gap-4 bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.05)] sm:grid-cols-4">
           <div>
             <p className="font-mono text-[11px] uppercase text-muted-foreground">Result</p>
             <p className="mt-2 font-display text-4xl leading-none">{result.score}</p>

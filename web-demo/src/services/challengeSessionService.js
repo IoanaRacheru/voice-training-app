@@ -5,6 +5,7 @@ import { MIN_SESSION_DURATION_SECONDS } from "./sessionService.js";
 import { resolveTargetRange } from "./targetRangeUtils.js";
 import { createLocalJsonStore } from "./core/localJsonStore.js";
 import { emitAppEvent } from "./core/appEventBus.js";
+import { practiceSessionService } from "./practiceSessionService.js";
 
 const STORAGE_KEY = "voiceDailyChallenge";
 const challengeStore = createLocalJsonStore(STORAGE_KEY, () => null);
@@ -120,9 +121,9 @@ export const challengeSessionService = {
     return null;
   },
 
-  generateChallenge(user, exerciseCount) {
+  generateChallenge(user, exerciseCount, selectedExerciseIds = []) {
     return writeChallenge(
-      challengeGeneratorService.generateDailyChallenge({ user, exerciseCount })
+      challengeGeneratorService.generateDailyChallenge({ user, exerciseCount, selectedExerciseIds })
     );
   },
 
@@ -230,6 +231,8 @@ export const challengeSessionService = {
     if (allCompleted) {
       challengeStreakService.completeChallenge(challenge.date);
     }
+
+    practiceSessionService.recordCompletion("challenge", exercise.id);
 
     return { ok: true, error: null, challenge: writeChallenge(nextChallenge), result };
   },

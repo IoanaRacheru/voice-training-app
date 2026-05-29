@@ -69,7 +69,7 @@ export default function SessionCoreGraphs({
 
   return (
     <div className="grid gap-5">
-      {showPitchGraph && <section className="bg-white p-4 shadow-[0_12px_35px_rgba(17,17,17,0.05)]">
+      {showPitchGraph && <section className="bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-black uppercase text-foreground">Pitch Graph</h3>
           <span className="text-xs font-bold uppercase text-muted-foreground">
@@ -84,19 +84,19 @@ export default function SessionCoreGraphs({
               <YAxis domain={[80, 300]} tick={{ fontSize: 10 }} />
               <Tooltip />
               <Legend />
-              <ReferenceArea y1={MASCULINE_RANGE[0]} y2={MASCULINE_RANGE[1]} fill="#93c5fd" fillOpacity={0.34} ifOverflow="extendDomain" />
-              <ReferenceArea y1={FEMININE_RANGE[0]} y2={FEMININE_RANGE[1]} fill="#f9a8d4" fillOpacity={0.34} ifOverflow="extendDomain" />
-              <Line type="monotone" dataKey="pitch" name="Current pitch" stroke="#111111" strokeWidth={2.5} dot={false} />
+              <ReferenceArea y1={MASCULINE_RANGE[0]} y2={MASCULINE_RANGE[1]} fill="#BFD3C1" fillOpacity={0.42} ifOverflow="extendDomain" />
+              <ReferenceArea y1={FEMININE_RANGE[0]} y2={FEMININE_RANGE[1]} fill="#EFC7C2" fillOpacity={0.42} ifOverflow="extendDomain" />
+              <Line type="monotone" dataKey="pitch" name="Current pitch" stroke="#694F5D" strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold uppercase text-muted-foreground">
-          <span className="border border-border bg-blue-100 px-2 py-1 text-blue-900">Masculine {MASCULINE_RANGE[0]}-{MASCULINE_RANGE[1]} Hz</span>
-          <span className="border border-border bg-pink-100 px-2 py-1 text-pink-900">Feminine {FEMININE_RANGE[0]}-{FEMININE_RANGE[1]} Hz</span>
+          <span className="border border-border bg-muted px-2 py-1 text-foreground">Masculine {MASCULINE_RANGE[0]}-{MASCULINE_RANGE[1]} Hz</span>
+          <span className="border border-border bg-secondary px-2 py-1 text-foreground">Feminine {FEMININE_RANGE[0]}-{FEMININE_RANGE[1]} Hz</span>
         </div>
       </section>}
 
-      {showResonanceGraph && <section className="bg-white p-4 shadow-[0_12px_35px_rgba(17,17,17,0.05)]">
+      {showResonanceGraph && <section className="bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
         <div className="mb-3 flex items-center gap-2">
           <h3 className="text-sm font-black uppercase text-foreground">Resonance Graph (F1/F2/F3)</h3>
           <Popover><PopoverTrigger asChild><button type="button" className="text-xs font-bold text-primary">F1</button></PopoverTrigger><PopoverContent className="w-64 text-xs">Shows how open the mouth is and tongue height.</PopoverContent></Popover>
@@ -111,22 +111,31 @@ export default function SessionCoreGraphs({
               <YAxis type="number" dataKey="f1" name="Hz" domain={[150, 3200]} tick={{ fontSize: 10 }} />
               <Tooltip />
               <Legend />
-              <Scatter name="F1" data={resonanceData} fill="#ef4444" />
-              <Scatter name="F2" data={resonanceData.map((p) => ({ ...p, f1: p.f2 }))} fill="#22c55e" />
-              <Scatter name="F3" data={resonanceData.map((p) => ({ ...p, f1: p.f3 }))} fill="#3b82f6" />
+              <Scatter name="F1" data={resonanceData} fill="#68A691" />
+              <Scatter name="F2" data={resonanceData.map((p) => ({ ...p, f1: p.f2 }))} fill="#EFC7C2" />
+              <Scatter name="F3" data={resonanceData.map((p) => ({ ...p, f1: p.f3 }))} fill="#694F5D" />
             </ScatterChart>
           </ResponsiveContainer>
         </div>
       </section>}
 
-      {showGenderGraph && <section className="bg-white p-4 shadow-[0_12px_35px_rgba(17,17,17,0.05)]">
+      {showGenderGraph && <section className="bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.07)]">
         <h3 className="mb-3 text-sm font-black uppercase text-foreground">Gender Graph</h3>
         <div className="space-y-3">
-          <div className="h-10 overflow-hidden border border-border bg-blue-500/85">
+          <div className="relative h-16 overflow-hidden rounded-full border border-border bg-gradient-to-r from-[#BFD3C1] via-[#FFE5D4] to-[#EFC7C2]">
             <motion.div
-              className="h-full bg-gradient-to-r from-violet-400 to-pink-500"
-              animate={{ width: `${femininePercent}%` }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
+              className="absolute inset-y-0 left-0 w-full opacity-70"
+              style={{
+                background:
+                  "radial-gradient(80px 28px at 18% 50%, rgba(255,229,212,0.65), transparent 70%), radial-gradient(120px 36px at 70% 50%, rgba(239,199,194,0.36), transparent 72%)",
+              }}
+              animate={{ x: ["-8%", "6%", "-8%"] }}
+              transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              className="absolute top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border-4 border-background bg-primary shadow-[0_10px_30px_rgba(105,79,93,0.09)]"
+              animate={{ left: `calc(${femininePercent}% - 20px)` }}
+              transition={{ duration: 0.65, ease: "easeInOut" }}
             />
           </div>
           <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">

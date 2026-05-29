@@ -1,4 +1,4 @@
-import { challengeExercisePool } from "@/data/challengeExercisePool";
+import { challengeService } from "./challengeService.js";
 import { createLocalJsonStore } from "./core/localJsonStore.js";
 
 const HISTORY_KEY = "voiceChallengeGenerationHistory";
@@ -112,41 +112,6 @@ function getProfileSnapshot(user) {
   };
 }
 
-function chooseDuration(exercise, profileSnapshot) {
-  const options = exercise.durationOptions || [180, 300, 600];
-  const goalPriorityMap = {
-    feminization: ["pitch", "resonance", "intonation", "breath", "pronunciation"],
-    masculinization: ["pitch", "volume", "breath", "resonance"],
-    clarity: ["pronunciation", "diction", "clarity", "volume", "resonance"],
-    singing: ["mimic_tones", "lung_capacity", "breath", "pitch"],
-    confidence: ["volume", "diction", "clarity", "pronunciation"],
-    general: ["pitch", "breath", "diction", "resonance"],
-  };
-  const priorityCategories =
-    goalPriorityMap[profileSnapshot.goal] || goalPriorityMap.general;
-  const priorityIndex = priorityCategories.indexOf(exercise.category);
-  const isPrimaryForGoal = priorityIndex >= 0 && priorityIndex <= 2;
-  const isSecondaryForGoal = priorityIndex > 2;
-
-  if (profileSnapshot.easyMode || profileSnapshot.difficulty === "easy") {
-    return isPrimaryForGoal ? 300 : 180;
-  }
-
-  if (profileSnapshot.difficulty === "hard") {
-    return isPrimaryForGoal ? 600 : 300;
-  }
-
-  if (isPrimaryForGoal) {
-    return 600;
-  }
-
-  if (isSecondaryForGoal) {
-    return 300;
-  }
-
-  return 180;
-}
-
 function getGoalFeedback(goal) {
   if (goal === "feminization") {
     return "Nice work. Keep blending pitch control, resonance, and relaxed articulation.";
@@ -173,54 +138,39 @@ export const challengeGeneratorService = {
   normalizeGoal,
   getGoalFeedback,
 
-  generateDailyChallenge({ user, exerciseCount = 5, date = getToday() }) {
+  generateDailyChallenge({ user, exerciseCount = 5, selectedExerciseIds = [], date = getToday() }) {
     const selectedCount = Math.max(1, Math.min(12, Number(exerciseCount) || 5));
     const profileSnapshot = getProfileSnapshot(user);
     const history = getStoredHistory();
-    const recentExerciseIds = getRecentExerciseIds(history, date);
     const yesterday = history[history.length - 1]?.exerciseIds || [];
-
-    const supported = challengeExercisePool.filter((exercise) =>
-      exercise.supportedGoals.includes(profileSnapshot.goal)
+    const recentExerciseIds = getRecentExerciseIds(history, date);
+    const freshSelectedIds = selectedExerciseIds.filter((id) => !recentExerciseIds.has(id));
+    const automaticExerciseIds = challengeService.getRandomExerciseIds(
+      selectedCount,
+      profileSnapshot.goal,
+      Array.from(recentExerciseIds)
     );
-    const fallback = challengeExercisePool.filter((exercise) =>
-      exercise.supportedGoals.includes("general")
-    );
-    const source = supported.length ? supported : fallback;
-    const uniqueFirst = shuffle(
-      source.filter((exercise) => !recentExerciseIds.has(exercise.id)),
-      `${date}-${profileSnapshot.goal}-fresh`
-    );
-    const repeats = shuffle(source, `${date}-${profileSnapshot.goal}-repeat`);
-    let selected = [...uniqueFirst, ...repeats].slice(0, selectedCount);
+    let selected = challengeService.buildChallengeExercises({
+      selectedExerciseIds: freshSelectedIds.length ? freshSelectedIds : automaticExerciseIds,
+      count: selectedCount,
+      date,
+      goal: profileSnapshot.goal,
+    });
 
     if (
       selected.map((exercise) => exercise.id).join("|") === yesterday.join("|") &&
-      repeats.length > 1
+      selected.length > 1
     ) {
       selected = [selected[1], selected[0], ...selected.slice(2)];
     }
 
-    const exercises = selected.map((exercise, index) => ({
-      ...exercise,
-      challengeId: `${date}-${exercise.id}-${index}`,
-      durationSeconds: chooseDuration(exercise, profileSnapshot),
-      status: index === 0 ? "available" : "locked",
-      progress: 0,
-      order: index,
-      motivationalFeedback:
-        index === 0
-          ? "Start calm and let the first take set the tone."
-          : "Complete the previous step to unlock this one.",
-    }));
-
-    saveGeneration(date, exercises.map((exercise) => exercise.id));
+    saveGeneration(date, selected.map((exercise) => exercise.id));
 
     return {
       date,
       profileGoalSnapshot: profileSnapshot,
       selectedExerciseCount: selectedCount,
-      exercises,
+      exercises: selected,
       orderLocked: false,
       startedAt: null,
       completedAt: null,

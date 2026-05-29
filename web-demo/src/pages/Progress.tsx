@@ -2,12 +2,11 @@ import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import PitchEvolutionChart from "@/components/progress/PitchEvolutionChart";
 import ScoreChart from "@/components/progress/ScoreChart";
-import SessionHistory from "@/components/progress/SessionHistory";
 import ExerciseHistory from "@/components/exercises/ExerciseHistory";
 import { useProgressController } from "@/hooks/useProgressController";
 
 export default function Progress() {
-  const { sessions, exerciseSessions, loading, hasSessions, pitchData, scoreData } =
+  const { exerciseSessions, loading, hasSessions, pitchData, scoreData } =
     useProgressController();
 
   return (
@@ -26,7 +25,7 @@ export default function Progress() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center gap-4 bg-white py-24 text-center shadow-[0_24px_70px_rgba(17,17,17,0.07)]"
+          className="flex flex-col items-center justify-center gap-4 bg-card py-24 text-center shadow-[0_24px_70px_rgba(105,79,93,0.07)]"
         >
           <div className="grid h-14 w-14 place-items-center bg-background">
             <Activity className="h-7 w-7 text-primary" />
@@ -44,11 +43,9 @@ export default function Progress() {
             <PitchEvolutionChart data={pitchData} />
             <ScoreChart data={scoreData} />
           </div>
-          <SessionHistory sessions={sessions} />
           <ExerciseHistory sessions={exerciseSessions} />
         </>
       )}
     </div>
   );
 }
-

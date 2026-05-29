@@ -6,8 +6,8 @@ export default function PageNotFound() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md border-2 border-foreground bg-white p-8 text-center shadow-[7px_7px_0_rgba(17,17,17,0.14)]">
-        <p className="inline-block bg-foreground px-2 py-1 font-mono text-[11px] uppercase text-white">
+      <div className="w-full max-w-md border-2 border-foreground bg-card p-8 text-center shadow-[7px_7px_0_rgba(105,79,93,0.08)]">
+        <p className="inline-block bg-primary px-2 py-1 font-mono text-[11px] uppercase text-primary-foreground">
           Error 404
         </p>
 
@@ -23,7 +23,7 @@ export default function PageNotFound() {
           onClick={() => {
             window.location.href = "/";
           }}
-          className="mt-8 inline-flex items-center border-2 border-foreground bg-foreground px-4 py-2 text-sm font-black uppercase text-white shadow-[4px_4px_0_#e50914] hover:bg-primary"
+          className="mt-8 inline-flex items-center border-2 border-primary bg-primary px-4 py-2 text-sm font-black uppercase text-primary-foreground shadow-[4px_4px_0_#EFC7C2] hover:bg-primary/85"
         >
           Go home
         </button>

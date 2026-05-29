@@ -4,14 +4,16 @@ import type { VoiceExercise } from "@/features/exercises/types";
 export type ExerciseSessionConfig = {
   shortInstruction: string;
   visualAid: SessionVisualAidType;
-  graphType: "none" | "pitch" | "resonance" | "gender";
+  graphTypes: Array<"pitch" | "resonance" | "gender">;
+  requiresRecorder: boolean;
   showReset: boolean;
 };
 
 const defaultConfig: ExerciseSessionConfig = {
   shortInstruction: "Practice comfortably and stop if your throat feels strained.",
   visualAid: "general",
-  graphType: "pitch",
+  graphTypes: ["pitch"],
+  requiresRecorder: true,
   showReset: true,
 };
 
@@ -19,55 +21,61 @@ const byExerciseId: Record<string, Partial<ExerciseSessionConfig>> = {
   "breathing-control": {
     shortInstruction: "Inhale quietly through your nose and release a smooth, steady vowel on one breath.",
     visualAid: "breathing",
-    graphType: "none",
+    graphTypes: [],
+    requiresRecorder: false,
     showReset: false,
   },
   "hydration-break": {
     shortInstruction: "Drink water, relax jaw and neck, then resume only when your voice feels easy.",
     visualAid: "general",
-    graphType: "none",
+    graphTypes: [],
+    requiresRecorder: false,
     showReset: false,
   },
   "resonance-humming": {
-    shortInstruction: "Hum softly with lips closed and aim for gentle vibration in lips and face.",
+    shortInstruction: "This is used to test the user's resonance after Bubble Phonation. Imitate the feeling of bubble phonation, but without using the glass of water and straw.",
     visualAid: "humming",
-    graphType: "resonance",
+    graphTypes: ["resonance"],
+    requiresRecorder: true,
     showReset: true,
   },
   resonance: {
     shortInstruction: "Use relaxed humming and nasal sounds while keeping vibration forward and easy.",
     visualAid: "resonance",
-    graphType: "resonance",
+    graphTypes: ["resonance"],
     showReset: true,
   },
   "bubble-phonation": {
-    shortInstruction: "Blow gently through the straw and voice softly, keeping bubbles steady and controlled.",
+    shortInstruction: "Practice first with a straw in a glass of water. Keep the bubbles steady, then try the same easy vibration without the straw by using Resonance Humming.",
     visualAid: "resonance",
-    graphType: "resonance",
-    showReset: true,
+    graphTypes: [],
+    requiresRecorder: false,
+    showReset: false,
   },
   "larynx-raise-tutorial": {
     shortInstruction: "Use a light, bright syllable and keep neck muscles relaxed while feeling subtle lift.",
     visualAid: "larynx",
-    graphType: "none",
+    graphTypes: [],
+    requiresRecorder: false,
     showReset: false,
   },
   "pitch-control": {
     shortInstruction: "Read one short phrase and keep your pitch movement smooth and controlled.",
     visualAid: "pitch",
-    graphType: "pitch",
+    graphTypes: ["pitch", "gender"],
     showReset: true,
   },
   "mimic-tones": {
     shortInstruction: "Match one target tone at a time and adjust gradually, not abruptly.",
     visualAid: "pitch",
-    graphType: "pitch",
+    graphTypes: ["pitch"],
     showReset: true,
   },
   "lung-capacity": {
     shortInstruction: "Take a relaxed breath and sustain one comfortable sound without forcing.",
     visualAid: "breathing",
-    graphType: "none",
+    graphTypes: [],
+    requiresRecorder: false,
     showReset: false,
   },
 };

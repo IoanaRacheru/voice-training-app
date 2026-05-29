@@ -11,7 +11,7 @@ const exerciseLabels: Record<string, string> = {
 
 export default function SessionHistory({ sessions }: { sessions: any[] }) {
   return (
-    <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+    <section className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.06)]">
       <div className="mb-5 flex items-end justify-between gap-4 border-b border-border pb-4">
         <div>
           <p className="font-mono text-[11px] uppercase text-muted-foreground">Ledger</p>

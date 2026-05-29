@@ -14,6 +14,12 @@ module.exports = {
   			xl: '1.25rem',
   			'2xl': '1.5rem'
   		},
+  		boxShadow: {
+  			sm: '0 1px 2px rgba(105, 79, 93, 0.05)',
+  			DEFAULT: '0 8px 24px rgba(105, 79, 93, 0.07)',
+  			lg: '0 18px 50px rgba(105, 79, 93, 0.09)',
+  			xl: '0 24px 70px rgba(105, 79, 93, 0.10)'
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

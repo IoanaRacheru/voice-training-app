@@ -22,7 +22,7 @@ export default function FullScreenSessionView({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex h-10 w-10 items-center justify-center border border-border bg-white text-foreground hover:border-primary"
+          className="inline-flex h-10 w-10 items-center justify-center border border-border bg-card text-foreground hover:border-primary"
           aria-label="Back to exercises and tools"
         >
           <ArrowLeft className="h-5 w-5" />

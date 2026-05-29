@@ -7,74 +7,81 @@
     --font-inter: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-display: Impact, "Arial Black", "Franklin Gothic Heavy", var(--font-inter);
 
-    --background: 48 12% 94%;
-    --foreground: 0 0% 7%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 7%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 7%;
-    --primary: 357 93% 47%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 45 10% 90%;
-    --secondary-foreground: 0 0% 7%;
-    --muted: 42 9% 87%;
-    --muted-foreground: 0 0% 33%;
-    --accent: 357 93% 47%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 357 93% 47%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 36 9% 82%;
-    --input: 36 9% 82%;
-    --ring: 357 93% 47%;
-    --chart-1: 357 93% 47%;
-    --chart-2: 0 0% 7%;
-    --chart-3: 0 0% 33%;
-    --chart-4: 36 9% 62%;
-    --chart-5: 0 0% 7%;
-    --radius: 0.25rem;
-    --sidebar-background: 48 12% 94%;
-    --sidebar-foreground: 0 0% 7%;
-    --sidebar-primary: 357 93% 47%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 100%;
-    --sidebar-accent-foreground: 0 0% 7%;
-    --sidebar-border: 36 9% 82%;
-    --sidebar-ring: 357 93% 47%;
+    --palette-secondary: #EFC7C2;
+    --palette-page: #FFF8F5;
+    --palette-warm: #FFE5D4;
+    --palette-neutral: #BFD3C1;
+    --palette-primary: #68A691;
+    --palette-dark: #694F5D;
+
+    --background: 18 100% 98%;
+    --foreground: 326 15% 36%;
+    --card: 24 100% 96%;
+    --card-foreground: 326 15% 36%;
+    --popover: 18 100% 98%;
+    --popover-foreground: 326 15% 36%;
+    --primary: 161 26% 53%;
+    --primary-foreground: 18 100% 98%;
+    --secondary: 6 56% 85%;
+    --secondary-foreground: 326 15% 36%;
+    --muted: 127 29% 94%;
+    --muted-foreground: 326 15% 36%;
+    --accent: 6 56% 85%;
+    --accent-foreground: 326 15% 36%;
+    --destructive: 6 56% 85%;
+    --destructive-foreground: 326 15% 36%;
+    --border: 128 23% 84%;
+    --input: 127 29% 94%;
+    --ring: 161 26% 53%;
+    --chart-1: 161 26% 53%;
+    --chart-2: 6 56% 85%;
+    --chart-3: 128 23% 79%;
+    --chart-4: 326 15% 36%;
+    --chart-5: 18 100% 98%;
+    --radius: 0.85rem;
+    --sidebar-background: 18 100% 98%;
+    --sidebar-foreground: 326 15% 36%;
+    --sidebar-primary: 161 26% 53%;
+    --sidebar-primary-foreground: 18 100% 98%;
+    --sidebar-accent: 6 56% 85%;
+    --sidebar-accent-foreground: 326 15% 36%;
+    --sidebar-border: 128 23% 84%;
+    --sidebar-ring: 161 26% 53%;
   }
 
   .dark {
-    --background: 48 12% 94%;
-    --foreground: 0 0% 7%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 7%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 7%;
-    --primary: 357 93% 47%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 45 10% 90%;
-    --secondary-foreground: 0 0% 7%;
-    --muted: 42 9% 87%;
-    --muted-foreground: 0 0% 33%;
-    --accent: 357 93% 47%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 357 93% 47%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 36 9% 82%;
-    --input: 36 9% 82%;
-    --ring: 357 93% 47%;
-    --chart-1: 357 93% 47%;
-    --chart-2: 0 0% 7%;
-    --chart-3: 0 0% 33%;
-    --chart-4: 36 9% 62%;
-    --chart-5: 0 0% 7%;
-    --sidebar-background: 48 12% 94%;
-    --sidebar-foreground: 0 0% 7%;
-    --sidebar-primary: 357 93% 47%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 100%;
-    --sidebar-accent-foreground: 0 0% 7%;
-    --sidebar-border: 36 9% 82%;
-    --sidebar-ring: 357 93% 47%;
+    --background: 18 100% 98%;
+    --foreground: 326 15% 36%;
+    --card: 24 100% 96%;
+    --card-foreground: 326 15% 36%;
+    --popover: 18 100% 98%;
+    --popover-foreground: 326 15% 36%;
+    --primary: 161 26% 53%;
+    --primary-foreground: 18 100% 98%;
+    --secondary: 6 56% 85%;
+    --secondary-foreground: 326 15% 36%;
+    --muted: 127 29% 94%;
+    --muted-foreground: 326 15% 36%;
+    --accent: 6 56% 85%;
+    --accent-foreground: 326 15% 36%;
+    --destructive: 6 56% 85%;
+    --destructive-foreground: 326 15% 36%;
+    --border: 128 23% 84%;
+    --input: 127 29% 94%;
+    --ring: 161 26% 53%;
+    --chart-1: 161 26% 53%;
+    --chart-2: 6 56% 85%;
+    --chart-3: 128 23% 79%;
+    --chart-4: 326 15% 36%;
+    --chart-5: 18 100% 98%;
+    --sidebar-background: 18 100% 98%;
+    --sidebar-foreground: 326 15% 36%;
+    --sidebar-primary: 161 26% 53%;
+    --sidebar-primary-foreground: 18 100% 98%;
+    --sidebar-accent: 6 56% 85%;
+    --sidebar-accent-foreground: 326 15% 36%;
+    --sidebar-border: 128 23% 84%;
+    --sidebar-ring: 161 26% 53%;
   }
 }
 
@@ -83,7 +90,7 @@
   body,
   #root {
     min-height: 100%;
-    background: #f2f1ee;
+    background: var(--palette-page);
   }
 
   * {
@@ -92,17 +99,17 @@
 
   body {
     @apply bg-background text-foreground font-inter;
-    color: #111111;
-    background-color: #f2f1ee;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.075'/%3E%3C/svg%3E");
+    color: var(--palette-dark);
+    background-color: var(--palette-page);
+    background-image: none;
     font-feature-settings: "liga" 1, "kern" 1;
     letter-spacing: 0;
   }
 }
 
 ::selection {
-  background: #e50914;
-  color: #ffffff;
+  background: var(--palette-primary);
+  color: var(--palette-dark);
 }
 
 ::-webkit-scrollbar {
@@ -110,12 +117,12 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #f2f1ee;
+  background: var(--palette-page);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #111111;
-  border: 3px solid #f2f1ee;
+  background: rgba(105, 79, 93, 0.42);
+  border: 3px solid var(--palette-page);
 }
 
 button,
@@ -145,11 +152,22 @@ button:active:not(:disabled) {
 }
 
 .glow-recording {
-  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.14);
+  box-shadow: 0 0 0 3px rgba(104, 166, 145, 0.16);
 }
 
 .bg-card {
-  box-shadow: 0 18px 50px rgba(17, 17, 17, 0.06);
+  box-shadow: 0 18px 50px rgba(105, 79, 93, 0.07);
+}
+
+.recharts-cartesian-grid line,
+.recharts-polar-grid path,
+.recharts-reference-line line {
+  stroke: hsl(var(--border));
+}
+
+.recharts-dot,
+.recharts-sector {
+  stroke: transparent;
 }
 
 @keyframes pulse-glow {
@@ -193,7 +211,7 @@ button:active:not(:disabled) {
 
 .duck-mark::before {
   content: "VS";
-  color: #ffffff;
+  color: var(--palette-warm);
   transform: skew(-8deg);
 }
 
@@ -211,13 +229,13 @@ button:active:not(:disabled) {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #f2f1ee;
+  background: var(--palette-page);
 }
 
 .paper-grain {
   position: absolute;
   inset: 0;
-  opacity: 0.42;
+  opacity: 0.18;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
 }
 

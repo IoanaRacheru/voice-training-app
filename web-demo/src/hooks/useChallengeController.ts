@@ -85,8 +85,8 @@ export function useChallengeController(user: UnknownUser) {
 
   const actions = useMemo(
     () => ({
-      generate(count: number) {
-        const nextChallenge = challengeSessionService.generateChallenge(user, count);
+      generate(count: number, selectedExerciseIds: string[] = []) {
+        const nextChallenge = challengeSessionService.generateChallenge(user, count, selectedExerciseIds);
         setChallenge(nextChallenge);
         setActiveExerciseIndex(null);
         toast.success("Daily challenge generated.");
@@ -150,4 +150,3 @@ export function useChallengeController(user: UnknownUser) {
     actions,
   };
 }
-

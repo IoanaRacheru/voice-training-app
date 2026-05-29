@@ -32,6 +32,13 @@ class RecordingService extends EventTarget {
       resonanceCentroid: null,
       voicePresentation: null,
       pitchData: [],
+      analyticsData: {
+        volume: [],
+        vocalWeight: [],
+        harmonics: [],
+        spectrum: [],
+        spectrogram: [],
+      },
       waveformData: EMPTY_WAVEFORM,
       error: null,
     };
@@ -65,6 +72,13 @@ class RecordingService extends EventTarget {
     return {
       ...this.state,
       pitchData: [...this.state.pitchData],
+      analyticsData: {
+        volume: [...(this.state.analyticsData?.volume || [])],
+        vocalWeight: [...(this.state.analyticsData?.vocalWeight || [])],
+        harmonics: [...(this.state.analyticsData?.harmonics || [])],
+        spectrum: [...(this.state.analyticsData?.spectrum || [])],
+        spectrogram: [...(this.state.analyticsData?.spectrogram || [])],
+      },
       waveformData: new Float32Array(this.state.waveformData),
     };
   }
@@ -120,6 +134,13 @@ class RecordingService extends EventTarget {
       resonanceCentroid: null,
       voicePresentation: null,
       pitchData: [],
+      analyticsData: {
+        volume: [],
+        vocalWeight: [],
+        harmonics: [],
+        spectrum: [],
+        spectrogram: [],
+      },
       waveformData: EMPTY_WAVEFORM,
       error: null,
     });
@@ -285,6 +306,13 @@ class RecordingService extends EventTarget {
       resonanceCentroid: null,
       voicePresentation: null,
       pitchData: [],
+      analyticsData: {
+        volume: [],
+        vocalWeight: [],
+        harmonics: [],
+        spectrum: [],
+        spectrogram: [],
+      },
       waveformData: EMPTY_WAVEFORM,
       error: null,
     });
@@ -435,11 +463,72 @@ class RecordingService extends EventTarget {
       pitch: this.state.currentPitch,
       resonanceCentroid,
     });
+    const elapsed = this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0;
+    const timestamp = `${elapsed}s`;
+    const spectrum = this.getSpectrumBands(frequencyBuffer, binHz);
+    const harmonics = this.getHarmonicBands(frequencyBuffer, binHz);
+    const vocalWeight = Math.round(Math.max(0, Math.min(100, currentVolume * 0.55 + (resonanceCentroid ? Math.min(40, resonanceCentroid / 80) : 0))));
+    const spectrogramRow = spectrum.slice(0, 6).map((band) => ({
+      time: timestamp,
+      frequency: band.frequency,
+      intensity: band.amplitude,
+    }));
 
     this.emitState({
       currentVolume,
       resonanceCentroid,
       voicePresentation,
+      analyticsData: {
+        volume: [...(this.state.analyticsData?.volume || []), { timestamp, value: currentVolume }].slice(-40),
+        vocalWeight: [...(this.state.analyticsData?.vocalWeight || []), { timestamp, value: vocalWeight }].slice(-40),
+        harmonics,
+        spectrum,
+        spectrogram: [...(this.state.analyticsData?.spectrogram || []), ...spectrogramRow].slice(-72),
+      },
+    });
+  }
+
+  getBandAverage(frequencyBuffer, binHz, minHz, maxHz) {
+    let total = 0;
+    let count = 0;
+
+    for (let index = 0; index < frequencyBuffer.length; index += 1) {
+      const frequency = index * binHz;
+      if (frequency >= minHz && frequency < maxHz) {
+        total += frequencyBuffer[index] || 0;
+        count += 1;
+      }
+    }
+
+    return count ? Math.round((total / count / 255) * 100) : 0;
+  }
+
+  getSpectrumBands(frequencyBuffer, binHz) {
+    return [
+      ["80Hz", 80, 160],
+      ["160Hz", 160, 320],
+      ["320Hz", 320, 640],
+      ["640Hz", 640, 1200],
+      ["1.2k", 1200, 2500],
+      ["2.5k", 2500, 5000],
+      ["5k", 5000, 8000],
+      ["8k", 8000, 12000],
+    ].map(([frequency, minHz, maxHz]) => ({
+      frequency,
+      amplitude: this.getBandAverage(frequencyBuffer, binHz, minHz, maxHz),
+    }));
+  }
+
+  getHarmonicBands(frequencyBuffer, binHz) {
+    const basePitch = analysisService.isValidPitch(this.state.currentPitch) ? this.state.currentPitch : 140;
+    return Array.from({ length: 8 }, (_, index) => {
+      const harmonic = index + 1;
+      const center = basePitch * harmonic;
+      const level = this.getBandAverage(frequencyBuffer, binHz, Math.max(60, center - 35), center + 35);
+      return {
+        label: `H${harmonic}`,
+        value: Math.max(4, level),
+      };
     });
   }
 

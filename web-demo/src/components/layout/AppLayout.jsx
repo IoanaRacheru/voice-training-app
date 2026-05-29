@@ -33,7 +33,7 @@ export default function AppLayout() {
           <button
             type="button"
             onClick={() => setCollapsed(false)}
-            className="fixed left-4 top-4 z-20 hidden h-9 w-9 items-center justify-center border border-border bg-white text-foreground hover:border-primary md:inline-flex"
+            className="fixed left-4 top-4 z-20 hidden h-9 w-9 items-center justify-center border border-border bg-card text-foreground hover:border-primary md:inline-flex"
             aria-label="Expand sidebar"
           >
             <Menu className="h-4 w-4" />

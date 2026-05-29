@@ -38,7 +38,7 @@ const Slider = React.forwardRef(({
       {Array.from({ length: thumbCount }).map((_, index) => (
         <SliderPrimitive.Thumb
           key={index}
-          className="slider-thumb block h-5 w-5 rounded-[1px] border-2 border-foreground bg-background shadow-[2px_2px_0_#111111] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          className="slider-thumb block h-5 w-5 rounded-[1px] border-2 border-foreground bg-background shadow-[2px_2px_0_#694F5D] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
         />
       ))}
     </SliderPrimitive.Root>

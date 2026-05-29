@@ -24,7 +24,7 @@ export function ExerciseExperiencePanel({
   const Icon = ICON_BY_TYPE[experience.icon];
 
   return (
-    <section className="border border-border bg-white p-4 shadow-[0_12px_35px_rgba(17,17,17,0.05)]">
+    <section className="border border-border bg-card p-4 shadow-[0_12px_35px_rgba(105,79,93,0.05)]">
       <div className="mb-3 flex items-center gap-2">
         <span className="inline-flex h-8 w-8 items-center justify-center border border-border bg-background">
           <Icon className="h-4 w-4 text-foreground" />

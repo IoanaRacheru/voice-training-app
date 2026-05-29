@@ -21,5 +21,5 @@ export type VoiceAnalyticsTool = {
   requiresPitchGraph: boolean;
   requiresResonanceGraph: boolean;
   requiresGenderGraph: boolean;
-  Component: ComponentType;
+  Component: ComponentType<any>;
 };

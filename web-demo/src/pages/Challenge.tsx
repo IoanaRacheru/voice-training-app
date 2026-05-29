@@ -4,8 +4,10 @@ import ChallengeExerciseSession from "@/components/challenge/ChallengeExerciseSe
 import ChallengeSetup from "@/components/challenge/ChallengeSetup";
 import ChallengeStreakCard from "@/components/challenge/ChallengeStreakCard";
 import DailyChallengeList from "@/components/challenge/DailyChallengeList";
+import HydrationReminder from "@/components/practice/HydrationReminder";
 import { useAuth } from "@/lib/AuthContext";
 import { useChallengeController } from "@/hooks/useChallengeController";
+import { usePracticeSession } from "@/hooks/usePracticeSession";
 
 export default function Challenge() {
   const { user } = useAuth();
@@ -18,6 +20,7 @@ export default function Challenge() {
     wasGeneratedFromDifferentGoal,
     actions,
   } = useChallengeController(user);
+  const practiceSession = usePracticeSession();
 
   return (
     <div className="mx-auto max-w-6xl space-y-10">
@@ -44,8 +47,14 @@ export default function Challenge() {
 
       <ChallengeStreakCard streak={streak} />
 
+      <HydrationReminder
+        open={practiceSession.reminder?.shouldShow}
+        message={practiceSession.reminder?.message}
+        onDismiss={practiceSession.dismissReminder}
+      />
+
       {wasGeneratedFromDifferentGoal && (
-        <div className="border-l-4 border-primary bg-white px-4 py-3 text-sm font-bold text-muted-foreground shadow-[0_12px_34px_rgba(17,17,17,0.06)]">
+        <div className="border-l-4 border-primary bg-card px-4 py-3 text-sm font-bold text-muted-foreground shadow-[0_12px_34px_rgba(105,79,93,0.06)]">
           Today&apos;s challenge was generated from your previous profile goal. Tomorrow&apos;s challenge will use the new goal.
         </div>
       )}
@@ -69,16 +78,17 @@ export default function Challenge() {
             />
           )}
 
-          <DailyChallengeList
-            challenge={challenge}
-            activeExerciseIndex={activeExerciseIndex}
-            onStartChallenge={actions.startChallenge}
-            onMoveExercise={actions.moveExercise}
-            onStartExercise={actions.startExercise}
-          />
+          {activeExerciseIndex === null && (
+            <DailyChallengeList
+              challenge={challenge}
+              activeExerciseIndex={activeExerciseIndex}
+              onStartChallenge={actions.startChallenge}
+              onMoveExercise={actions.moveExercise}
+              onStartExercise={actions.startExercise}
+            />
+          )}
         </>
       )}
     </div>
   );
 }
-

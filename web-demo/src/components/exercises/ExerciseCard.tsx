@@ -13,7 +13,7 @@ export default function ExerciseCard({ exercise, isSelected, onSelect }: Exercis
     <button
       type="button"
       onClick={() => onSelect(exercise)}
-      className={`group flex min-h-[154px] flex-col justify-between border bg-white p-5 text-left shadow-[0_18px_50px_rgba(17,17,17,0.05)] transition-all hover:-translate-y-0.5 hover:border-primary ${
+      className={`group flex min-h-[118px] flex-col justify-between border bg-card p-5 text-left shadow-[0_18px_50px_rgba(105,79,93,0.05)] transition-all hover:-translate-y-0.5 hover:border-primary ${
         isSelected ? "border-primary ring-2 ring-primary/20" : "border-border"
       }`}
     >
@@ -26,15 +26,12 @@ export default function ExerciseCard({ exercise, isSelected, onSelect }: Exercis
             {exercise.name}
           </h2>
         </div>
-        <span className="grid h-9 w-9 shrink-0 place-items-center bg-background text-muted-foreground group-hover:bg-primary group-hover:text-white">
+        <span className="grid h-9 w-9 shrink-0 place-items-center bg-background text-muted-foreground group-hover:bg-primary group-hover:text-background">
           <ArrowUpRight className="h-4 w-4" />
         </span>
       </div>
 
-      <p className="mt-5 text-sm font-medium leading-6 text-muted-foreground">
-        {exercise.explanation}
-      </p>
+      <p className="mt-5 font-mono text-[11px] uppercase text-muted-foreground">Open exercise</p>
     </button>
   );
 }
-

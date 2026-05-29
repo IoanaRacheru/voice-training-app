@@ -123,7 +123,7 @@ export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
   const statusLabel = isRecording ? "Recording in progress" : status === "recorded" ? "Recording saved" : status === "uploaded" ? "Upload saved" : "No initial sample yet";
 
   return (
-    <section className="bg-white p-6 shadow-[0_24px_70px_rgba(17,17,17,0.07)]">
+    <section className="bg-card p-6 shadow-[0_24px_70px_rgba(105,79,93,0.07)]">
       <div className="border-b border-border pb-5">
         <p className="font-mono text-[11px] uppercase text-muted-foreground">Initial voice sample</p>
         <h2 className="mt-2 text-2xl font-black uppercase text-foreground">Record or upload audio</h2>
@@ -180,7 +180,7 @@ export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSample} className="border-destructive bg-destructive text-destructive-foreground hover:bg-foreground">
+            <AlertDialogAction onClick={handleDeleteSample} className="border-destructive bg-destructive text-destructive-foreground hover:bg-secondary">
               Delete sample
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -189,4 +189,3 @@ export default function VoiceInput({ user, onUpdate }: VoiceInputProps) {
     </section>
   );
 }
-

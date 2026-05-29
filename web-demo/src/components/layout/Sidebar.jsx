@@ -9,7 +9,7 @@ import { getUserDisplayName } from "@/lib/userDisplay";
 export default function Sidebar({ collapsed = false, onToggleCollapse }) {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const displayName = getUserDisplayName(user, { fallbackToEmail: true });
+  const displayName = getUserDisplayName(user, { fallbackToEmail: false });
 
   return (
     <aside
@@ -22,7 +22,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapse }) {
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="inline-flex h-9 w-9 items-center justify-center border border-border bg-white text-foreground hover:border-primary"
+            className="inline-flex h-9 w-9 items-center justify-center border border-border bg-card text-foreground hover:border-primary"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -30,7 +30,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapse }) {
         </div>
 
         <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-          <span className="brand-icon !h-8 !w-10 !bg-foreground !text-foreground !shadow-none">
+          <span className="brand-icon !h-8 !w-10 !bg-primary !text-primary !shadow-none">
             <DuckMark />
           </span>
           {!collapsed && (
@@ -57,8 +57,8 @@ export default function Sidebar({ collapsed = false, onToggleCollapse }) {
                 to={path}
                 className={`relative flex items-center gap-3 px-3 py-3 text-sm font-bold uppercase transition-colors ${
                   isActive
-                    ? "bg-white text-foreground"
-                    : "text-muted-foreground hover:bg-white hover:text-foreground"
+                    ? "bg-card text-foreground"
+                    : "text-muted-foreground hover:bg-background hover:text-foreground"
                 }`}
               >
                 {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-primary" />}

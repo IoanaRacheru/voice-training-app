@@ -31,7 +31,7 @@ export default function ProfileCard({ user }: ProfileCardProps) {
   }, []);
 
   return (
-    <section className="bg-white p-5 shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+    <section className="bg-card p-5 shadow-[0_18px_50px_rgba(105,79,93,0.06)]">
       <p className="font-mono text-[11px] uppercase text-muted-foreground">Identification</p>
       <div className="mt-5 min-w-0">
         <h2 className="break-words text-2xl font-black uppercase leading-tight text-foreground">{displayName}</h2>

@@ -4,9 +4,12 @@ import ExerciseCard from "@/components/exercises/ExerciseCard";
 import ExerciseTrainingSession from "@/components/exercises/ExerciseTrainingSession";
 import VoiceAnalyticsToolSession from "@/components/exercises/VoiceAnalyticsToolSession";
 import FullScreenSessionView from "@/components/exercises/FullScreenSessionView";
+import HydrationReminder from "@/components/practice/HydrationReminder";
 import { voiceAnalyticsTools } from "@/components/exercises/voiceAnalyticsTools";
 import { exercises } from "@/data/exercises";
 import { useProfilePreferences } from "@/hooks/useProfilePreferences";
+import { usePracticeSession } from "@/hooks/usePracticeSession";
+import { practiceSessionService } from "@/services/practiceSessionService";
 import type { VoiceExercise } from "@/features/exercises/types";
 import type { VoiceAnalyticsTool } from "@/features/exercises/toolTypes";
 
@@ -16,6 +19,7 @@ export default function Exercises() {
   const [selectedAnalyticsTool, setSelectedAnalyticsTool] = useState<VoiceAnalyticsTool | null>(null);
   const targetRange = preferences.target_pitch_range;
   const pitchTargetEnabled = preferences.pitch_target_enabled;
+  const practiceSession = usePracticeSession();
 
   if (selectedExercise) {
     const exercise = selectedExercise;
@@ -31,7 +35,7 @@ export default function Exercises() {
           exercise={exercise}
           targetRange={pitchTargetEnabled ? targetRange : undefined}
           pitchTargetEnabled={pitchTargetEnabled}
-          onSessionSaved={() => {}}
+          onSessionSaved={() => practiceSessionService.recordCompletion("exercise", exercise.id)}
         />
       </FullScreenSessionView>
     );
@@ -80,6 +84,12 @@ export default function Exercises() {
         </div>
       </motion.header>
 
+      <HydrationReminder
+        open={practiceSession.reminder?.shouldShow}
+        message={practiceSession.reminder?.message}
+        onDismiss={practiceSession.dismissReminder}
+      />
+
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -113,7 +123,7 @@ export default function Exercises() {
               key={tool.id}
               type="button"
               onClick={() => setSelectedAnalyticsTool(tool)}
-              className="border border-border bg-white p-5 text-left transition-colors hover:border-primary"
+              className="border border-border bg-card p-5 text-left transition-colors hover:border-primary"
             >
               <p className="font-mono text-[11px] uppercase text-muted-foreground">Voice analytics</p>
               <h3 className="mt-2 text-lg font-black uppercase text-foreground">{tool.name}</h3>

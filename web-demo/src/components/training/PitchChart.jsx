@@ -51,19 +51,19 @@ export default function PitchChart({ data, targetRange }) {
               <ReferenceArea
                 y1={lowTarget}
                 y2={highTarget}
-                fill="#22c55e"
+                fill="#68A691"
                 fillOpacity={0.16}
                 strokeOpacity={0}
               />
               <ReferenceLine
                 y={lowTarget}
-                stroke="#16a34a"
+                stroke="#68A691"
                 strokeDasharray="6 4"
                 strokeWidth={2}
               />
               <ReferenceLine
                 y={highTarget}
-                stroke="#16a34a"
+                stroke="#68A691"
                 strokeDasharray="6 4"
                 strokeWidth={2}
               />
